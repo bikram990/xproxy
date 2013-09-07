@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include "log.h"
+#include "http_proxy_server.h"
 
 int main(int argc, char* argv[]) {
     Log::set_debug_level(boost::log::trivial::debug);
@@ -22,6 +23,7 @@ int main(int argc, char* argv[]) {
         for(; it != end; it++) {
             std::cout << (*it).endpoint().address() << std::endl;
         }
+        HttpProxyServer s;
         //server s(io_service, 7077);
         //io_service.run();
     } catch (std::exception& e) {
