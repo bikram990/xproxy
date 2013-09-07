@@ -1,6 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <boost/noncopyable.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 
