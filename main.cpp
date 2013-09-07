@@ -4,6 +4,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include "log.h"
 
 using boost::asio::ip::tcp;
 
@@ -169,34 +170,27 @@ private:
   boost::asio::streambuf response_;
 };
 
-//int main(int argc, char* argv[])
-//{
-//  try
-//  {
-////    if (argc != 3)
-////    {
-////      std::cout << "Usage: async_client <server> <path>\n";
-////      std::cout << "Example:\n";
-////      std::cout << "  async_client www.boost.org /LICENSE_1_0.txt\n";
-////      return 1;
-////    }
-//
-//    boost::asio::io_service io_service;
-////    client c(io_service, argv[1], argv[2]);
-//    client c(io_service, "www.google.com.hk", "/");
-////    client c(io_service, "www.cnbeta.com", "/");
-//    io_service.run();
-//  }
-//  catch (std::exception& e)
-//  {
-//    std::cout << "Exception: " << e.what() << "\n";
-//  }
-//
-//  return 0;
-//}
+int main(int argc, char* argv[]) {
+    Log::set_debug_level(boost::log::trivial::debug);
+    Log::debug("xProxy is starting...");
+    try {
+        using namespace boost::asio;
+        boost::asio::io_service io_service;
+        boost::asio::signal_set sigs(io_service, SIGINT, SIGTERM);
+        sigs.async_wait(boost::bind(&boost::asio::io_service::stop, &io_service));
 
-//int main() {
-//    cout << sizeof(A) << endl;
-//    cout << "Hello World!" << endl;
-//    return 0;
-//}
+        boost::asio::ip::tcp::resolver r(io_service);
+        boost::asio::ip::tcp::resolver::query q("www.google.com", "http");
+        boost::asio::ip::tcp::resolver::iterator it = r.resolve(q);
+        boost::asio::ip::tcp::resolver::iterator end;
+        for(; it != end; it++) {
+            std::cout << (*it).endpoint().address() << std::endl;
+        }
+        //server s(io_service, 7077);
+        //io_service.run();
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
+    Log::debug("xProxy is stopped.");
+    return 0;
+}
