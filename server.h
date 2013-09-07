@@ -5,9 +5,9 @@
 
 class Server : private boost::noncopyable {
 public:
-    void Start() = 0;
-    void Stop() = 0;
-    ~Server() = 0;
+    virtual void Start() = 0;
+    virtual void Stop() = 0;
+    virtual ~Server() = 0;
 
 protected:
     Server();
