@@ -67,6 +67,6 @@ private:
 };
 
 boost::log::trivial::severity_level Log::level_ = boost::log::trivial::debug;
-Log *Log::instance_ = nullptr;
+Log *Log::instance_ = NULL;//nullptr;
 
 #endif // LOG_HPP

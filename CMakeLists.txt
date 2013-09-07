@@ -32,3 +32,7 @@ if(Boost_FOUND)
 else()
     message(FATAL_ERROR "Boost is not found.")
 endif()
+
+if(UNIX)
+    target_link_libraries(${PROJECT_NAME} pthread)
+endif()
