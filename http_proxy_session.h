@@ -6,7 +6,8 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
-#include "http_proxy_session_manager.h"
+
+class HttpProxySessionManager;
 
 
 class HttpProxySession
