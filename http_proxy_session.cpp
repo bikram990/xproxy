@@ -17,3 +17,9 @@ boost::asio::ip::tcp::socket& HttpProxySession::LocalSocket() {
 boost::asio::ip::tcp::socket& HttpProxySession::RemoteSocket() {
     return remote_socket_;
 }
+
+void HttpProxySession::Start() {
+}
+
+void HttpProxySession::Stop() {
+}
