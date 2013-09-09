@@ -10,8 +10,7 @@
 
 class HttpProxyServer : public Server {
 public:
-    HttpProxyServer(const std::string& address = "localhost",
-                    int port = 7077);
+    HttpProxyServer(int port = 7077);
     virtual ~HttpProxyServer();
 
     virtual void Start();

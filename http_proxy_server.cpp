@@ -4,7 +4,7 @@
 #include "log.h"
 #include "http_proxy_server.h"
 
-HttpProxyServer::HttpProxyServer(const std::string& address, int port)
+HttpProxyServer::HttpProxyServer(int port)
     : service_(), signals_(service_), acceptor_(service_),
       current_session_(), session_manager_() {
     signals_.add(SIGINT);
@@ -12,12 +12,9 @@ HttpProxyServer::HttpProxyServer(const std::string& address, int port)
     // signals_.add(SIGQUIT); // TODO is this needed?
     signals_.async_wait(boost::bind(&HttpProxyServer::HandleStop, this));
 
-    using namespace boost::asio::ip;
-    tcp::resolver r(service_);
-    tcp::resolver::query q(address, boost::lexical_cast<std::string>(port));
-    tcp::endpoint e = *r.resolve(q);
+    boost::asio::ip::tcp::endpoint e(boost::asio::ip::tcp::v4(), port);
     acceptor_.open(e.protocol());
-    acceptor_.set_option(tcp::acceptor::reuse_address(true));
+    acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
     acceptor_.bind(e);
     acceptor_.listen();
 
@@ -36,6 +33,7 @@ void HttpProxyServer::Stop() {
 }
 
 void HttpProxyServer::StartAccept() {
+    Log::debug("A new session is initialized.");
     current_session_.reset(new HttpProxySession(service_, session_manager_));
     acceptor_.async_accept(current_session_->LocalSocket(),
                            boost::bind(&HttpProxyServer::HandleAccept, this,
