@@ -13,6 +13,7 @@ message(STATUS "cxx flags: " ${CMAKE_CXX_FLAGS})
 
 # for boost library
 if(WIN32)
+    set(BOOST_ROOT "D:/SDTs/Boost")
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
     if(MINGW)
@@ -22,14 +23,9 @@ if(WIN32)
         set(Boost_COMPILER "-vc110")
         add_definitions(-D_WIN32_WINNT=0x0501)
     endif()
-    set(BOOST_ROOT "D:/SDTs/Boost")
-#    set(BOOST_INCLUDEDIR "D:/SDTs/Boost")
-#    set(BOOST_LIBRARYDIR "D:/SDTs/Boost/stage/lib")
 endif()
 
-#find_package(Boost 1.54.0 COMPONENTS system date_time regex log filesystem thread REQUIRED)
 find_package(Boost 1.54.0 COMPONENTS system date_time regex log log_setup filesystem thread chrono REQUIRED)
-
 if(Boost_FOUND)
     message(STATUS "Boost is found at: " ${Boost_INCLUDE_DIRS} ", lib: " ${Boost_LIBRARIES})
     if(NOT WIN32)
