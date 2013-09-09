@@ -3,6 +3,14 @@ cmake_minimum_required(VERSION 2.8)
 aux_source_directory(. SRC_LIST)
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
+message(STATUS "release c flags: " ${CMAKE_C_FLAGS_RELEASE})
+message(STATUS "debug c flags: " ${CMAKE_C_FLAGS_DEBUG})
+message(STATUS "release cxx flags: " ${CMAKE_CXX_FLAGS_RELEASE})
+message(STATUS "debug cxx flags: " ${CMAKE_CXX_FLAGS_DEBUG})
+message(STATUS ${CMAKE_BUILD_TYPE})
+message(STATUS "c flags: " ${CMAKE_C_FLAGS})
+message(STATUS "cxx flags: " ${CMAKE_CXX_FLAGS})
+
 # for boost library
 if(WIN32)
     set(Boost_USE_STATIC_LIBS ON)
