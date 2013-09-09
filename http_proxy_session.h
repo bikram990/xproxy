@@ -25,6 +25,7 @@ public:
 
 private:
     void HandleRead(const boost::system::error_code& e, std::size_t size);
+    void HandleWrite(const boost::system::error_code& e);
 
     boost::asio::io_service remote_service_;
     boost::asio::ip::tcp::socket local_socket_;
