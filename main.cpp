@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
             std::cout << (*it).endpoint().address() << std::endl;
         }
         HttpProxyServer s;
+        s.Start();
         //server s(io_service, 7077);
         //io_service.run();
     } catch (std::exception& e) {
