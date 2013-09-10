@@ -1,3 +1,4 @@
+#include <iostream>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include "http_proxy_session.h"
