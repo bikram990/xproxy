@@ -1,61 +1,64 @@
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/support/date_time.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
 #include "log.h"
 
-boost::log::trivial::severity_level Log::level_ = boost::log::trivial::debug;
-Log *Log::instance_ = NULL;//nullptr;
+namespace xproxy_log {
+    ExtraLogAttributes g_attrs;
 
-Log::Log() {
-    boost::log::formatter formatter =
-            boost::log::expressions::stream << boost::log::expressions::attr<unsigned int>("LineID") << ": "
-                                            << boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S") << " *"
-                                            << boost::log::expressions::attr<int>("Severity") << "* "
-                                            << boost::log::expressions::message;
-    boost::log::add_file_log(
-                boost::log::keywords::file_name = "xproxy_%N.log",
-                boost::log::keywords::rotation_size = 10 * 1024 * 1024,
-                boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
-                boost::log::keywords::format = "[%TimeStamp%]: %Message%"
-            )->set_formatter(formatter);
-    boost::log::core::get()->set_filter(
-                boost::log::trivial::severity >= level_
-                );
-    boost::log::add_common_attributes();
-}
+//    logger& LogExtraInfo(logger& log, const std::string& file, const std::string& function, int line) {
+//        g_attrs.set_file_attr(file);
+//        g_attrs.set_function_attr(function);
+//        g_attrs.set_line_attr(line);
+//        return log;
+//    }
 
-Log::~Log() {
-    // do nothing here
-}
+    void InitLogging() {
+        namespace logging = boost::log;
+        namespace attrs = boost::log::attributes;
+        namespace src = boost::log::sources;
+        namespace sinks = boost::log::sinks;
+        namespace expr = boost::log::expressions;
+        namespace keywords = boost::log::keywords;
 
-void Log::set_debug_level(boost::log::trivial::severity_level level) {
-    level_ = level;
-}
+        logging::formatter formatter =
+            expr::stream << expr::attr<unsigned int>("LineID") << ": "
+                         << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S") << " ["
+                         << expr::attr<SeverityLevel>("Severity") << "] ["
+                         << expr::attr<attrs::current_process_id::value_type>("ProcessID")
+                         << ":"
+                         << expr::attr<attrs::current_thread_id::value_type>("ThreadID")
+                         << "] ["
+                         << expr::attr<std::string>("Function")
+                         << ":"
+                         << expr::attr<std::string >("File")
+                         << ":"
+                         << expr::attr< int >("Line")
+                         << "] "
+                         << expr::message;
 
-void Log::debug(const char *msg) {
-    Log::instance().log(boost::log::trivial::debug, msg);
-}
+        typedef sinks::synchronous_sink<sinks::text_ostream_backend> text_sink;
+        boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
+        sink->locked_backend()->add_stream(boost::make_shared<std::ofstream>("xproxy.log"));
+        boost::shared_ptr<std::ostream> console(&std::clog, logging::empty_deleter());
+        sink->locked_backend()->add_stream(console);
+        sink->set_formatter(formatter);
 
-void Log::warn(const char *msg) {
-    Log::instance().log(boost::log::trivial::warning, msg);
-}
 
-void Log::error(const char *msg) {
-    Log::instance().log(boost::log::trivial::error, msg);
-}
+        boost::shared_ptr<logging::core> core = logging::core::get();
+        core->add_sink(sink);
+        core->add_global_attribute("File", *g_attrs.get_file_attr());
+        core->add_global_attribute("Function", *g_attrs.get_function_attr());
+        core->add_global_attribute("Line", *g_attrs.get_line_attr());
 
-Log& Log::instance() {
-    if(!instance_) {
-        // TODO add lock for MSVC, it is not thread-safe
-        // gcc is thread-safe
-        static Log temp;
-        instance_ = &temp;
+        logging::add_common_attributes();
     }
-    return *instance_;
+
+    void Log(logger& log, SeverityLevel level, const char *msg) {
+        boost::log::record rec = log.open_record(boost::log::keywords::severity = level);
+        if(rec) {
+            boost::log::record_ostream stream(rec);
+            stream << msg;
+            stream.flush();
+            log.push_record(boost::move(rec));
+        }
+    }
 }
 
-void Log::log(boost::log::trivial::severity_level level, const char *msg) {
-    BOOST_LOG_SEV(log_, level) << msg;
-}

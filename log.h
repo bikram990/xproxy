@@ -1,150 +1,141 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include <iostream>
 #include <fstream>
 #include <boost/noncopyable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/support/date_time.hpp>
-#include <boost/log/utility/setup/file.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/attributes/mutable_constant.hpp>
-#include <boost/log/expressions/formatters.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/expressions/attr.hpp>
 #include <boost/log/sinks.hpp>
-#include <boost/log/sinks/text_ostream_backend.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/empty_deleter.hpp>
+//#include <boost/log/utility/formatting_ostream.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
 
-enum severity_level {
-    debug = -1,
-    info = 0,
-    warning,
-    error,
-    fatal
-};
+//std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, severity_level level);
 
-template< typename CharT, typename TraitsT >
-    inline std::basic_ostream< CharT, TraitsT >& operator<<
-    (std::basic_ostream< CharT, TraitsT >& strm, severity_level level) {
-    static const char* const str[] = {
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "fatal"
+namespace xproxy_log {
+
+    enum SeverityLevel {
+        kDebug = 0,
+        kInfo,
+        kWarning,
+        kError,
+        kFatal
     };
-    if(level >= debug && level <= fatal) {
-        strm << str[level - debug];
+
+    class ExtraLogAttributes {
+    public:
+        //typedef boost::log::attributes::mutable_constant<int, boost::mutex, boost::lock_guard< boost::mutex > > mutable_int_mt;
+        typedef boost::log::attributes::mutable_constant<int> mutable_int_mt;
+        //typedef boost::log::attributes::mutable_constant<std::string, boost::mutex, boost::lock_guard< boost::mutex > > mutable_string_mt;
+        typedef boost::log::attributes::mutable_constant<std::string> mutable_string_mt;
+
+        ExtraLogAttributes() {
+            init();
+        }
+
+        boost::shared_ptr<mutable_string_mt> get_file_attr() const {
+            return file_attr_;
+        }
+
+        void set_file_attr(const std::string& file) {
+            file_attr_->set(file);
+        }
+
+        boost::shared_ptr<mutable_string_mt> get_function_attr() const {
+            return function_attr_;
+        }
+
+        void set_function_attr(const std::string& function) {
+            function_attr_->set(function);
+        }
+
+        boost::shared_ptr<mutable_int_mt> get_line_attr() const {
+            return line_attr_;
+        }
+
+        void set_line_attr(int line) {
+            line_attr_->set(line);
+        }
+
+    private:
+        void init() {
+            if(inited_) return;
+
+            file_attr_ = boost::make_shared<mutable_string_mt>("");
+            function_attr_ = boost::make_shared<mutable_string_mt>("");
+            line_attr_ = boost::make_shared<mutable_int_mt>(0);
+
+            inited_ = true;
+        }
+
+        boost::shared_ptr<mutable_string_mt> file_attr_;
+        boost::shared_ptr<mutable_string_mt> function_attr_;
+        boost::shared_ptr<mutable_int_mt> line_attr_;
+
+        bool inited_;
+    };
+
+    typedef boost::log::sources::severity_logger<SeverityLevel> logger;
+
+    extern ExtraLogAttributes g_attrs;
+
+    inline logger& LogExtraInfo(logger& log, const std::string& file, const std::string& function, int line) {
+        g_attrs.set_file_attr(file);
+        g_attrs.set_function_attr(function);
+        g_attrs.set_line_attr(line);
+        return log;
+    }
+
+    void InitLogging();
+
+    void Log(logger& log, SeverityLevel level, const char *msg);
+}
+
+template<typename CharT, typename TraitsT>
+inline std::basic_ostream<CharT, TraitsT>& operator<<(
+        std::basic_ostream<CharT, TraitsT>& stream,
+        xproxy_log::SeverityLevel level) {
+    std::cout << "in func <<" << std::endl;
+    static const char* const str[] = {
+        "debug", "info", "warning", "error", "fatal"
+    };
+    if(level >= xproxy_log::kDebug && level <= xproxy_log::kFatal) {
+        stream << str[level - xproxy_log::kDebug];
     } else {
-        strm << static_cast<int>(level);
+        stream << static_cast<int>(level);
     }
-    return strm;
+    return stream;
 }
 
-
-namespace mylog {
-    //typedef boost::log::attributes::mutable_constant<int, boost::mutex, boost::lock_guard< boost::mutex > > mutable_int_mt;
-    typedef boost::log::attributes::mutable_constant<int> mutable_int_mt;
-    //typedef boost::log::attributes::mutable_constant<std::string, boost::mutex, boost::lock_guard< boost::mutex > > mutable_string_mt;
-    typedef boost::log::attributes::mutable_constant<std::string> mutable_string_mt;
-    static boost::shared_ptr<mylog::mutable_string_mt> file_attr(new mylog::mutable_string_mt(""));
-    static boost::shared_ptr<mylog::mutable_string_mt> function_attr(new mylog::mutable_string_mt(""));
-    static boost::shared_ptr<mylog::mutable_int_mt> line_attr(new mylog::mutable_int_mt(-1));
-
-    typedef boost::log::sources::severity_logger<severity_level> logger;
-
-    template<typename T>
-    static inline T& tag_log_location
-        (T &log_,
-         const std::string file_,
-         int line_,
-         const std::string function_) {
-        mylog::file_attr->set(file_);
-        mylog::function_attr->set(function_);
-        mylog::line_attr->set(line_);
-        return log_;
+template< typename CharT, typename TraitsT, typename AllocatorT >
+inline boost::log::basic_formatting_ostream<CharT, TraitsT, AllocatorT>& operator<<(
+        boost::log::basic_formatting_ostream<CharT, TraitsT, AllocatorT>& stream,
+        xproxy_log::SeverityLevel level) {
+    std::cout << "in func <<" << std::endl;
+    static const char* const str[] = {
+        "debug", "info", "warning", "error", "fatal"
+    };
+    if(level >= xproxy_log::kDebug && level <= xproxy_log::kFatal) {
+        stream << str[level - xproxy_log::kDebug];
+    } else {
+        stream << static_cast<int>(level);
     }
-
-    static void init_logging() {
-        namespace logging = boost::log;
-        namespace attrs = boost::log::attributes;
-        namespace src = boost::log::sources;
-        namespace sinks = boost::log::sinks;
-        namespace expr = boost::log::expressions;
-        //namespace fmt = boost::log::formatters;
-        namespace keywords = boost::log::keywords;
-
-        boost::shared_ptr< logging::core > core = logging::core::get();
-
-        // Create a backend and attach a couple of streams to it
-        boost::shared_ptr< sinks::text_ostream_backend > backend =
-            boost::make_shared< sinks::text_ostream_backend >();
-        //backend->add_stream(boost::shared_ptr< std::ostream >(&std::clog, logging::empty_deleter()));
-        backend->add_stream(boost::shared_ptr<std::ostream>(new std::ofstream("test.log")));
-
-        logging::formatter formatter =
-            expr::stream << expr::attr<unsigned int>("LineID") << ": "
-                         << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S") << " *"
-                         << expr::attr<severity_level>("Severity") << "* "
-                         << expr::attr<attrs::current_process_id::value_type>("ProcessID")
-                         << ":"
-                         << expr::attr<attrs::current_thread_id::value_type>("ThreadID")
-                         << " "
-                         << expr::attr<std::string>("Function")
-                         << ":"
-                         << expr::attr<std::string >("File")
-                         << ":"
-                         << expr::attr< int >("Line")
-                         << " "
-                         << expr::message;
-
-        // Enable auto-flushing after each log record written
-        backend->auto_flush(true);
-
-        // Wrap it into the frontend and register in the core.
-        // The backend requires synchronization in the frontend.
-        typedef sinks::synchronous_sink< sinks::text_ostream_backend > sink_t;
-        boost::shared_ptr< sink_t > sink(new sink_t(backend));
-        sink->set_formatter(formatter);
-        core->add_sink(sink);
-
-        core->add_global_attribute("File", *mylog::file_attr);
-        core->add_global_attribute("Function", *mylog::function_attr);
-        core->add_global_attribute("Line", *mylog::line_attr);
-        logging::add_common_attributes();
-    }
+    return stream;
 }
 
+//#define LOG(log, level, msg) xproxy_log::Log(xproxy_log::LogExtraInfo(log, __FILE__, __FUNCTION__, __LINE__), level, msg)
+#define LOG(log, level, msg) BOOST_LOG_SEV(xproxy_log::LogExtraInfo(log, __FILE__, __FUNCTION__, __LINE__), level) << msg
 
-#define LOG(log_, lvl_) BOOST_LOG_SEV(mylog::tag_log_location(log_, __FILE__, __LINE__, __FUNCTION__), lvl_)
+#define DEBUG(log, msg) LOG(log, xproxy_log::kDebug, msg)
+#define ERROR(log, msg) LOG(log, xproxy_log::kError, msg)
 
-
-class Log : private boost::noncopyable {
-public:
-    static void set_debug_level(boost::log::trivial::severity_level level);
-    static void debug(const char *msg);
-    static void warn(const char *msg);
-    static void error(const char *msg);
-
-private:
-    static Log& instance();
-
-    void log(boost::log::trivial::severity_level level, const char *msg);
-
-    Log();
-    ~Log();
-
-    static boost::log::trivial::severity_level level_;
-    static Log *instance_;
-
-    boost::log::sources::severity_logger<boost::log::trivial::severity_level> log_;
-};
+//#define LOG(log_, lvl_) BOOTS_LOG_SEV(mylog::tag_log_location(log_, __FILE__, __LINE__, __FUNCTION__), lvl_)
 
 #endif // LOG_H
