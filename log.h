@@ -81,4 +81,6 @@ void InitLogging();
 #define XERROR XLOG(*xproxy::log::g_logger, xproxy::log::kError)
 #define XFATAL XLOG(*xproxy::log::g_logger, xproxy::log::kFatal)
 
+#define TRACE_THIS_PTR XTRACE << "Address of this pointer: [" << this << "]."
+
 #endif // LOG_H

@@ -4,7 +4,7 @@
 
 int main(int argc, char* argv[]) {
     xproxy::log::InitLogging();
-    XDEBUG << "xProxy is starting...";
+    XINFO << "xProxy is starting...";
 
     try {
         HttpProxyServer s;
@@ -12,6 +12,6 @@ int main(int argc, char* argv[]) {
     } catch (std::exception& e) {
         XERROR << "Exception occurred: " << e.what();
     }
-    XDEBUG << "xProxy is stopped.";
+    XINFO << "xProxy is stopped.";
     return 0;
 }

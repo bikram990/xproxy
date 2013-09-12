@@ -7,6 +7,8 @@
 HttpProxyServer::HttpProxyServer(int port)
     : service_(), signals_(service_), acceptor_(service_),
       current_session_(), session_manager_() {
+    TRACE_THIS_PTR;
+
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
     // signals_.add(SIGQUIT); // TODO is this needed?
@@ -22,6 +24,7 @@ HttpProxyServer::HttpProxyServer(int port)
 }
 
 HttpProxyServer::~HttpProxyServer() {
+    TRACE_THIS_PTR;
 }
 
 void HttpProxyServer::Start() {
@@ -29,7 +32,7 @@ void HttpProxyServer::Start() {
 }
 
 void HttpProxyServer::Stop() {
-    XWARN << "this function is not implemented";
+    XWARN << "Function not implemented.";
 }
 
 void HttpProxyServer::StartAccept() {
@@ -42,7 +45,7 @@ void HttpProxyServer::StartAccept() {
 
 void HttpProxyServer::HandleAccept(const boost::system::error_code &e) {
     if(!acceptor_.is_open()) {
-        XWARN << "socket is not opened.";
+        XWARN << "Socket is not open," << "error code: " << e.message();
         return;
     }
     if(!e)
