@@ -1,11 +1,12 @@
 #include <boost/bind.hpp>
 #include "http_proxy_session_manager.h"
 
-HttpProxySessionManager::HttpProxySessionManager() {
+HttpProxySessionManager::HttpProxySessionManager() : dispatcher_() {
 }
 
 HttpProxySessionManager::~HttpProxySessionManager() {
     // do nothing here
+    // TODO should we clean sockets in dispatcher_ here?
 }
 
 void HttpProxySessionManager::Start(HttpProxySessionPtr session) {
