@@ -3,15 +3,15 @@
 #include "http_proxy_server.h"
 
 int main(int argc, char* argv[]) {
-    Log::set_debug_level(boost::log::trivial::debug);
-    Log::debug("xProxy is starting...");
+    xproxy::log::InitLogging();
+    XDEBUG << "xProxy is starting...";
+
     try {
         HttpProxyServer s;
         s.Start();
     } catch (std::exception& e) {
-        Log::error("Exception occurred.");
-        std::cerr << "Exception: " << e.what() << "\n";
+        XERROR << "Exception occurred: " << e.what();
     }
-    Log::debug("xProxy is stopped.");
+    XDEBUG << "xProxy is stopped.";
     return 0;
 }

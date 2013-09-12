@@ -29,11 +29,11 @@ void HttpProxyServer::Start() {
 }
 
 void HttpProxyServer::Stop() {
-    Log::warn("this function is not implemented");
+    XWARN << "this function is not implemented";
 }
 
 void HttpProxyServer::StartAccept() {
-    Log::debug("A new session is initialized.");
+    XDEBUG << "A new session is initialized.";
     current_session_.reset(new HttpProxySession(service_, session_manager_));
     acceptor_.async_accept(current_session_->LocalSocket(),
                            boost::bind(&HttpProxyServer::HandleAccept, this,
@@ -42,7 +42,7 @@ void HttpProxyServer::StartAccept() {
 
 void HttpProxyServer::HandleAccept(const boost::system::error_code &e) {
     if(!acceptor_.is_open()) {
-        Log::warn("socket is not opened.");
+        XWARN << "socket is not opened.";
         return;
     }
     if(!e)
