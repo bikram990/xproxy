@@ -11,7 +11,8 @@ namespace xproxy {
 namespace log {
 
 enum SeverityLevel {
-    kDebug = 0,
+    kTrace = 0,
+    kDebug,
     kInfo,
     kWarning,
     kError,
@@ -56,10 +57,10 @@ template<typename CharT, typename TraitsT>
 inline std::basic_ostream<CharT, TraitsT>&
 operator<<(std::basic_ostream<CharT, TraitsT>& stream, SeverityLevel level) {
     static const char* const str[] = {
-        "debug", "info", "warning", "error", "fatal"
+        "trace", "debug", "info", "warning", "error", "fatal"
     };
-    if(level >= kDebug && level <= kFatal)
-        stream << str[level - kDebug];
+    if(level >= kTrace && level <= kFatal)
+        stream << str[level - kTrace];
     else
         stream << static_cast<int>(level);
     return stream;
@@ -73,7 +74,9 @@ void InitLogging();
 
 #define XLOG(logger, level) BOOST_LOG_SEV(xproxy::log::LogExtraInfo((logger), __FILE__, __FUNCTION__, __LINE__), (level))
 
+#define XTRACE XLOG(*xproxy::log::g_logger, xproxy::log::kTrace)
 #define XDEBUG XLOG(*xproxy::log::g_logger, xproxy::log::kDebug)
+#define XINFO  XLOG(*xproxy::log::g_logger, xproxy::log::kInfo)
 #define XWARN  XLOG(*xproxy::log::g_logger, xproxy::log::kWarning)
 #define XERROR XLOG(*xproxy::log::g_logger, xproxy::log::kError)
 #define XFATAL XLOG(*xproxy::log::g_logger, xproxy::log::kFatal)
