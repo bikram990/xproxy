@@ -14,11 +14,10 @@ public:
     // the build process may repeats twice or more, if the request is too large
     // and are transferred twice or more times
     virtual BuildResult BuildFromRaw(IterT begin, IterT end) = 0;
-    virtual ~Request() = 0;
+    virtual ~Request() = 0 {}
 
 protected:
-    Request();
+    Request() {}
 };
-
 
 #endif // REQUEST_H

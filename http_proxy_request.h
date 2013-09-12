@@ -2,14 +2,18 @@
 #define HTTP_PROXY_REQUEST_H
 
 #include <map>
+#include "request.h"
 
 
 template<typename IterT>
 class HttpProxyRequest : public Request<IterT> {
 public:
-    HttpProxyRequest();
-    virtual ~HttpProxyRequest();
-    virtual BuildResult BuildFromRaw(IterT begin, IterT end);
+    HttpProxyRequest() {}
+    virtual ~HttpProxyRequest() {}
+    virtual BuildResult BuildFromRaw(IterT begin, IterT end) {
+        return kBuildError;
+        // TODO implement me
+    }
 
 private:
     enum BuildState {
