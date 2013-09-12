@@ -83,16 +83,18 @@ namespace xproxy_log {
 
     extern ExtraLogAttributes g_attrs;
 
-    inline logger& LogExtraInfo(logger& log, const std::string& file, const std::string& function, int line) {
+    template<typename LoggerT>
+    inline LoggerT& LogExtraInfo(LoggerT& log, const std::string& file, const std::string& function, int line) {
         g_attrs.set_file_attr(file);
         g_attrs.set_function_attr(function);
         g_attrs.set_line_attr(line);
-        return log;
+        return LoggerT;
     }
 
     void InitLogging();
 
-    void Log(logger& log, SeverityLevel level, const char *msg);
+    template<typename LoggerT>
+    void Log(LoggerT& log, SeverityLevel level, const char *msg);
 }
 
 template<typename CharT, typename TraitsT>
