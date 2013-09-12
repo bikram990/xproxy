@@ -16,6 +16,8 @@ class HttpProxySession
         : public boost::enable_shared_from_this<HttpProxySession>,
           private boost::noncopyable {
 public:
+    typedef HttpProxyRequest::BuildResult ResultType;
+
     HttpProxySession(boost::asio::io_service& local_service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
@@ -33,7 +35,7 @@ private:
     boost::asio::ip::tcp::socket remote_socket_;
     HttpProxySessionManager& manager_;
 
-    HttpProxyRequest<char *> request_;
+    HttpProxyRequest request_;
 
     boost::array<char, 4096> buffer_;
 };

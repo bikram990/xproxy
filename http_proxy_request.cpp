@@ -1,15 +1,12 @@
-//#include "http_proxy_request.h"
+#include "http_proxy_request.h"
 
-//template<typename IterT>
-//HttpProxyRequest<T>::HttpProxyRequest() : state_(kRequestStart) {
-//}
+HttpProxyRequest::HttpProxyRequest() : state_(kRequestStart) {
+}
 
-//template<typename T>
-//HttpProxyRequest<T>::~HttpProxyRequest() {
-//}
+HttpProxyRequest::~HttpProxyRequest() {
+}
 
-//template<typename IterT>
-//typename HttpProxyRequest<IterT>::BuildResult HttpProxyRequest<IterT>::BuildFromRaw(IterT begin, IterT end) {
-//    return kNotStart;
-//    // TODO implement me
-//}
+HttpProxyRequest::BuildResult HttpProxyRequest::BuildFromRaw(char *buffer, std::size_t length) {
+    return HttpProxyRequest::kBuildError;
+    // TODO implement me
+}

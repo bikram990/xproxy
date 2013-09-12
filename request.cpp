@@ -1,9 +1,10 @@
-//#include "request.h"
+#include "log.h"
+#include "request.h"
 
-//template<typename IterT>
-//Request<IterT>::Request() {
-//}
+Request::Request() {
+    TRACE_THIS_PTR;
+}
 
-//template<typename IterT>
-//Request<IterT>::~Request() {
-//}
+Request::~Request() {
+    TRACE_THIS_PTR;
+}

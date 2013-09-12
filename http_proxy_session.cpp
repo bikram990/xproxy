@@ -48,7 +48,20 @@ void HttpProxySession::HandleRead(const boost::system::error_code &e,
 //                                         shared_from_this(),
 //                                         boost::asio::placeholders::error));
     // TODO implement me
-    request_.BuildFromRaw(buffer_.data(), buffer_.data() + size);
+    ResultType result = request_.BuildFromRaw(buffer_.data(), size);
+    if(result == HttpProxyRequest::kComplete) {
+    } else if(result == HttpProxyRequest::kNotComplete) {
+        local_socket_.async_read_some(
+                    boost::asio::buffer(buffer_),
+                    boost::bind(&HttpProxySession::HandleRead,
+                                shared_from_this(),
+                                boost::asio::placeholders::error,
+                                boost::asio::placeholders::bytes_transferred));
+    } else { // build error
+        XWARN << "Bad request: " << local_socket_.remote_endpoint().address()
+              << ":" << local_socket_.remote_endpoint().port();
+        // TODO implement this
+    }
 }
 
 void HttpProxySession::HandleWrite(const boost::system::error_code& e) {

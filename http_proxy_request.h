@@ -2,18 +2,18 @@
 #define HTTP_PROXY_REQUEST_H
 
 #include <map>
+#include <string>
 #include "request.h"
 
 
-template<typename IterT>
-class HttpProxyRequest : public Request<IterT> {
+class HttpProxyRequest : public Request {
 public:
-    HttpProxyRequest() {}
-    virtual ~HttpProxyRequest() {}
-    virtual BuildResult BuildFromRaw(IterT begin, IterT end) {
-        return kBuildError;
-        // TODO implement me
-    }
+    HttpProxyRequest();
+    virtual ~HttpProxyRequest();
+    virtual BuildResult BuildFromRaw(char *buffer, std::size_t length);
+
+    const std::string& host() const { return host_; }
+    short port() const { return port_; }
 
 private:
     enum BuildState {
