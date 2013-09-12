@@ -13,11 +13,8 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/empty_deleter.hpp>
-//#include <boost/log/utility/formatting_ostream.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
-
-//std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, severity_level level);
 
 namespace xproxy_log {
 
@@ -31,16 +28,16 @@ namespace xproxy_log {
 
     class ExtraLogAttributes {
     public:
-        //typedef boost::log::attributes::mutable_constant<int, boost::mutex, boost::lock_guard< boost::mutex > > mutable_int_mt;
-        typedef boost::log::attributes::mutable_constant<int> mutable_int_mt;
-        //typedef boost::log::attributes::mutable_constant<std::string, boost::mutex, boost::lock_guard< boost::mutex > > mutable_string_mt;
-        typedef boost::log::attributes::mutable_constant<std::string> mutable_string_mt;
+        //typedef boost::log::attributes::mutable_constant<int, boost::mutex, boost::lock_guard< boost::mutex > > MutableIntMt;
+        typedef boost::log::attributes::mutable_constant<int> MutableIntMt;
+        //typedef boost::log::attributes::mutable_constant<std::string, boost::mutex, boost::lock_guard< boost::mutex > > MutableStringMt;
+        typedef boost::log::attributes::mutable_constant<std::string> MutableStringMt;
 
         ExtraLogAttributes() {
             init();
         }
 
-        boost::shared_ptr<mutable_string_mt> get_file_attr() const {
+        boost::shared_ptr<MutableStringMt> get_file_attr() const {
             return file_attr_;
         }
 
@@ -48,7 +45,7 @@ namespace xproxy_log {
             file_attr_->set(file);
         }
 
-        boost::shared_ptr<mutable_string_mt> get_function_attr() const {
+        boost::shared_ptr<MutableStringMt> get_function_attr() const {
             return function_attr_;
         }
 
@@ -56,7 +53,7 @@ namespace xproxy_log {
             function_attr_->set(function);
         }
 
-        boost::shared_ptr<mutable_int_mt> get_line_attr() const {
+        boost::shared_ptr<MutableIntMt> get_line_attr() const {
             return line_attr_;
         }
 
@@ -68,21 +65,21 @@ namespace xproxy_log {
         void init() {
             if(inited_) return;
 
-            file_attr_ = boost::make_shared<mutable_string_mt>("");
-            function_attr_ = boost::make_shared<mutable_string_mt>("");
-            line_attr_ = boost::make_shared<mutable_int_mt>(0);
+            file_attr_ = boost::make_shared<MutableStringMt>("");
+            function_attr_ = boost::make_shared<MutableStringMt>("");
+            line_attr_ = boost::make_shared<MutableIntMt>(0);
 
             inited_ = true;
         }
 
-        boost::shared_ptr<mutable_string_mt> file_attr_;
-        boost::shared_ptr<mutable_string_mt> function_attr_;
-        boost::shared_ptr<mutable_int_mt> line_attr_;
+        boost::shared_ptr<MutableStringMt> file_attr_;
+        boost::shared_ptr<MutableStringMt> function_attr_;
+        boost::shared_ptr<MutableIntMt> line_attr_;
 
         bool inited_;
     };
 
-    typedef boost::log::sources::severity_logger<SeverityLevel> logger;
+    typedef boost::log::sources::severity_logger<SeverityLevel> Logger;
 
     extern ExtraLogAttributes g_attrs;
 
