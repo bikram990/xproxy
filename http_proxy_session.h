@@ -7,6 +7,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/array.hpp>
+#include "http_proxy_request.h"
 
 class HttpProxySessionManager;
 
@@ -31,6 +32,8 @@ private:
     boost::asio::ip::tcp::socket local_socket_;
     boost::asio::ip::tcp::socket remote_socket_;
     HttpProxySessionManager& manager_;
+
+    HttpProxyRequest<char *> request_;
 
     boost::array<char, 4096> buffer_;
 };

@@ -1,17 +1,20 @@
 #include <iostream>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include "log.h"
 #include "http_proxy_session.h"
 #include "http_proxy_session_manager.h"
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& local_service,
                                    HttpProxySessionManager& manager)
     : remote_service_(), local_socket_(local_service),
-      remote_socket_(remote_service_), manager_(manager) {
+      remote_socket_(remote_service_), manager_(manager),
+      request_() {
+    TRACE_THIS_PTR;
 }
 
 HttpProxySession::~HttpProxySession() {
-    // do nothing here
+    TRACE_THIS_PTR;
 }
 
 boost::asio::ip::tcp::socket& HttpProxySession::LocalSocket() {
@@ -38,12 +41,14 @@ void HttpProxySession::Stop() {
 
 void HttpProxySession::HandleRead(const boost::system::error_code &e,
                                   std::size_t size) {
-    std::cout << buffer_.data() << std::endl;
-    local_socket_.async_send(boost::asio::buffer(std::string("HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello Proxy!")),
-                             boost::bind(&HttpProxySession::HandleWrite,
-                                         shared_from_this(),
-                                         boost::asio::placeholders::error));
+    // TODO dump the raw request to log according a configuration item
+    XTRACE << "Raw request: " << std::endl << buffer_.data();
+//    local_socket_.async_send(boost::asio::buffer(std::string("HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello Proxy!")),
+//                             boost::bind(&HttpProxySession::HandleWrite,
+//                                         shared_from_this(),
+//                                         boost::asio::placeholders::error));
     // TODO implement me
+    request_.BuildFromRaw(buffer_.data(), buffer_.data() + size);
 }
 
 void HttpProxySession::HandleWrite(const boost::system::error_code& e) {
