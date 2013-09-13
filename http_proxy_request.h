@@ -19,14 +19,33 @@ public:
 private:
     enum BuildState {
         kRequestStart,
-        kMethod
-        // TODO add more here...
+        kMethod,
+        kUri,
+        kProtocolH,
+        kProtocolT1,
+        kProtocolT2,
+        kProtocolP,
+        kSlash,
+        kMajorVersionStart,
+        kMajorVersion,
+        kMinorVersionStart,
+        kMinorVersion,
+        kNewLineHeader,
+        kHeaderStart,
+        kNewLineBody,
+        kHeaderLWS, // linear white space
+        kHeaderName,
+        kNewLineHeaderContinue,
+        kHeaderValue,
+        kHeaderValueSpaceBefore
     };
 
     struct Header {
         std::string name;
         std::string value;
     };
+
+    BuildResult consume(char current_byte);
 
     //typedef std::map<std::string, std::string> HeaderMap;
 
@@ -42,6 +61,7 @@ private:
     int minor_version_;
     //HeaderMap headers_;
     std::vector<Header> headers_;
+    std::string body_;
 };
 
 #endif // HTTP_PROXY_REQUEST_H
