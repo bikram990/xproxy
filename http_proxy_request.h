@@ -1,7 +1,8 @@
 #ifndef HTTP_PROXY_REQUEST_H
 #define HTTP_PROXY_REQUEST_H
 
-#include <map>
+//#include <map>
+#include <vector>
 #include <string>
 #include "request.h"
 
@@ -22,7 +23,12 @@ private:
         // TODO add more here...
     };
 
-    typedef std::map<std::string, std::string> HeaderMap;
+    struct Header {
+        std::string name;
+        std::string value;
+    };
+
+    //typedef std::map<std::string, std::string> HeaderMap;
 
     BuildState state_;
 
@@ -34,7 +40,8 @@ private:
     std::string uri_;
     int major_version_;
     int minor_version_;
-    HeaderMap headers_;
+    //HeaderMap headers_;
+    std::vector<Header> headers_;
 };
 
 #endif // HTTP_PROXY_REQUEST_H
