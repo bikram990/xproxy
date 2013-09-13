@@ -48,6 +48,8 @@ private:
     };
 
     BuildResult consume(char current_byte);
+    bool ischar(int c);
+    bool istspecial(int c);
 
     //typedef std::map<std::string, std::string> HeaderMap;
 

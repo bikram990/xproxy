@@ -134,9 +134,11 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
             state_ = kHeaderLWS;
             return CTN;
         }
-        if(!std::isalnum(current_byte)) // TODO check here
+        if(!ischar(current_byte)
+           || std::iscntrl(current_byte)
+           || istspecial(current_byte))
             return ERR;
-        if(!headers_.empty())
+        if(!headers_.empty()) {
             if(headers_.back().name == "Host") {
                 std::string& target = headers_.back().value;
                 std::string::size_type seperator = target.find(':');
@@ -148,6 +150,7 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
                     port_ = 80;
                 }
             }
+        }
         headers_.push_back(Header());
         headers_.back().name.push_back(current_byte);
         state_ = kHeaderName;
@@ -169,7 +172,9 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
             state_ = kHeaderValueSpaceBefore;
             return CTN;
         }
-        if(!std::isalnum(current_byte)) // TODO check here
+        if(!ischar(current_byte)
+           || std::iscntrl(current_byte)
+           || istspecial(current_byte))
             return ERR;
         headers_.back().name.push_back(current_byte);
         return CTN;
@@ -191,6 +196,7 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
         if(current_byte != '\n')
             return ERR;
         state_ = kHeaderStart;
+        return CTN;
     case kNewLineBody:
         if(current_byte != '\n')
             return ERR;
@@ -202,4 +208,20 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
 #undef ERR
 #undef CTN
 #undef DONE
+}
+
+inline bool HttpProxyRequest::ischar(int c) {
+  return c >= 0 && c <= 127;
+}
+
+inline bool HttpProxyRequest::istspecial(int c) {
+  switch(c) {
+  case '(': case ')': case '<': case '>': case '@':
+  case ',': case ';': case ':': case '\\': case '"':
+  case '/': case '[': case ']': case '?': case '=':
+  case '{': case '}': case ' ': case '\t':
+    return true;
+  default:
+    return false;
+  }
 }
