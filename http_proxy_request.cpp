@@ -135,8 +135,8 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
             return CTN;
         }
         if(!std::isalnum(current_byte)) // TODO check here
-        if(!headers_.empty())
             return ERR;
+        if(!headers_.empty())
             if(headers_.back().name == "Host") {
                 std::string& target = headers_.back().value;
                 std::string::size_type seperator = target.find(':');
