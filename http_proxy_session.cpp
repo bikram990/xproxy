@@ -50,8 +50,14 @@ void HttpProxySession::HandleRead(const boost::system::error_code &e,
     // TODO implement me
     ResultType result = request_.BuildFromRaw(buffer_.data(), size);
     if(result == HttpProxyRequest::kComplete) {
-        void * a = NULL;
-        manager_.dispatcher().DispatchRequest(request_.host(), request_.port(), a);
+        boost::asio::streambuf response;
+        manager_.dispatcher().DispatchRequest(request_.host(),
+                                              request_.port(),
+                                              response);
+        boost::asio::async_write(local_socket_, response,
+                                 boost::bind(&HttpProxySession::HandleWrite,
+                                             shared_from_this(),
+                                             boost::asio::placeholders::error));
     } else if(result == HttpProxyRequest::kNotComplete) {
         local_socket_.async_read_some(
                     boost::asio::buffer(buffer_),

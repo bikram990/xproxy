@@ -31,10 +31,11 @@ bool RequestDispatcher::DispatchRequest(std::string host, short port, BufT& buff
         boost::asio::connect(socket, endpoint_iterator);
 
         for(;;) {
-            boost::array<char, 128> buf;
+            //boost::array<char, 128> buf;
             boost::system::error_code error;
 
-            std::size_t length = socket.read_some(boost::asio::buffer(buf), error);
+            //std::size_t length = socket.read_some(boost::asio::buffer(buf), error);
+            boost::asio::read(socket, buffer, error);
 
             if (error == boost::asio::error::eof)
                 break; // Connection closed cleanly by peer.
