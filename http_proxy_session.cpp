@@ -53,6 +53,7 @@ void HttpProxySession::HandleRead(const boost::system::error_code &e,
         boost::asio::streambuf response;
         manager_.dispatcher().DispatchRequest(request_.host(),
                                               request_.port(),
+                                              &request_,
                                               response);
         boost::asio::async_write(local_socket_, response,
                                  boost::bind(&HttpProxySession::HandleWrite,

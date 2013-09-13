@@ -13,6 +13,8 @@ public:
     virtual ~HttpProxyRequest();
     virtual BuildResult BuildFromRaw(char *buffer, std::size_t length);
 
+    virtual boost::asio::streambuf& OutboundBuffer() { return raw_buffer_; }
+
     const std::string& host() const { return host_; }
     short port() const { return port_; }
 
@@ -53,6 +55,8 @@ private:
 
     std::string host_;
     short port_;
+
+    boost::asio::streambuf raw_buffer_;
 
     // the following contents are meaningless for a proxy
     std::string method_;
