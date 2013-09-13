@@ -1,5 +1,6 @@
 #include <cctype>
 #include <boost/lexical_cast.hpp>
+#include "log.h"
 #include "http_proxy_request.h"
 
 HttpProxyRequest::HttpProxyRequest() : state_(kRequestStart) {
@@ -9,17 +10,20 @@ HttpProxyRequest::~HttpProxyRequest() {
 }
 
 HttpProxyRequest::BuildResult HttpProxyRequest::BuildFromRaw(char *buffer, std::size_t length) {
+    std::ostream buf(&raw_buffer_);
+
     for(std::size_t i = 0; i < length; ++i) {
-        std::ostream buf(&raw_buffer_);
         buf << *buffer;
 
         HttpProxyRequest::BuildResult result = consume(*buffer++);
+
         if(result == HttpProxyRequest::kBuildError)
             return result;
-        if(result == HttpProxyRequest::kComplete)
+        if(result == HttpProxyRequest::kComplete) {
             if(i < length - 1) // there is more content, for body
                 body_ = buffer;
             return result;
+        }
     }
     return HttpProxyRequest::kNotComplete;
 }
@@ -131,8 +135,8 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
             return CTN;
         }
         if(!std::isalnum(current_byte)) // TODO check here
-            return CTN;
         if(!headers_.empty())
+            return ERR;
             if(headers_.back().name == "Host") {
                 std::string& target = headers_.back().value;
                 std::string::size_type seperator = target.find(':');

@@ -31,14 +31,25 @@ bool RequestDispatcher::DispatchRequest(const std::string& host, short port,
         tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
         tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
+        XDEBUG << "Dispatch request, host: " << host << ", port: " << port;
+        XDEBUG << "Resolved host address: " << endpoint_iterator->endpoint().address().to_string();
+
         tcp::socket socket(service_);
         boost::asio::connect(socket, endpoint_iterator);
 
+        XDEBUG << "Host connected: " << host;
+
         boost::system::error_code write_error;
+
+        XTRACE << "Writing following contents to host: " << host << "\n"
+               << request->OutboundBuffer().data().begin();
+
         std::size_t written = boost::asio::write(socket,
                                                  request->OutboundBuffer(),
                                                  write_error);
         // TODO enhance the error handling here
+
+        XDEBUG << "Data is written to host: " << host << ", start to receive data.";
 
         for(;;) {
             //boost::array<char, 128> buf;
