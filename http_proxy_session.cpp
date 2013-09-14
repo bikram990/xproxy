@@ -1,6 +1,5 @@
 #include <iostream>
 #include <boost/bind.hpp>
-#include <boost/asio.hpp>
 #include "log.h"
 #include "http_proxy_session.h"
 #include "http_proxy_session_manager.h"
@@ -8,7 +7,7 @@
 HttpProxySession::HttpProxySession(boost::asio::io_service& service,
                                    HttpProxySessionManager& manager)
     : local_socket_(service), remote_socket_(service),
-      resolver_(service), manager_(manager), request_() {
+      resolver_(service), manager_(manager) {
     TRACE_THIS_PTR;
 }
 
@@ -147,14 +146,13 @@ void HttpProxySession::HandleRemoteReadStatusLine(const boost::system::error_cod
 
     // As async_read_until may return more data beyond the delimiter, so we only process the status line
     std::istream response(&remote_buffer_);
-    std::string status_line;
-    std::getline(response, status_line);
+    std::getline(response, response_.status_line());
 
-    XDEBUG << "Status line from remote server: " << status_line;
+    XDEBUG << "Status line from remote server: " << response_.status_line();
 
-    boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), boost::asio::buffer(status_line));
+    //boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), boost::asio::buffer(status_line));
 
-    boost::asio::async_write(local_socket_, /*remote_buffer_*/boost::asio::buffer(local_buffer_),
+    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.status_line()),
                              boost::bind(&HttpProxySession::HandleLocalWrite,
                                          shared_from_this(),
                                          boost::asio::placeholders::error, false));
@@ -174,6 +172,7 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
 
     XDEBUG << "Headers from remote server: \n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
 
+    local_buffer_.fill('\0');
     boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), remote_buffer_.data());
 
     std::istream response(&remote_buffer_);
@@ -182,15 +181,22 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
     while(std::getline(response, header)) {
         // TODO here should examine whether the header is a \r character(means a blank line),
         // because async_read_until may return more data then header
+        if(header == "\r") {
+            XDEBUG << "no more headers";
+            break;
+        }
         std::string::size_type sep_idx = header.find(": ");
         if(sep_idx == std::string::npos) {
             XWARN << "Invalid header: " << header;
             continue;
         }
         std::string name = header.substr(0, sep_idx);
+        XTRACE << "header name: " << name << ", value: " << header.substr(sep_idx + 2);
         if(name != "Content-Length")
             continue;
-        body_len = boost::lexical_cast<std::size_t>(header.substr(sep_idx + 2));
+        std::string value = header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2);
+        XTRACE << "value: " << value << ", length: " << value.length();
+        body_len = boost::lexical_cast<std::size_t>(header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2));
     }
 
     boost::asio::async_write(local_socket_, /*remote_buffer_*/boost::asio::buffer(local_buffer_),
@@ -221,9 +227,9 @@ void HttpProxySession::HandleRemoteReadBody(const boost::system::error_code& e) 
     XDEBUG << "Body from remote server: \n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
 
     // TODO there is no more data from remote socket, so maybe we could use remote_buffer_ directly
-    boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), remote_buffer_.data());
+    boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
 
-    boost::asio::async_write(local_socket_, /*remote_buffer_*/boost::asio::buffer(local_buffer_),
+    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body()),
                              boost::bind(&HttpProxySession::HandleLocalWrite,
                                          shared_from_this(),
                                          boost::asio::placeholders::error, true));

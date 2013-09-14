@@ -1,13 +1,13 @@
 #ifndef HTTP_PROXY_SESSION_H
 #define HTTP_PROXY_SESSION_H
 
+#include <boost/array.hpp>
+#include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/array.hpp>
 #include "http_proxy_request.h"
+#include "http_proxy_response.h"
 
 class HttpProxySessionManager;
 
@@ -43,6 +43,7 @@ private:
     HttpProxySessionManager& manager_;
 
     HttpProxyRequest request_;
+    HttpProxyResponse response_;
 
     //boost::array<char, 4096> buffer_;
     boost::array<char, 4096> local_buffer_;
