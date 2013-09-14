@@ -51,10 +51,12 @@ void HttpProxySession::HandleRead(const boost::system::error_code &e,
     ResultType result = request_.BuildFromRaw(buffer_.data(), size);
     if(result == HttpProxyRequest::kComplete) {
         boost::asio::streambuf response;
-        manager_.dispatcher().DispatchRequest(request_.host(),
-                                              request_.port(),
-                                              &request_,
-                                              response);
+        if(!manager_.dispatcher().DispatchRequest(request_.host(),
+                                                  request_.port(),
+                                                  &request_,
+                                                  response)) {
+            XWARN << "Dispatcher returns false.";
+        }
         boost::asio::async_write(local_socket_, response,
                                  boost::bind(&HttpProxySession::HandleWrite,
                                              shared_from_this(),
