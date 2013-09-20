@@ -27,8 +27,9 @@ public:
             header_string_ += it->name;
             header_string_ += ": ";
             header_string_ += it->value;
-            header_string_ += '\n';
+            header_string_ += "\r\n";
         }
+        header_string_ += "\r\n";
         return header_string_;
     }
 
