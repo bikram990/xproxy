@@ -180,17 +180,17 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
     std::string header;
     std::size_t body_len = 0;
     while(std::getline(response, header)) {
-        // TODO here should examine whether the header is a \r character(means a blank line),
-        // because async_read_until may return more data then header
-        if(header == "\r") {
+        if(header == "\r") { // there is no more headers
             XDEBUG << "no more headers";
             break;
         }
+
         std::string::size_type sep_idx = header.find(": ");
         if(sep_idx == std::string::npos) {
             XWARN << "Invalid header: " << header;
             continue;
         }
+
         std::string name = header.substr(0, sep_idx);
         std::string value = header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2); // remove the last \r
         response_.AddHeader(name, value);
