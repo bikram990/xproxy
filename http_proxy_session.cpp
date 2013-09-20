@@ -222,17 +222,25 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
 
 void HttpProxySession::HandleRemoteReadBody(const boost::system::error_code& e) {
     if(e) {
-        XWARN << "Failed to read body from remote server, message: " << e.message();
-        Stop();
-        return;
+        if(e == boost::asio::error::eof)
+            XDEBUG << "The remote peer closed the connection.";
+        else {
+            XWARN << "Failed to read body from remote server, message: " << e.message();
+            Stop();
+            return;
+        }
     }
 
-    XDEBUG << "Body from remote server: \n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
+    XDEBUG << "Body from remote server, size: " << remote_buffer_.size()
+           << ", content:\n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
 
     // TODO there is no more data from remote socket, so maybe we could use remote_buffer_ directly
-    boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
+    std::size_t copied = boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
 
-    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body()),
+    XDEBUG << "Body copied from raw stream to response, copied: " << copied
+           << ", response body size: " << response_.body().size();
+
+    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
                              boost::bind(&HttpProxySession::HandleLocalWrite,
                                          shared_from_this(),
                                          boost::asio::placeholders::error, true));
