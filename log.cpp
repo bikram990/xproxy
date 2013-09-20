@@ -24,16 +24,15 @@ void InitLogging() {
     namespace expr = boost::log::expressions;
 
     logging::formatter formatter =
-        expr::stream << expr::attr<unsigned int>("LineID") << ": "
-                     << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S") << " ["
+        expr::stream << "[" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S") << "] ["
                      << expr::attr<SeverityLevel>("Severity") << "] ["
                      << expr::attr<attrs::current_process_id::value_type>("ProcessID")
                      << ":"
                      << expr::attr<attrs::current_thread_id::value_type>("ThreadID")
                      << "] ["
-                     << expr::attr<std::string>("Function")
+                     << expr::attr<std::string>("File")
                      << ":"
-                     << expr::attr<std::string >("File")
+                     << expr::attr<std::string >("Function") << "()"
                      << ":"
                      << expr::attr< int >("Line")
                      << "] "
