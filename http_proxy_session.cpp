@@ -214,7 +214,9 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
         remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         return;
     }
-    boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(body_len),
+
+    response_.SetBodyLength(body_len);
+    boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1/*body_len*/),
                             boost::bind(&HttpProxySession::HandleRemoteReadBody,
                                         shared_from_this(),
                                         boost::asio::placeholders::error));
@@ -231,19 +233,32 @@ void HttpProxySession::HandleRemoteReadBody(const boost::system::error_code& e) 
         }
     }
 
-    XDEBUG << "Body from remote server, size: " << remote_buffer_.size()
-           << ", content:\n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
-
-    // TODO there is no more data from remote socket, so maybe we could use remote_buffer_ directly
+    std::size_t read = remote_buffer_.size();
     std::size_t copied = boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
 
+    XDEBUG << "Body from remote server, size: " << read
+           << ", content:\n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
     XDEBUG << "Body copied from raw stream to response, copied: " << copied
            << ", response body size: " << response_.body().size();
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
                              boost::bind(&HttpProxySession::HandleLocalWrite,
                                          shared_from_this(),
-                                         boost::asio::placeholders::error, true));
-    boost::system::error_code ec;
-    remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                                         boost::asio::placeholders::error, read >= response_.GetBodyLength()));
+    if(copied < read) {
+        // TODO the response's body buffer is less than read content, try write again
+    }
+
+    remote_buffer_.consume(read); // the read bytes are consumed
+
+    if(read < response_.GetBodyLength()) { // there is more content
+        response_.SetBodyLength(response_.GetBodyLength() - read);
+        boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1/*body_len*/),
+                                boost::bind(&HttpProxySession::HandleRemoteReadBody,
+                                            shared_from_this(),
+                                            boost::asio::placeholders::error));
+    } else {
+        boost::system::error_code ec;
+        remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    }
 }

@@ -21,6 +21,12 @@ public:
         headers_.push_back(h);
     }
 
+    void SetBodyLength(std::size_t length) {
+        body_length_ = length;
+    }
+
+    std::size_t GetBodyLength() { return body_length_; }
+
     std::string& headers() {
         header_string_ = "";
         for(std::vector<Header>::iterator it = headers_.begin(); it != headers_.end(); ++it) {
@@ -43,6 +49,7 @@ private:
     std::vector<Header> headers_;
     std::string header_string_;
     boost::array<char, 4096> body_;
+    std::size_t body_length_;
 };
 
 #endif // HTTP_PROXY_RESPONSE_H
