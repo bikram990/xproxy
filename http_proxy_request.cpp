@@ -111,7 +111,7 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
         state_ = kMinorVersion;
         return CTN;
     case kMinorVersion:
-        if(current_byte = '\r') {
+        if(current_byte == '\r') {
             state_ = kNewLineHeader;
             return CTN;
         }
