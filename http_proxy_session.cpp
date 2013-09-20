@@ -80,7 +80,7 @@ void HttpProxySession::HandleLocalWrite(const boost::system::error_code& e,
         return;
     }
 
-    XDEBUG << "Content written to local socket: \n" << boost::asio::buffer_cast<const char *>(boost::asio::buffer(local_buffer_));
+    XDEBUG << "Content written to local socket.";
 
     if(!finished)
         return;
@@ -147,6 +147,7 @@ void HttpProxySession::HandleRemoteReadStatusLine(const boost::system::error_cod
     // As async_read_until may return more data beyond the delimiter, so we only process the status line
     std::istream response(&remote_buffer_);
     std::getline(response, response_.status_line());
+    response_.status_line() += '\n'; // append the missing newline character
 
     XDEBUG << "Status line from remote server: " << response_.status_line();
 
@@ -172,8 +173,8 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
 
     XDEBUG << "Headers from remote server: \n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
 
-    local_buffer_.fill('\0');
-    boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), remote_buffer_.data());
+    //local_buffer_.fill('\0');
+    //boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), remote_buffer_.data());
 
     std::istream response(&remote_buffer_);
     std::string header;
@@ -191,15 +192,17 @@ void HttpProxySession::HandleRemoteReadHeaders(const boost::system::error_code& 
             continue;
         }
         std::string name = header.substr(0, sep_idx);
-        XTRACE << "header name: " << name << ", value: " << header.substr(sep_idx + 2);
+        std::string value = header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2); // remove the last \r
+        response_.AddHeader(name, value);
+
+        XTRACE << "header name: " << name << ", value: " << value;
+
         if(name != "Content-Length")
             continue;
-        std::string value = header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2);
-        XTRACE << "value: " << value << ", length: " << value.length();
-        body_len = boost::lexical_cast<std::size_t>(header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2));
+        body_len = boost::lexical_cast<std::size_t>(value);
     }
 
-    boost::asio::async_write(local_socket_, /*remote_buffer_*/boost::asio::buffer(local_buffer_),
+    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.headers()),///*remote_buffer_*/boost::asio::buffer(local_buffer_),
                              boost::bind(&HttpProxySession::HandleLocalWrite,
                                          shared_from_this(),
                                          boost::asio::placeholders::error,
