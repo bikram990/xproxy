@@ -1,11 +1,11 @@
-#ifndef HTTP_PROXY_REQUEST_H
-#define HTTP_PROXY_REQUEST_H
+#ifndef HTTP_REQUEST_H
+#define HTTP_REQUEST_H
 
 #include <vector>
 #include <string>
 
 
-class HttpProxyRequest {
+class HttpRequest {
 public:
     enum BuildResult {
         kBuildError = 0,
@@ -14,8 +14,8 @@ public:
         kComplete
     };
 
-    HttpProxyRequest();
-    ~HttpProxyRequest();
+    HttpRequest();
+    ~HttpRequest();
     BuildResult BuildFromRaw(char *buffer, std::size_t length);
 
     boost::asio::streambuf& OutboundBuffer() { return raw_buffer_; }
@@ -75,4 +75,4 @@ private:
     std::string body_;
 };
 
-#endif // HTTP_PROXY_REQUEST_H
+#endif // HTTP_REQUEST_H

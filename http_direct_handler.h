@@ -2,7 +2,7 @@
 #define HTTP_DIRECT_HANDLER_H
 
 #include <boost/asio.hpp>
-#include "http_proxy_request.h"
+#include "http_request.h"
 #include "http_proxy_response.h"
 #include "request_handler.h"
 
@@ -11,7 +11,7 @@ class HttpProxySession;
 
 class HttpDirectHandler : public RequestHandler {
 public:
-    typedef HttpProxyRequest::BuildResult ResultType;
+    typedef HttpRequest::BuildResult ResultType;
 
     HttpDirectHandler(HttpProxySession& session,
                       boost::asio::io_service& service,
@@ -38,7 +38,7 @@ private:
 
     boost::asio::streambuf remote_buffer_;
 
-    HttpProxyRequest request_;
+    HttpRequest request_;
     HttpProxyResponse response_;
 };
 

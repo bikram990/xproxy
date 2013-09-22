@@ -22,9 +22,9 @@ void HttpDirectHandler::HandleRequest(char *data, std::size_t size) {
            << ":" << local_socket_.remote_endpoint().port()
            << ":\n" << data;
     ResultType result = request_.BuildFromRaw(data, size);
-    if(result == HttpProxyRequest::kComplete) {
+    if(result == HttpRequest::kComplete) {
         ResolveRemote();
-    } else if(result == HttpProxyRequest::kNotComplete) {
+    } else if(result == HttpRequest::kNotComplete) {
         XWARN << "Fuck, the request parsing seems failed, or maybe a https connection...";
         session_.Terminate();
     } else {

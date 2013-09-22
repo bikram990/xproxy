@@ -2,41 +2,41 @@
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include "log.h"
-#include "http_proxy_request.h"
+#include "http_request.h"
 
-HttpProxyRequest::HttpProxyRequest() : state_(kRequestStart) {
+HttpRequest::HttpRequest() : state_(kRequestStart) {
 }
 
-HttpProxyRequest::~HttpProxyRequest() {
+HttpRequest::~HttpRequest() {
 }
 
-HttpProxyRequest::BuildResult HttpProxyRequest::BuildFromRaw(char *buffer, std::size_t length) {
+HttpRequest::BuildResult HttpRequest::BuildFromRaw(char *buffer, std::size_t length) {
     std::ostream buf(&raw_buffer_);
 
     for(std::size_t i = 0; i < length; ++i) {
         buf << *buffer;
 
-        HttpProxyRequest::BuildResult result = consume(*buffer++);
+        HttpRequest::BuildResult result = consume(*buffer++);
 
-        if(result == HttpProxyRequest::kBuildError)
+        if(result == HttpRequest::kBuildError)
             return result;
-        if(result == HttpProxyRequest::kComplete) {
+        if(result == HttpRequest::kComplete) {
             if(i < length - 1) // there is more content, for body
                 body_ = buffer;
             return result;
         }
     }
-    return HttpProxyRequest::kNotComplete;
+    return HttpRequest::kNotComplete;
 }
 
 /*
  * This function is almost copied from the URL below, I modified a little.
  * http://www.boost.org/doc/libs/1_54_0/doc/html/boost_asio/example/cpp03/http/server/request_parser.cpp
  */
-HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
-#define ERR  HttpProxyRequest::kBuildError  // error
-#define CTN  HttpProxyRequest::kNotComplete // continue
-#define DONE HttpProxyRequest::kComplete    // complete
+HttpRequest::BuildResult HttpRequest::consume(char current_byte) {
+#define ERR  HttpRequest::kBuildError  // error
+#define CTN  HttpRequest::kNotComplete // continue
+#define DONE HttpRequest::kComplete    // complete
 
     switch(state_) {
     case kRequestStart:
@@ -211,11 +211,11 @@ HttpProxyRequest::BuildResult HttpProxyRequest::consume(char current_byte) {
 #undef DONE
 }
 
-inline bool HttpProxyRequest::ischar(int c) {
+inline bool HttpRequest::ischar(int c) {
   return c >= 0 && c <= 127;
 }
 
-inline bool HttpProxyRequest::istspecial(int c) {
+inline bool HttpRequest::istspecial(int c) {
   switch(c) {
   case '(': case ')': case '<': case '>': case '@':
   case ',': case ';': case ':': case '\\': case '"':

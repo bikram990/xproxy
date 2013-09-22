@@ -7,7 +7,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "http_direct_handler.h"
-#include "http_proxy_request.h"
+#include "http_request.h"
 #include "http_proxy_response.h"
 #include "request_handler.h"
 
