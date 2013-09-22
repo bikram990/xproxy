@@ -1,4 +1,5 @@
 #include <cctype>
+#include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include "log.h"
 #include "http_proxy_request.h"

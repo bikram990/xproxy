@@ -1,19 +1,24 @@
 #ifndef HTTP_PROXY_REQUEST_H
 #define HTTP_PROXY_REQUEST_H
 
-//#include <map>
 #include <vector>
 #include <string>
-#include "request.h"
 
 
-class HttpProxyRequest : public Request {
+class HttpProxyRequest {
 public:
-    HttpProxyRequest();
-    virtual ~HttpProxyRequest();
-    virtual BuildResult BuildFromRaw(char *buffer, std::size_t length);
+    enum BuildResult {
+        kBuildError = 0,
+        kNotStart, // TODO this is not used
+        kNotComplete,
+        kComplete
+    };
 
-    virtual boost::asio::streambuf& OutboundBuffer() { return raw_buffer_; }
+    HttpProxyRequest();
+    ~HttpProxyRequest();
+    BuildResult BuildFromRaw(char *buffer, std::size_t length);
+
+    boost::asio::streambuf& OutboundBuffer() { return raw_buffer_; }
 
     const std::string& host() const { return host_; }
     short port() const { return port_; }
