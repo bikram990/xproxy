@@ -9,6 +9,7 @@
 #include "http_direct_handler.h"
 #include "http_proxy_request.h"
 #include "http_proxy_response.h"
+#include "request_handler.h"
 
 
 class HttpProxySessionManager;
@@ -36,7 +37,7 @@ private:
     boost::array<char, 4096> local_buffer_;
 
     // TODO make the handler a generic handler after all types implemented
-    boost::shared_ptr<HttpDirectHandler> handler_;
+    boost::shared_ptr<RequestHandler> handler_;
 };
 
 typedef boost::shared_ptr<HttpProxySession> HttpProxySessionPtr;

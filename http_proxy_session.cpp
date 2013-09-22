@@ -1,7 +1,7 @@
 #include <boost/bind.hpp>
-#include "log.h"
 #include "http_proxy_session.h"
 #include "http_proxy_session_manager.h"
+#include "log.h"
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& service,
                                    HttpProxySessionManager& manager)
@@ -37,6 +37,7 @@ void HttpProxySession::Start() {
 void HttpProxySession::HandleLocalRead(const boost::system::error_code &e,
                                        std::size_t size) {
     if(!handler_)
-        handler_ = boost::make_shared<HttpDirectHandler>(*this, service_, local_socket_, remote_socket_);
-    handler_->HandleRequest(local_buffer_.data(), size);
+        handler_.reset(RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_));
+    if(handler_)
+        handler_->HandleRequest(local_buffer_.data(), size);
 }

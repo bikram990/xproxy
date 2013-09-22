@@ -4,11 +4,12 @@
 #include <boost/asio.hpp>
 #include "http_proxy_request.h"
 #include "http_proxy_response.h"
+#include "request_handler.h"
 
 
 class HttpProxySession;
 
-class HttpDirectHandler {
+class HttpDirectHandler : public RequestHandler {
 public:
     typedef HttpProxyRequest::BuildResult ResultType;
 
