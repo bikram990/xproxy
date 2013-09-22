@@ -6,49 +6,37 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include "http_direct_handler.h"
 #include "http_proxy_request.h"
 #include "http_proxy_response.h"
 
-class HttpProxySessionManager;
 
+class HttpProxySessionManager;
 
 class HttpProxySession
         : public boost::enable_shared_from_this<HttpProxySession>,
           private boost::noncopyable {
 public:
-    typedef HttpProxyRequest::BuildResult ResultType;
-
     HttpProxySession(boost::asio::io_service& service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
-    boost::asio::ip::tcp::socket& LocalSocket();
-    boost::asio::ip::tcp::socket& RemoteSocket();
+    boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
     void Start();
     void Stop();
+    void Terminate();
 
 private:
     void HandleLocalRead(const boost::system::error_code& e, std::size_t size);
-    void HandleLocalWrite(const boost::system::error_code& e, bool finished);
 
-    void ResolveRemote();
-    void HandleConnect(const boost::system::error_code& e);
-    void HandleRemoteWrite(const boost::system::error_code& e);
-    void HandleRemoteReadStatusLine(const boost::system::error_code& e);
-    void HandleRemoteReadHeaders(const boost::system::error_code& e);
-    void HandleRemoteReadBody(const boost::system::error_code& e);
-
+    boost::asio::io_service& service_;
     boost::asio::ip::tcp::socket local_socket_;
     boost::asio::ip::tcp::socket remote_socket_;
-    boost::asio::ip::tcp::resolver resolver_; // to resolve remote address
     HttpProxySessionManager& manager_;
 
-    HttpProxyRequest request_;
-    HttpProxyResponse response_;
-
-    //boost::array<char, 4096> buffer_;
     boost::array<char, 4096> local_buffer_;
-    //boost::array<char, 4096> remote_buffer_;
-    boost::asio::streambuf remote_buffer_;
+
+    // TODO make the handler a generic handler after all types implemented
+    boost::shared_ptr<HttpDirectHandler> handler_;
 };
 
 typedef boost::shared_ptr<HttpProxySession> HttpProxySessionPtr;
