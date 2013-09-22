@@ -16,9 +16,9 @@ RequestHandler *RequestHandler::CreateHandler(char *data, std::size_t size,
                                               boost::asio::ip::tcp::socket &local_socket,
                                               boost::asio::ip::tcp::socket &remote_socket) {
     if(!data)
-        return nullptr;
+        return NULL;//nullptr;
     if(data[0] == 'C' && data[1] == 'O' && data[2] == 'N')
-        return nullptr; // TODO this is https connection, implement it later
+        return NULL;//nullptr; // TODO this is https connection, implement it later
     // TODO may add socks handler here
     else
         return CreateHttpHandler(data, size, session, service, local_socket, remote_socket);
