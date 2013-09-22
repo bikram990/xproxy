@@ -1,15 +1,15 @@
-#ifndef HTTP_PROXY_RESPONSE_H
-#define HTTP_PROXY_RESPONSE_H
+#ifndef HTTP_RESPONSE_H
+#define HTTP_RESPONSE_H
 
 #include <string>
 #include <vector>
 #include <boost/array.hpp>
 
 
-class HttpProxyResponse {
+class HttpResponse {
 public:
-    HttpProxyResponse();
-    ~HttpProxyResponse();
+    HttpResponse();
+    ~HttpResponse();
 
     std::string& status_line() { return status_line_; }
     boost::array<char, 4096>& body() { return body_; }
@@ -52,4 +52,4 @@ private:
     std::size_t body_length_;
 };
 
-#endif // HTTP_PROXY_RESPONSE_H
+#endif // HTTP_RESPONSE_H

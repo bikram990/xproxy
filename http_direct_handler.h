@@ -3,7 +3,7 @@
 
 #include <boost/asio.hpp>
 #include "http_request.h"
-#include "http_proxy_response.h"
+#include "http_response.h"
 #include "request_handler.h"
 
 
@@ -39,7 +39,7 @@ private:
     boost::asio::streambuf remote_buffer_;
 
     HttpRequest request_;
-    HttpProxyResponse response_;
+    HttpResponse response_;
 };
 
 #endif // HTTP_DIRECT_HANDLER_H
