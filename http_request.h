@@ -48,6 +48,7 @@ private:
     };
 
     BuildResult ConsumeInitialLine(const std::string& line);
+    BuildResult ConsumeHeaderLine(const std::string& line);
     BuildResult consume(char current_byte);
     bool ischar(int c);
     bool istspecial(int c);
@@ -59,13 +60,12 @@ private:
 
     boost::asio::streambuf raw_buffer_;
 
-    // the following contents are meaningless for a proxy
     std::string method_;
     std::string uri_;
     int major_version_;
     int minor_version_;
-    //HeaderMap headers_;
     std::vector<HttpHeader> headers_;
+    std::size_t body_length_;
     std::string body_;
 };
 
