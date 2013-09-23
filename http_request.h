@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include "http_header.h"
 
 
 class HttpRequest {
@@ -47,16 +48,9 @@ private:
         kHeaderValueSpaceBefore
     };
 
-    struct Header {
-        std::string name;
-        std::string value;
-    };
-
     BuildResult consume(char current_byte);
     bool ischar(int c);
     bool istspecial(int c);
-
-    //typedef std::map<std::string, std::string> HeaderMap;
 
     BuildState state_;
 
@@ -71,7 +65,7 @@ private:
     int major_version_;
     int minor_version_;
     //HeaderMap headers_;
-    std::vector<Header> headers_;
+    std::vector<HttpHeader> headers_;
     std::string body_;
 };
 

@@ -152,7 +152,7 @@ HttpRequest::BuildResult HttpRequest::consume(char current_byte) {
                 }
             }
         }
-        headers_.push_back(Header());
+        headers_.push_back(HttpHeader());
         headers_.back().name.push_back(current_byte);
         state_ = kHeaderName;
         return CTN;
