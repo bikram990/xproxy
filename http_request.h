@@ -18,7 +18,7 @@ public:
     ~HttpRequest();
     BuildResult BuildRequest(char *buffer, std::size_t length);
 
-    boost::asio::streambuf& OutboundBuffer() { return raw_buffer_; }
+    boost::asio::streambuf& OutboundBuffer();
 
     const std::string& host() const { return host_; }
     short port() const { return port_; }
@@ -47,11 +47,21 @@ private:
         kHeaderValueSpaceBefore
     };
 
+    struct HeaderFinder {
+        std::string name;
+        HeaderFinder(const char *name) : name(name) {}
+        bool operator()(const HttpHeader& header) {
+            return header.name == name;
+        }
+    };
+
     BuildResult ConsumeInitialLine(const std::string& line);
     BuildResult ConsumeHeaderLine(const std::string& line);
     BuildResult consume(char current_byte);
     bool ischar(int c);
     bool istspecial(int c);
+
+    const std::string FindHeader(const char *name);
 
     BuildState state_;
 

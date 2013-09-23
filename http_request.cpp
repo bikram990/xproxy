@@ -13,6 +13,24 @@ HttpRequest::~HttpRequest() {
     TRACE_THIS_PTR;
 }
 
+boost::asio::streambuf& HttpRequest::OutboundBuffer() {
+    std::ostream buf(&raw_buffer_);
+
+    buf << method_ << ' ' << uri_ << ' '
+        << "HTTP/" << major_version_ << '.' << minor_version_ << "\r\n";
+
+    for(std::vector<HttpHeader>::iterator it = headers_.begin();
+        it != headers_.end(); ++it)
+        buf << it->name << ": " << it->value << "\r\n";
+
+    buf << "\r\n";
+
+    if(body_length_ > 0)
+        buf << body_;
+
+    return raw_buffer_;
+}
+
 HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t length) {
     // TODO should we care if there is null character in buffer?
     std::stringstream req(buffer);
@@ -43,29 +61,36 @@ HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t len
             return kNotComplete;
         }
     }
-    if(ret = kNotComplete) {// indicate not all headers are received
+    if(ret == kNotComplete) {// indicate not all headers are received
         XDEBUG << "Headers are incomplete.";
         return kNotComplete;
     }
 
-    struct ContentLengthFinder {
-        bool operator()(const HttpHeader& header) {
-            return header.name == "Content-Length";
-        }
-    };
-
     if(method_ == "POST") {
-        std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
-                                                            headers_.end(),
-                                                            ContentLengthFinder());
-        if(it != headers_.end())
-            body_length_ = boost::lexical_cast<std::size_t>(it->value);
+        const std::string len = FindHeader("Content-Length");
+        if(!len.empty())
+            body_length_ = boost::lexical_cast<std::size_t>(len);
         if(body_length_ > 0) {
             if(!std::getline(req, body_) || body_.length() < body_length_) {
                 XDEBUG << "Incomplete body.";
                 return kNotComplete;
             }
         }
+    }
+
+    const std::string host = FindHeader("Host");
+    if(host.empty()) {
+        XERROR << "No valid host found.";
+        return kBadRequest;
+    }
+
+    std::string::size_type sep = host.find(':');
+    if(sep != std::string::npos) {
+        host_ = host.substr(0, sep);
+        port_ = boost::lexical_cast<short>(host.substr(sep + 1));
+    } else {
+        host_ = host;
+        port_ = 80;
     }
 
     return kComplete;
@@ -109,6 +134,13 @@ HttpRequest::BuildResult HttpRequest::ConsumeHeaderLine(const std::string &line)
     headers_.push_back(HttpHeader(name, value));
 
     return kComplete;
+}
+
+const std::string HttpRequest::FindHeader(const char *name) {
+    std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
+                                                        headers_.end(),
+                                                        HeaderFinder(name));
+    return it->value;
 }
 
 /*
