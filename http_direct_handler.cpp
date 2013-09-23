@@ -1,3 +1,4 @@
+#include <boost/algorithm/string.hpp>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include "log.h"
@@ -90,8 +91,6 @@ void HttpDirectHandler::HandleRemoteReadStatusLine(const boost::system::error_co
 
     XDEBUG << "Status line from remote server: " << response_.status_line();
 
-    //boost::asio::buffer_copy(boost::asio::buffer(local_buffer_), boost::asio::buffer(status_line));
-
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.status_line()),
                              boost::bind(&HttpDirectHandler::HandleLocalWrite,
                                          this,
@@ -135,6 +134,7 @@ void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code&
 
         if(name != "Content-Length")
             continue;
+        boost::algorithm::trim(value);
         body_len = boost::lexical_cast<std::size_t>(value);
     }
 
