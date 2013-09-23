@@ -25,10 +25,10 @@ RequestHandler *RequestHandler::CreateHandler(char *data, std::size_t size,
 }
 
 RequestHandler *RequestHandler::CreateHttpHandler(char *data, std::size_t size,
-                                              HttpProxySession &session,
-                                              boost::asio::io_service &service,
-                                              boost::asio::ip::tcp::socket &local_socket,
-                                              boost::asio::ip::tcp::socket &remote_socket) {
+                                                  HttpProxySession &session,
+                                                  boost::asio::io_service &service,
+                                                  boost::asio::ip::tcp::socket &local_socket,
+                                                  boost::asio::ip::tcp::socket &remote_socket) {
     // TODO add logic here after HttpProxyHandler is implemented
     return new HttpDirectHandler(session, service, local_socket, remote_socket);
 }
