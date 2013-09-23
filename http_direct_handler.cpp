@@ -22,7 +22,7 @@ void HttpDirectHandler::HandleRequest(char *data, std::size_t size) {
     XTRACE << "Raw request from " << local_socket_.remote_endpoint().address()
            << ":" << local_socket_.remote_endpoint().port()
            << ":\n" << data;
-    ResultType result = request_.BuildFromRaw(data, size);
+    ResultType result = request_.BuildRequest(data, size);
     if(result == HttpRequest::kComplete) {
         ResolveRemote();
     } else if(result == HttpRequest::kNotComplete) {

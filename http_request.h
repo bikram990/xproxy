@@ -9,15 +9,14 @@
 class HttpRequest {
 public:
     enum BuildResult {
-        kBuildError = 0,
-        kNotStart, // TODO this is not used
-        kNotComplete,
-        kComplete
+        kBadRequest = 0,
+        kNotComplete, // the request is incomplete, need to read more data from socket
+        kComplete // the request is complete
     };
 
     HttpRequest();
     ~HttpRequest();
-    BuildResult BuildFromRaw(char *buffer, std::size_t length);
+    BuildResult BuildRequest(char *buffer, std::size_t length);
 
     boost::asio::streambuf& OutboundBuffer() { return raw_buffer_; }
 
@@ -48,6 +47,7 @@ private:
         kHeaderValueSpaceBefore
     };
 
+    BuildResult ConsumeInitialLine(const std::string& line);
     BuildResult consume(char current_byte);
     bool ischar(int c);
     bool istspecial(int c);

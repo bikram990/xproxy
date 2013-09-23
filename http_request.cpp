@@ -1,4 +1,5 @@
 #include <cctype>
+#include <sstream>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include "log.h"
@@ -10,23 +11,52 @@ HttpRequest::HttpRequest() : state_(kRequestStart) {
 HttpRequest::~HttpRequest() {
 }
 
-HttpRequest::BuildResult HttpRequest::BuildFromRaw(char *buffer, std::size_t length) {
-    std::ostream buf(&raw_buffer_);
+HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t length) {
+    // TODO should we care if there is null character in buffer?
+    std::stringstream req(buffer);
+    std::string line;
 
-    for(std::size_t i = 0; i < length; ++i) {
-        buf << *buffer;
+    if(!std::getline(req, line)) {
+        XDEBUG << "This request is incomplete.";
+        return kNotComplete;
+    }
 
-        HttpRequest::BuildResult result = consume(*buffer++);
+    if(ConsumeInitialLine(line) == kBadRequest) {
+        XERROR << "Invalid initial line: " << line;
+        return kBadRequest;
+    }
 
-        if(result == HttpRequest::kBuildError)
-            return result;
-        if(result == HttpRequest::kComplete) {
-            if(i < length - 1) // there is more content, for body
-                body_ = buffer;
-            return result;
-        }
+    while(std::getline(req, line)) {
+        if(line == "\r") // no more headers
+            break;
+        // TODO continue coding here
     }
     return HttpRequest::kNotComplete;
+}
+
+HttpRequest::BuildResult HttpRequest::ConsumeInitialLine(const std::string& line) {
+    std::stringstream ss(line);
+
+    if(!std::getline(ss, method_, ' '))
+        return kBadRequest;
+
+    if(!std::getline(ss, uri_, ' '))
+        return kBadRequest;
+
+    std::string item;
+
+    if(!std::getline(ss, item, '/')) // the "HTTP" string, do nothing here
+        return kBadRequest;
+
+    if(!std::getline(ss, item, '.')) // http major version
+        return kBadRequest;
+    major_version_ = boost::lexical_cast<int>(item);
+
+    if(!std::getline(ss, item, '\r')) // remember there is a \r character at the end of line
+        return kBadRequest;
+    minor_version_ = boost::lexical_cast<int>(item);
+
+    return kComplete;
 }
 
 /*
@@ -34,7 +64,7 @@ HttpRequest::BuildResult HttpRequest::BuildFromRaw(char *buffer, std::size_t len
  * http://www.boost.org/doc/libs/1_54_0/doc/html/boost_asio/example/cpp03/http/server/request_parser.cpp
  */
 HttpRequest::BuildResult HttpRequest::consume(char current_byte) {
-#define ERR  HttpRequest::kBuildError  // error
+#define ERR  HttpRequest::kBadRequest  // error
 #define CTN  HttpRequest::kNotComplete // continue
 #define DONE HttpRequest::kComplete    // complete
 
