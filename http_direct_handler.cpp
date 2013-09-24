@@ -48,36 +48,36 @@ void HttpDirectHandler::ResolveRemote() {
     XDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
     boost::asio::async_connect(remote_socket_, endpoint_iterator,
-                               boost::bind(&HttpDirectHandler::HandleConnect,
+                               boost::bind(&HttpDirectHandler::OnRemoteConnected,
                                            this,
                                            boost::asio::placeholders::error));
 }
 
-void HttpDirectHandler::HandleConnect(const boost::system::error_code& e) {
+void HttpDirectHandler::OnRemoteConnected(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to connect to remote server, message: " << e.message();
         session_.Stop();
         return;
     }
     boost::asio::async_write(remote_socket_, request_.OutboundBuffer(),
-                             boost::bind(&HttpDirectHandler::HandleRemoteWrite,
+                             boost::bind(&HttpDirectHandler::OnRemoteDataSent,
                                          this,
                                          boost::asio::placeholders::error));
 }
 
-void HttpDirectHandler::HandleRemoteWrite(const boost::system::error_code& e) {
+void HttpDirectHandler::OnRemoteDataSent(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to write request to remote server, message: " << e.message();
         session_.Stop();
         return;
     }
     boost::asio::async_read_until(remote_socket_, remote_buffer_, "\r\n",
-                                  boost::bind(&HttpDirectHandler::HandleRemoteReadStatusLine,
+                                  boost::bind(&HttpDirectHandler::OnRemoteStatusLineReceived,
                                               this,
                                               boost::asio::placeholders::error));
 }
 
-void HttpDirectHandler::HandleRemoteReadStatusLine(const boost::system::error_code& e) {
+void HttpDirectHandler::OnRemoteStatusLineReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read status line from remote server, message: " << e.message();
         session_.Stop();
@@ -92,17 +92,17 @@ void HttpDirectHandler::HandleRemoteReadStatusLine(const boost::system::error_co
     XDEBUG << "Status line from remote server: " << response_.status_line();
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.status_line()),
-                             boost::bind(&HttpDirectHandler::HandleLocalWrite,
+                             boost::bind(&HttpDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error, false));
 
     boost::asio::async_read_until(remote_socket_, remote_buffer_, "\r\n\r\n",
-                                  boost::bind(&HttpDirectHandler::HandleRemoteReadHeaders,
+                                  boost::bind(&HttpDirectHandler::OnRemoteHeadersReceived,
                                               this,
                                               boost::asio::placeholders::error));
 }
 
-void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code& e) {
+void HttpDirectHandler::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read response header from remote server, message: " << e.message();
         session_.Stop();
@@ -148,14 +148,14 @@ void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code&
     }
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.headers()),
-                             boost::bind(&HttpDirectHandler::HandleLocalWrite,
+                             boost::bind(&HttpDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error,
                                          !chunked_encoding && body_len <= 0));
 
     if(chunked_encoding) {
         boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
-                                boost::bind(&HttpDirectHandler::HandleRemoteReadChunk,
+                                boost::bind(&HttpDirectHandler::OnRemoteChunksReceived,
                                             this,
                                             boost::asio::placeholders::error));
         return;
@@ -170,12 +170,12 @@ void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code&
 
     response_.SetBodyLength(body_len);
     boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
-                            boost::bind(&HttpDirectHandler::HandleRemoteReadBody,
+                            boost::bind(&HttpDirectHandler::OnRemoteBodyReceived,
                                         this,
                                         boost::asio::placeholders::error));
 }
 
-void HttpDirectHandler::HandleRemoteReadChunk(const boost::system::error_code& e) {
+void HttpDirectHandler::OnRemoteChunksReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read chunk from remote server, message: " << e.message();
         session_.Stop();
@@ -201,13 +201,13 @@ void HttpDirectHandler::HandleRemoteReadChunk(const boost::system::error_code& e
             finished = true;
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
-                             boost::bind(&HttpDirectHandler::HandleLocalWrite,
+                             boost::bind(&HttpDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error, finished));
 
     if(!finished) {
         boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
-                                boost::bind(&HttpDirectHandler::HandleRemoteReadChunk,
+                                boost::bind(&HttpDirectHandler::OnRemoteChunksReceived,
                                             this,
                                             boost::asio::placeholders::error));
     } else {
@@ -216,7 +216,7 @@ void HttpDirectHandler::HandleRemoteReadChunk(const boost::system::error_code& e
     }
 }
 
-void HttpDirectHandler::HandleRemoteReadBody(const boost::system::error_code& e) {
+void HttpDirectHandler::OnRemoteBodyReceived(const boost::system::error_code& e) {
     if(e) {
         if(e == boost::asio::error::eof)
             XDEBUG << "The remote peer closed the connection.";
@@ -236,7 +236,7 @@ void HttpDirectHandler::HandleRemoteReadBody(const boost::system::error_code& e)
            << ", response body size: " << response_.body().size();
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
-                             boost::bind(&HttpDirectHandler::HandleLocalWrite,
+                             boost::bind(&HttpDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error, read >= response_.GetBodyLength()));
     if(copied < read) {
@@ -248,7 +248,7 @@ void HttpDirectHandler::HandleRemoteReadBody(const boost::system::error_code& e)
     if(read < response_.GetBodyLength()) { // there is more content
         response_.SetBodyLength(response_.GetBodyLength() - read);
         boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1/*body_len*/),
-                                boost::bind(&HttpDirectHandler::HandleRemoteReadBody,
+                                boost::bind(&HttpDirectHandler::OnRemoteBodyReceived,
                                             this,
                                             boost::asio::placeholders::error));
     } else {
@@ -257,7 +257,7 @@ void HttpDirectHandler::HandleRemoteReadBody(const boost::system::error_code& e)
     }
 }
 
-void HttpDirectHandler::HandleLocalWrite(const boost::system::error_code& e,
+void HttpDirectHandler::OnLocalDataSent(const boost::system::error_code& e,
                                          bool finished) {
     if(e) {
         XWARN << "Failed to write response to local socket, message: " << e.message();

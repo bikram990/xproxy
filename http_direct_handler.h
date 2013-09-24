@@ -23,13 +23,13 @@ public:
 
 private:
     void ResolveRemote();
-    void HandleConnect(const boost::system::error_code& e);
-    void HandleRemoteWrite(const boost::system::error_code& e);
-    void HandleRemoteReadStatusLine(const boost::system::error_code& e);
-    void HandleRemoteReadHeaders(const boost::system::error_code& e);
-    void HandleRemoteReadBody(const boost::system::error_code& e);
-    void HandleRemoteReadChunk(const boost::system::error_code& e);
-    void HandleLocalWrite(const boost::system::error_code& e, bool finished);
+    void OnRemoteConnected(const boost::system::error_code& e);
+    void OnRemoteDataSent(const boost::system::error_code& e);
+    void OnRemoteStatusLineReceived(const boost::system::error_code& e);
+    void OnRemoteHeadersReceived(const boost::system::error_code& e);
+    void OnRemoteBodyReceived(const boost::system::error_code& e);
+    void OnRemoteChunksReceived(const boost::system::error_code& e);
+    void OnLocalDataSent(const boost::system::error_code& e, bool finished);
 
     HttpProxySession& session_;
 
