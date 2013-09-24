@@ -28,13 +28,13 @@ void HttpProxySession::Terminate() {
 void HttpProxySession::Start() {
     local_socket_.async_read_some(
                 boost::asio::buffer(local_buffer_),
-                boost::bind(&HttpProxySession::HandleLocalRead,
+                boost::bind(&HttpProxySession::OnRequestReceived,
                             shared_from_this(),
                             boost::asio::placeholders::error,
                             boost::asio::placeholders::bytes_transferred));
 }
 
-void HttpProxySession::HandleLocalRead(const boost::system::error_code &e,
+void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                        std::size_t size) {
     if(!handler_)
         handler_.reset(RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_));

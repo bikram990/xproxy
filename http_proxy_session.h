@@ -27,7 +27,7 @@ public:
     void Terminate();
 
 private:
-    void HandleLocalRead(const boost::system::error_code& e, std::size_t size);
+    void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
 
     boost::asio::io_service& service_;
     boost::asio::ip::tcp::socket local_socket_;
