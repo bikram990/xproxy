@@ -28,6 +28,7 @@ private:
     void HandleRemoteReadStatusLine(const boost::system::error_code& e);
     void HandleRemoteReadHeaders(const boost::system::error_code& e);
     void HandleRemoteReadBody(const boost::system::error_code& e);
+    void HandleRemoteReadChunk(const boost::system::error_code& e);
     void HandleLocalWrite(const boost::system::error_code& e, bool finished);
 
     HttpProxySession& session_;

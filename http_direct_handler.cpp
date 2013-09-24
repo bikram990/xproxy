@@ -114,6 +114,7 @@ void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code&
     std::istream response(&remote_buffer_);
     std::string header;
     std::size_t body_len = 0;
+    bool chunked_encoding = false;
     while(std::getline(response, header)) {
         if(header == "\r") { // there is no more headers
             XDEBUG << "no more headers";
@@ -132,17 +133,33 @@ void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code&
 
         XTRACE << "header name: " << name << ", value: " << value;
 
-        if(name != "Content-Length")
-            continue;
-        boost::algorithm::trim(value);
-        body_len = boost::lexical_cast<std::size_t>(value);
+        if(name == "Transfer-Encoding") {
+            XINFO << "Transfer-Encoding header is found, value: " << value;
+            if(value == "chunked")
+                chunked_encoding = true;
+        }
+
+        if(name == "Content-Length") {
+            if(chunked_encoding)
+                XWARN << "Both Transfer-Encoding and Content-Length headers are found";
+            boost::algorithm::trim(value);
+            body_len = boost::lexical_cast<std::size_t>(value);
+        }
     }
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.headers()),
                              boost::bind(&HttpDirectHandler::HandleLocalWrite,
                                          this,
                                          boost::asio::placeholders::error,
-                                         body_len <= 0));
+                                         !chunked_encoding && body_len <= 0));
+
+    if(chunked_encoding) {
+        boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
+                                boost::bind(&HttpDirectHandler::HandleRemoteReadChunk,
+                                            this,
+                                            boost::asio::placeholders::error));
+        return;
+    }
 
     if(body_len <= 0) {
         XDEBUG << "This response seems have no body.";
@@ -156,6 +173,56 @@ void HttpDirectHandler::HandleRemoteReadHeaders(const boost::system::error_code&
                             boost::bind(&HttpDirectHandler::HandleRemoteReadBody,
                                         this,
                                         boost::asio::placeholders::error));
+}
+
+void HttpDirectHandler::HandleRemoteReadChunk(const boost::system::error_code& e) {
+    if(e) {
+        XWARN << "Failed to read chunk from remote server, message: " << e.message();
+        session_.Stop();
+        return;
+    }
+
+    std::size_t read = remote_buffer_.size();
+    std::size_t copied = boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
+
+    XTRACE << "Chunk from remote server, read size: " << read;
+    XTRACE << "Body copied from raw stream to response, copied: " << copied;
+
+    if(copied < read) {
+        // TODO here we should handle the condition that the buffer size is
+        // smaller than the raw stream size
+    }
+
+    remote_buffer_.consume(read);
+
+    bool finished = false;
+    XTRACE << response_.body()[copied - 4] << "|"
+           << response_.body()[copied - 3] << "|"
+           << response_.body()[copied - 2] << "|"
+           << response_.body()[copied - 1];
+    if(response_.body()[copied - 4] == '\r' && response_.body()[copied - 3] == '\n'
+                    && response_.body()[copied - 2] == '\r' && response_.body()[copied - 1] == '\n')
+            finished = true;
+
+    XTRACE << "here" << ", finished: " << finished;
+
+    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
+                             boost::bind(&HttpDirectHandler::HandleLocalWrite,
+                                         this,
+                                         boost::asio::placeholders::error, finished));
+
+    XTRACE << "here.";
+
+    if(!finished) {
+        boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
+                                boost::bind(&HttpDirectHandler::HandleRemoteReadChunk,
+                                            this,
+                                            boost::asio::placeholders::error));
+        XTRACE << "not finished";
+    } else {
+        boost::system::error_code ec;
+        remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    }
 }
 
 void HttpDirectHandler::HandleRemoteReadBody(const boost::system::error_code& e) {
