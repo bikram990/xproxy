@@ -61,7 +61,7 @@ private:
     bool ischar(int c);
     bool istspecial(int c);
 
-    const std::string FindHeader(const char *name);
+    const std::string& FindHeader(const char *name);
 
     BuildState state_;
 

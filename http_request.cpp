@@ -136,7 +136,7 @@ HttpRequest::BuildResult HttpRequest::ConsumeHeaderLine(const std::string &line)
     return kComplete;
 }
 
-const std::string HttpRequest::FindHeader(const char *name) {
+const std::string& HttpRequest::FindHeader(const char *name) {
     std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
                                                         headers_.end(),
                                                         HeaderFinder(name));
