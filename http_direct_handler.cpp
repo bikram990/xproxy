@@ -196,29 +196,20 @@ void HttpDirectHandler::HandleRemoteReadChunk(const boost::system::error_code& e
     remote_buffer_.consume(read);
 
     bool finished = false;
-    XTRACE << response_.body()[copied - 4] << "|"
-           << response_.body()[copied - 3] << "|"
-           << response_.body()[copied - 2] << "|"
-           << response_.body()[copied - 1];
     if(response_.body()[copied - 4] == '\r' && response_.body()[copied - 3] == '\n'
                     && response_.body()[copied - 2] == '\r' && response_.body()[copied - 1] == '\n')
             finished = true;
-
-    XTRACE << "here" << ", finished: " << finished;
 
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
                              boost::bind(&HttpDirectHandler::HandleLocalWrite,
                                          this,
                                          boost::asio::placeholders::error, finished));
 
-    XTRACE << "here.";
-
     if(!finished) {
         boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
                                 boost::bind(&HttpDirectHandler::HandleRemoteReadChunk,
                                             this,
                                             boost::asio::placeholders::error));
-        XTRACE << "not finished";
     } else {
         boost::system::error_code ec;
         remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
