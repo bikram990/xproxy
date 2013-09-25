@@ -78,10 +78,21 @@ HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t len
         }
     }
 
-    const std::string host = FindHeader("Host");
+    std::string host = FindHeader("Host");
     if(host.empty()) {
-        XERROR << "No valid host found.";
-        return kBadRequest;
+        // if host is empty, we would find host in uri
+        std::string http("http://");
+        if(uri_.compare(0, http.length(), http) != 0) {
+            XERROR << "No valid host found.";
+            return kBadRequest;
+        }
+        std::string::size_type end = uri_.find('/', http.length());
+        if(end == std::string::npos) {
+            XERROR << "No valid host found.";
+            return kBadRequest;
+        }
+        host = uri_.substr(http.length(), end);
+        XDEBUG << "Host found in uri: " << host;
     }
 
     std::string::size_type sep = host.find(':');
