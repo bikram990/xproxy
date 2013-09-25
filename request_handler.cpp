@@ -29,6 +29,17 @@ RequestHandler *RequestHandler::CreateHttpHandler(char *data, std::size_t size,
                                                   boost::asio::io_service &service,
                                                   boost::asio::ip::tcp::socket &local_socket,
                                                   boost::asio::ip::tcp::socket &remote_socket) {
+    HttpRequestPtr request(boost::make_shared<HttpRequest>());
+    ResultType result = request->BuildRequest(data, size);
+    if(result == HttpRequest::kNotComplete) {
+        XWARN << "Not a complete request, but currently partial request cannot be handled.";
+        return NULL;
+    }
+    if(result == HttpRequest::kBadRequest) { // kNotComplete or kBadRequest
+        XWARN << "Bad request: " << local_socket.remote_endpoint().address()
+              << ":" << local_socket.remote_endpoint().port();
+        return NULL;
+    }
     // TODO add logic here after HttpProxyHandler is implemented
-    return new HttpDirectHandler(session, service, local_socket, remote_socket);
+    return new HttpDirectHandler(session, service, local_socket, remote_socket, request);
 }

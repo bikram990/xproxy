@@ -39,5 +39,5 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
     if(!handler_)
         handler_.reset(RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_));
     if(handler_)
-        handler_->HandleRequest(local_buffer_.data(), size);
+        handler_->HandleRequest();
 }

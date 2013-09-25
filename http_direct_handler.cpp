@@ -8,9 +8,11 @@
 HttpDirectHandler::HttpDirectHandler(HttpProxySession& session,
                                      boost::asio::io_service& service,
                                      boost::asio::ip::tcp::socket& local_socket,
-                                     boost::asio::ip::tcp::socket& remote_socket)
+                                     boost::asio::ip::tcp::socket& remote_socket,
+                                     HttpRequestPtr request)
     : session_(session), local_socket_(local_socket),
-      remote_socket_(remote_socket), resolver_(service) {
+      remote_socket_(remote_socket), resolver_(service),
+      request_(request) {
         TRACE_THIS_PTR;
 }
 
@@ -18,27 +20,15 @@ HttpDirectHandler::~HttpDirectHandler() {
     TRACE_THIS_PTR;
 }
 
-void HttpDirectHandler::HandleRequest(char *data, std::size_t size) {
-    XTRACE << "Raw request from " << local_socket_.remote_endpoint().address()
-           << ":" << local_socket_.remote_endpoint().port()
-           << ":\n" << data;
-    ResultType result = request_.BuildRequest(data, size);
-    if(result == HttpRequest::kComplete) {
-        ResolveRemote();
-    } else if(result == HttpRequest::kNotComplete) {
-        XWARN << "Fuck, the request parsing seems failed, or maybe a https connection...";
-        session_.Terminate();
-    } else {
-        XWARN << "Bad request: " << local_socket_.remote_endpoint().address()
-              << ":" << local_socket_.remote_endpoint().port();
-        // TODO implement this
-        session_.Terminate();
-    }
+void HttpDirectHandler::HandleRequest() {
+    XTRACE << "New request received, host: " << request_->host()
+           << ", port: " << request_->port();
+    ResolveRemote();
 }
 
 void HttpDirectHandler::ResolveRemote() {
-    const std::string& host = request_.host();
-    short port = request_.port();
+    const std::string& host = request_->host();
+    short port = request_->port();
 
     XDEBUG << "Resolving remote address, host: " << host << ", port: " << port;
 
@@ -59,7 +49,7 @@ void HttpDirectHandler::OnRemoteConnected(const boost::system::error_code& e) {
         session_.Stop();
         return;
     }
-    boost::asio::async_write(remote_socket_, request_.OutboundBuffer(),
+    boost::asio::async_write(remote_socket_, request_->OutboundBuffer(),
                              boost::bind(&HttpDirectHandler::OnRemoteDataSent,
                                          this,
                                          boost::asio::placeholders::error));

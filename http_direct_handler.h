@@ -11,15 +11,14 @@ class HttpProxySession;
 
 class HttpDirectHandler : public RequestHandler {
 public:
-    typedef HttpRequest::BuildResult ResultType;
-
     HttpDirectHandler(HttpProxySession& session,
                       boost::asio::io_service& service,
                       boost::asio::ip::tcp::socket& local_socket,
-                      boost::asio::ip::tcp::socket& remote_socket);
+                      boost::asio::ip::tcp::socket& remote_socket,
+                      HttpRequestPtr request);
     ~HttpDirectHandler();
 
-    void HandleRequest(char *data, std::size_t size);
+    void HandleRequest();
 
 private:
     void ResolveRemote();
@@ -39,7 +38,7 @@ private:
 
     boost::asio::streambuf remote_buffer_;
 
-    HttpRequest request_;
+    HttpRequestPtr request_;
     HttpResponse response_;
 };
 
