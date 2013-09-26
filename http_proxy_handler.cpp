@@ -38,7 +38,8 @@ void HttpProxyHandler::BuildProxyRequest(HttpRequest& request) {
            .AddHeader("Connection", "close")
            .AddHeader("Content-Length", boost::lexical_cast<std::string>(length))
            .body(boost::asio::buffers_begin(origin_body),
-                 boost::asio::buffers_end(origin_body));
+                 boost::asio::buffers_end(origin_body))
+           .SetBodyLength(length);
 }
 
 void HttpProxyHandler::ResolveRemote() {
@@ -64,7 +65,11 @@ void HttpProxyHandler::OnRemoteConnected(const boost::system::error_code& e) {
         session_.Stop();
         return;
     }
+
     BuildProxyRequest(proxy_request_);
+
+    XTRACE << boost::asio::buffer_cast<const char *>(proxy_request_.OutboundBuffer().data());
+
     boost::asio::async_write(remote_socket_, proxy_request_.OutboundBuffer(),
                              boost::bind(&HttpProxyHandler::OnRemoteDataSent,
                                          this,
