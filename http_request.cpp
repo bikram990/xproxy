@@ -36,6 +36,11 @@ HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t len
     std::stringstream req(buffer);
     std::string line;
 
+    if(!buffer || length <= 0) {
+        XERROR << "The buffer is invalid: null pointer or zero length.";
+        return kBadRequest;
+    }
+
     if(!std::getline(req, line)) {
         XDEBUG << "This request is incomplete.";
         return kNotComplete;
@@ -81,6 +86,7 @@ HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t len
     std::string host = FindHeader("Host");
     if(host.empty()) {
         // if host is empty, we would find host in uri
+        XDEBUG << "Host header not found, read host from the URI: " << uri_;
         std::string http("http://");
         if(uri_.compare(0, http.length(), http) != 0) {
             XERROR << "No valid host found.";
@@ -91,7 +97,7 @@ HttpRequest::BuildResult HttpRequest::BuildRequest(char *buffer, std::size_t len
             XERROR << "No valid host found.";
             return kBadRequest;
         }
-        host = uri_.substr(http.length(), end);
+        host = uri_.substr(http.length(), end - http.length());
         XDEBUG << "Host found in uri: " << host;
     }
 
