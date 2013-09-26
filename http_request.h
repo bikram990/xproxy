@@ -50,6 +50,11 @@ public:
         return *this;
     }
 
+    HttpRequest& SetBodyLength(std::size_t length) {
+        body_length_ = length;
+        return *this;
+    }
+
 private:
     enum BuildState {
         kRequestStart,
