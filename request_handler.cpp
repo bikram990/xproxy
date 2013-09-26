@@ -29,6 +29,10 @@ RequestHandler *RequestHandler::CreateHttpHandler(char *data, std::size_t size,
                                                   boost::asio::io_service &service,
                                                   boost::asio::ip::tcp::socket &local_socket,
                                                   boost::asio::ip::tcp::socket &remote_socket) {
+    XTRACE << "Dump data from local socket(size:" << size << "):\n"
+           << "--------------------------------------------\n"
+           << data
+           << "\n--------------------------------------------";
     HttpRequestPtr request(boost::make_shared<HttpRequest>());
     ResultType result = request->BuildRequest(data, size);
     if(result == HttpRequest::kNotComplete) {
