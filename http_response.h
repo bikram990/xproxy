@@ -16,10 +16,7 @@ public:
     boost::array<char, 4096>& body() { return body_; }
 
     void AddHeader(const std::string& name, const std::string& value) {
-        HttpHeader h;
-        h.name = name;
-        h.value = value;
-        headers_.push_back(h);
+        headers_.push_back(HttpHeader(name, value));
     }
 
     void SetBodyLength(std::size_t length) {
