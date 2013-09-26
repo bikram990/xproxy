@@ -23,6 +23,33 @@ public:
     const std::string& host() const { return host_; }
     short port() const { return port_; }
 
+    HttpRequest& method(const std::string& method) {
+        method_ = method;
+        return *this; // return self for chaining operation
+    }
+    HttpRequest& uri(const std::string& uri) {
+        uri_ = uri;
+        return *this;
+    }
+    HttpRequest& major_version(int major_version) {
+        major_version_ = major_version;
+        return *this;
+    }
+    HttpRequest& minor_version(int minor_version) {
+        minor_version_ = minor_version;
+        return *this;
+    }
+    HttpRequest& AddHeader(const std::string& name, const std::string& value) {
+        headers_.push_back(HttpHeader(name, value));
+        return *this;
+    }
+
+    template<typename IterT>
+    HttpRequest& body(IterT begin, IterT end) {
+        body_ = std::string(begin, end);
+        return *this;
+    }
+
 private:
     enum BuildState {
         kRequestStart,

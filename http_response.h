@@ -15,8 +15,9 @@ public:
     std::string& status_line() { return status_line_; }
     boost::array<char, 4096>& body() { return body_; }
 
-    void AddHeader(const std::string& name, const std::string& value) {
+    HttpResponse& AddHeader(const std::string& name, const std::string& value) {
         headers_.push_back(HttpHeader(name, value));
+        return *this; // for chaining operation
     }
 
     void SetBodyLength(std::size_t length) {
