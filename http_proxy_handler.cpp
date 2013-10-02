@@ -4,6 +4,9 @@
 #include "http_proxy_handler.h"
 #include "http_proxy_session.h"
 #include "log.h"
+#include "proxy_configuration.h"
+
+extern ProxyConfiguration g_config;
 
 HttpProxyHandler::HttpProxyHandler(HttpProxySession& session,
                                    boost::asio::io_service& service,
@@ -33,7 +36,7 @@ void HttpProxyHandler::BuildProxyRequest(HttpRequest& request) {
     std::size_t length = origin_body_buf.size();
 
     request.method("POST").uri("/proxy").major_version(1).minor_version(1)
-           .AddHeader("Host", "0x77ff.appspot.com")
+           .AddHeader("Host", g_config.GetGAEAppId() + ".appspot.com")
            .AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0")
            .AddHeader("Connection", "close")
            .AddHeader("Content-Length", boost::lexical_cast<std::string>(length))
@@ -43,7 +46,7 @@ void HttpProxyHandler::BuildProxyRequest(HttpRequest& request) {
 }
 
 void HttpProxyHandler::ResolveRemote() {
-    const std::string host("0x77ff.appspot.com");
+    const std::string host = g_config.GetGAEServerDomain();
     short port = 80;
 
     XDEBUG << "Resolving remote address, host: " << host << ", port: " << port;
