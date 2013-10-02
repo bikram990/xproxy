@@ -5,15 +5,6 @@ const std::string ProxyConfiguration::kConfPortKey("basic.port");
 const std::string ProxyConfiguration::kConfGAEAppIdKey("proxy_gae.app_id");
 const std::string ProxyConfiguration::kConfGAEDomainKey("proxy_gae.domain");
 
-ProxyConfiguration::ProxyConfiguration(const std::string& conf_file)
-    : conf_file_(conf_file) {
-    TRACE_THIS_PTR;
-}
-
-ProxyConfiguration::~ProxyConfiguration() {
-    TRACE_THIS_PTR;
-}
-
 bool ProxyConfiguration::LoadConfig() {
     try {
         boost::property_tree::ini_parser::read_ini(conf_file_, conf_tree_);

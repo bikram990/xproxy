@@ -12,8 +12,9 @@ public:
     const static std::string kConfGAEAppIdKey;
     const static std::string kConfGAEDomainKey;
 
-    ProxyConfiguration(const std::string& conf_file = "xproxy.conf");
-    ~ProxyConfiguration();
+    ProxyConfiguration(const std::string& conf_file = "xproxy.conf")
+        : conf_file_(conf_file) {}
+    ~ProxyConfiguration() {}
 
     bool LoadConfig();
     bool LoadConfig(const std::string& conf_file);
