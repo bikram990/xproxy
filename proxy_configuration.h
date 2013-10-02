@@ -10,6 +10,9 @@ public:
     ProxyConfiguration(const std::string& conf_file = "xproxy.conf");
     ~ProxyConfiguration();
 
+    bool LoadConfig();
+    bool LoadConfig(const std::string& conf_file);
+
     short GetProxyPort(short default_value = 7077);
 
     template<typename TypeT>
@@ -19,8 +22,6 @@ public:
     }
 
 private:
-    bool init();
-
     std::string conf_file_;
     boost::property_tree::ptree conf_tree_;
 };
