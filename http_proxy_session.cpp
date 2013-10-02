@@ -36,6 +36,11 @@ void HttpProxySession::Start() {
 
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                        std::size_t size) {
+    if(handler_) {
+        // TODO for those persistent connections, there will exist a handler for a
+        // second request, so this condition should be handled here
+        // ...
+    }
     RequestHandler *h = RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_);
     if(h) {
         handler_.reset(h);
