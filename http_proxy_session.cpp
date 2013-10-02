@@ -36,8 +36,12 @@ void HttpProxySession::Start() {
 
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                        std::size_t size) {
-    if(!handler_)
-        handler_.reset(RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_));
-    if(handler_)
+    RequestHandler *h = RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_);
+    if(h) {
+        handler_.reset(h);
         handler_->HandleRequest();
+    } else {
+        XERROR << "Request Handler cannot be created successfully.";
+        Terminate();
+    }
 }
