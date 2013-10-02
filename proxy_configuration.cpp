@@ -1,6 +1,9 @@
 #include <boost/property_tree/ini_parser.hpp>
-#include "log.h"
 #include "proxy_configuration.h"
+
+const std::string ProxyConfiguration::kConfPortKey("basic.port");
+const std::string ProxyConfiguration::kConfGAEAppIdKey("proxy_gae.app_id");
+const std::string ProxyConfiguration::kConfGAEDomainKey("proxy_gae.domain");
 
 ProxyConfiguration::ProxyConfiguration(const std::string& conf_file)
     : conf_file_(conf_file) {
@@ -29,6 +32,16 @@ bool ProxyConfiguration::LoadConfig(const std::string& conf_file) {
 }
 
 short ProxyConfiguration::GetProxyPort(short default_value) {
-    // TODO implement this
-    return default_value;
+    short result;
+    return GetConfig(kConfPortKey, result) ? result : default_value;
+}
+
+const std::string ProxyConfiguration::GetGAEAppId() {
+    std::string result;
+    return GetConfig(kConfGAEAppIdKey, result) ? result : "";
+}
+
+const std::string ProxyConfiguration::GetGAEServerDomain(const std::string& default_value) {
+    std::string result;
+    return GetConfig(kConfGAEDomainKey, result) ? result : default_value;
 }
