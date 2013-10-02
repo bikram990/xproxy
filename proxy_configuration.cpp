@@ -22,7 +22,7 @@ bool ProxyConfiguration::LoadConfig() {
     return true;
 }
 
-bool ProxyConfiguration::LoadConfig(const std::string &conf_file) {
+bool ProxyConfiguration::LoadConfig(const std::string& conf_file) {
     if(conf_file_ != conf_file)
         conf_file_ = conf_file;
     return LoadConfig();

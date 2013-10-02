@@ -16,7 +16,7 @@ public:
     short GetProxyPort(short default_value = 7077);
 
     template<typename TypeT>
-    TypeT GetConfig(char *path) {
+    TypeT GetConfig(const std::string& path) {
         // TODO handle exception here
         return conf_tree_.get<TypeT>(path);
     }
