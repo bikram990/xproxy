@@ -1,5 +1,5 @@
 #include <iostream>
-#include "http_proxy_server.h"
+#include "proxy_server.h"
 #include "log.h"
 #include "proxy_configuration.h"
 

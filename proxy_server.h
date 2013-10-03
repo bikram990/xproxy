@@ -1,20 +1,18 @@
-#ifndef HTTP_PROXY_SERVER_H
-#define HTTP_PROXY_SERVER_H
+#ifndef PROXY_SERVER_H
+#define PROXY_SERVER_H
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include "server.h"
+#include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 #include "http_proxy_session_manager.h"
 
 
-class HttpProxyServer : public Server {
+class HttpProxyServer : private boost::noncopyable {
 public:
     HttpProxyServer(int port = 7077);
-    virtual ~HttpProxyServer();
+    ~HttpProxyServer();
 
-    virtual void Start();
-    virtual void Stop();
+    void Start();
+    void Stop();
 
 private:
     void StartAccept();
@@ -29,4 +27,4 @@ private:
     HttpProxySessionManager session_manager_;
 };
 
-#endif // HTTP_PROXY_SERVER_H
+#endif // PROXY_SERVER_H

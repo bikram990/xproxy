@@ -1,8 +1,7 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/asio.hpp>
 #include "log.h"
-#include "http_proxy_server.h"
+#include "proxy_server.h"
 
 HttpProxyServer::HttpProxyServer(int port)
     : service_(), signals_(service_), acceptor_(service_),
