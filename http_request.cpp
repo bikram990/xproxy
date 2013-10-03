@@ -102,6 +102,9 @@ HttpRequest::State HttpRequest::BuildRequest(char *buffer, std::size_t length,
 }
 
 boost::asio::streambuf& HttpRequest::OutboundBuffer() {
+    if(buffer_built_)
+        return raw_buffer_;
+
     std::ostream buf(&raw_buffer_);
 
     buf << method_ << ' ' << uri_ << ' '
@@ -116,6 +119,7 @@ boost::asio::streambuf& HttpRequest::OutboundBuffer() {
     if(body_length_ > 0)
         buf << body_;
 
+    buffer_built_ = true;
     return raw_buffer_;
 }
 

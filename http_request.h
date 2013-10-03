@@ -19,8 +19,8 @@ public:
     static State BuildRequest(char *buffer, std::size_t length,
                               HttpRequest& request);
 
-    HttpRequest() : state_(kEmptyRequest), port_(80), method_("GET"),
-                    major_version_(1), minor_version_(1), body_length_(0) {
+    HttpRequest() : buffer_built_(false), state_(kEmptyRequest), port_(80),
+        method_("GET"), major_version_(1), minor_version_(1), body_length_(0) {
         TRACE_THIS_PTR;
     }
     ~HttpRequest() { TRACE_THIS_PTR; }
@@ -76,6 +76,7 @@ private:
 
     const std::string& FindHeader(const std::string& name);
 
+    bool buffer_built_; // to indicate whether the raw buffer is built
     State state_;
 
     std::string host_;
