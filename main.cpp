@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        HttpProxyServer s(g_config.GetProxyPort());
+        ProxyServer s(g_config.GetProxyPort());
         s.Start();
     } catch (std::exception& e) {
         XERROR << "Exception occurred: " << e.what();

@@ -6,18 +6,19 @@
 #include "http_proxy_session_manager.h"
 
 
-class HttpProxyServer : private boost::noncopyable {
+class ProxyServer : private boost::noncopyable {
 public:
-    HttpProxyServer(int port = 7077);
-    ~HttpProxyServer();
+    ProxyServer(short port = 7077);
 
     void Start();
     void Stop();
 
 private:
+    void init(short port);
+
     void StartAccept();
-    void HandleAccept(const boost::system::error_code& e);
-    void HandleStop();
+    void OnConnectionAccepted(const boost::system::error_code& e);
+    void OnStopSignalReceived();
 
     boost::asio::io_service service_;
     boost::asio::signal_set signals_;
