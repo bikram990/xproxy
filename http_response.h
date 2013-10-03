@@ -20,11 +20,11 @@ public:
         return *this; // for chaining operation
     }
 
-    void SetBodyLength(std::size_t length) {
+    void body_lenth(std::size_t length) {
         body_length_ = length;
     }
 
-    std::size_t GetBodyLength() { return body_length_; }
+    std::size_t body_length() { return body_length_; }
 
     std::string& headers() {
         header_string_ = "";

@@ -11,12 +11,8 @@ class HttpProxySession;
 
 class HttpDirectHandler : public RequestHandler {
 public:
-    HttpDirectHandler(HttpProxySession& session,
-                      boost::asio::io_service& service,
-                      boost::asio::ip::tcp::socket& local_socket,
-                      boost::asio::ip::tcp::socket& remote_socket,
-                      HttpRequestPtr request);
-    ~HttpDirectHandler();
+    HttpDirectHandler(HttpProxySession& session, HttpRequestPtr request);
+    ~HttpDirectHandler() { TRACE_THIS_PTR; }
 
     void HandleRequest();
 

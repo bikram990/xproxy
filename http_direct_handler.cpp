@@ -6,17 +6,10 @@
 #include "http_proxy_session.h"
 
 HttpDirectHandler::HttpDirectHandler(HttpProxySession& session,
-                                     boost::asio::io_service& service,
-                                     boost::asio::ip::tcp::socket& local_socket,
-                                     boost::asio::ip::tcp::socket& remote_socket,
                                      HttpRequestPtr request)
-    : session_(session), local_socket_(local_socket),
-      remote_socket_(remote_socket), resolver_(service),
+    : session_(session), local_socket_(session.LocalSocket()),
+      remote_socket_(session.RemoteSocket()), resolver_(session.service()),
       request_(request) {
-        TRACE_THIS_PTR;
-}
-
-HttpDirectHandler::~HttpDirectHandler() {
     TRACE_THIS_PTR;
 }
 
@@ -158,7 +151,7 @@ void HttpDirectHandler::OnRemoteHeadersReceived(const boost::system::error_code&
         return;
     }
 
-    response_.SetBodyLength(body_len);
+    response_.body_lenth(body_len);
     boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1),
                             boost::bind(&HttpDirectHandler::OnRemoteBodyReceived,
                                         this,
@@ -228,15 +221,15 @@ void HttpDirectHandler::OnRemoteBodyReceived(const boost::system::error_code& e)
     boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
                              boost::bind(&HttpDirectHandler::OnLocalDataSent,
                                          this,
-                                         boost::asio::placeholders::error, read >= response_.GetBodyLength()));
+                                         boost::asio::placeholders::error, read >= response_.body_length()));
     if(copied < read) {
         // TODO the response's body buffer is less than read content, try write again
     }
 
     remote_buffer_.consume(read); // the read bytes are consumed
 
-    if(read < response_.GetBodyLength()) { // there is more content
-        response_.SetBodyLength(response_.GetBodyLength() - read);
+    if(read < response_.body_length()) { // there is more content
+        response_.body_lenth(response_.body_length() - read);
         boost::asio::async_read(remote_socket_, remote_buffer_, boost::asio::transfer_at_least(1/*body_len*/),
                                 boost::bind(&HttpDirectHandler::OnRemoteBodyReceived,
                                             this,

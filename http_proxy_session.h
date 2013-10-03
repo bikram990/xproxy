@@ -21,7 +21,9 @@ public:
     HttpProxySession(boost::asio::io_service& service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
+    boost::asio::io_service& service() { return service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
+    boost::asio::ip::tcp::socket& RemoteSocket() { return remote_socket_; }
     void Start();
     void Stop();
     void Terminate();
