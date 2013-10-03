@@ -4,19 +4,26 @@
 #include <vector>
 #include <string>
 #include "http_header.h"
+#include "log.h"
 
 
 class HttpRequest {
 public:
-    enum BuildResult {
-        kBadRequest = 0,
-        kNotComplete, // the request is incomplete, need to read more data from socket
-        kComplete // the request is complete
+    enum State {
+        kComplete = 0, // request is complete
+        kEmptyRequest,
+        kIncomplete, // request is incomplete, need to read more data from socket
+        kBadRequest
     };
 
-    HttpRequest();
-    ~HttpRequest();
-    BuildResult BuildRequest(char *buffer, std::size_t length);
+    static State BuildRequest(char *buffer, std::size_t length,
+                              HttpRequest& request);
+
+    HttpRequest() : state_(kEmptyRequest), port_(80), method_("GET"),
+                    major_version_(1), minor_version_(1), body_length_(0) {
+        TRACE_THIS_PTR;
+    }
+    ~HttpRequest() { TRACE_THIS_PTR; }
 
     boost::asio::streambuf& OutboundBuffer();
 
@@ -39,6 +46,10 @@ public:
         minor_version_ = minor_version;
         return *this;
     }
+    HttpRequest& body_length(std::size_t length) {
+        body_length_ = length;
+        return *this;
+    }
     HttpRequest& AddHeader(const std::string& name, const std::string& value) {
         headers_.push_back(HttpHeader(name, value));
         return *this;
@@ -47,55 +58,25 @@ public:
     template<typename IterT>
     HttpRequest& body(IterT begin, IterT end) {
         body_ = std::string(begin, end);
-        return *this;
-    }
-
-    HttpRequest& SetBodyLength(std::size_t length) {
-        body_length_ = length;
+        body_length_ = body_.length();
         return *this;
     }
 
 private:
-    enum BuildState {
-        kRequestStart,
-        kMethod,
-        kUri,
-        kProtocolH,
-        kProtocolT1,
-        kProtocolT2,
-        kProtocolP,
-        kSlash,
-        kMajorVersionStart,
-        kMajorVersion,
-        kMinorVersionStart,
-        kMinorVersion,
-        kNewLineHeader,
-        kHeaderStart,
-        kNewLineBody,
-        kHeaderLWS, // linear white space
-        kHeaderName,
-        kNewLineHeaderContinue,
-        kHeaderValue,
-        kHeaderValueSpaceBefore
-    };
-
     struct HeaderFinder {
         std::string name;
-        HeaderFinder(const char *name) : name(name) {}
+        HeaderFinder(const std::string& name) : name(name) {}
         bool operator()(const HttpHeader& header) {
             return header.name == name;
         }
     };
 
-    BuildResult ConsumeInitialLine(const std::string& line);
-    BuildResult ConsumeHeaderLine(const std::string& line);
-    BuildResult consume(char current_byte);
-    bool ischar(int c);
-    bool istspecial(int c);
+    State ConsumeInitialLine(const std::string& line);
+    State ConsumeHeaderLine(const std::string& line);
 
-    const std::string& FindHeader(const char *name);
+    const std::string& FindHeader(const std::string& name);
 
-    BuildState state_;
+    State state_;
 
     std::string host_;
     short port_;

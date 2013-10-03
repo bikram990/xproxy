@@ -9,7 +9,7 @@ class HttpProxySession;
 
 class RequestHandler {
 public:
-    typedef HttpRequest::BuildResult ResultType;
+    typedef HttpRequest::State ResultType;
     typedef boost::shared_ptr<HttpRequest> HttpRequestPtr;
 
     static RequestHandler *CreateHandler(char *data, std::size_t size,

@@ -42,7 +42,7 @@ void HttpProxyHandler::BuildProxyRequest(HttpRequest& request) {
            .AddHeader("Content-Length", boost::lexical_cast<std::string>(length))
            .body(boost::asio::buffers_begin(origin_body),
                  boost::asio::buffers_end(origin_body))
-           .SetBodyLength(length);
+           .body_length(length);
 }
 
 void HttpProxyHandler::ResolveRemote() {

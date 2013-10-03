@@ -34,8 +34,8 @@ RequestHandler *RequestHandler::CreateHttpHandler(char *data, std::size_t size,
            << data
            << "\n--------------------------------------------";
     HttpRequestPtr request(boost::make_shared<HttpRequest>());
-    ResultType result = request->BuildRequest(data, size);
-    if(result == HttpRequest::kNotComplete) {
+    ResultType result = HttpRequest::BuildRequest(data, size, *request);
+    if(result == HttpRequest::kIncomplete) {
         XWARN << "Not a complete request, but currently partial request cannot be handled.";
         return NULL;
     }
