@@ -5,12 +5,13 @@
 #include <vector>
 #include <boost/array.hpp>
 #include "http_header.h"
+#include "log.h"
 
 
 class HttpResponse {
 public:
-    HttpResponse();
-    ~HttpResponse();
+    HttpResponse() { TRACE_THIS_PTR; }
+    ~HttpResponse() { TRACE_THIS_PTR; }
 
     std::string& status_line() { return status_line_; }
     boost::array<char, 4096>& body() { return body_; }
