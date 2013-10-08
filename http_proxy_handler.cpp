@@ -156,7 +156,7 @@ void HttpProxyHandler::OnRemoteHeadersReceived(const boost::system::error_code& 
 //                             boost::bind(&HttpProxyHandler::OnLocalDataSent,
 //                                         this,
 //                                         boost::asio::placeholders::error,
-//                                         !chunked_encoding && body_len <= 0));
+//                                         body_len <= 0));
 
     if(body_len <= 0) {
         XERROR << "The proxy server returns no body.";

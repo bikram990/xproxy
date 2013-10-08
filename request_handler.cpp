@@ -1,5 +1,6 @@
 #include "log.h"
 #include "http_direct_handler.h"
+#include "http_proxy_handler.h"
 #include "request_handler.h"
 
 RequestHandler::RequestHandler() {
@@ -45,5 +46,6 @@ RequestHandler *RequestHandler::CreateHttpHandler(char *data, std::size_t size,
         return NULL;
     }
     // TODO add logic here after HttpProxyHandler is implemented
-    return new HttpDirectHandler(session, service, local_socket, remote_socket, request);
+    //return new HttpDirectHandler(session, service, local_socket, remote_socket, request);
+    return new HttpProxyHandler(session, service, local_socket, remote_socket, request);
 }
