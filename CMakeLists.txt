@@ -40,3 +40,6 @@ endif()
 if(UNIX)
     target_link_libraries(${PROJECT_NAME} pthread)
 endif()
+
+# copy configuration file
+configure_file(xproxy.conf xproxy.conf COPYONLY)
