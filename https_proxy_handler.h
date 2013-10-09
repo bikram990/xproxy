@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include "http_request.h"
+#include "http_response.h"
 #include "request_handler.h"
 
 
@@ -27,7 +28,7 @@ private:
     void OnRemoteBodyReceived(const boost::system::error_code& e);
     void OnLocalDataSent(const boost::system::error_code& e, bool finished);
 
-    void VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
+    bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
     void OnRemoteHandshaken(const boost::system::error_code& e);
 
     HttpProxySession& session_;

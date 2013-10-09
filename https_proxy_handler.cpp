@@ -1,17 +1,23 @@
+#include <boost/algorithm/string.hpp>
+#include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
 #include "https_proxy_handler.h"
 #include "http_proxy_session.h"
 #include "log.h"
+#include "proxy_configuration.h"
 
-HttpsProxyHandler::HttpsProxyHandler(HttpsProxySession& session,
+extern ProxyConfiguration g_config;
+
+HttpsProxyHandler::HttpsProxyHandler(HttpProxySession& session,
                                      HttpRequestPtr request)
-    : session(session), local_socket_(session.LocalSocket()),
+    : session_(session), local_socket_(session.LocalSocket()),
       context_(boost::asio::ssl::context::sslv23),
       remote_socket_(session.service(), context_),
       resolver_(session.service()),
       origin_request_(request) {
     TRACE_THIS_PTR;
     remote_socket_.set_verify_mode(boost::asio::ssl::verify_peer);
-    remote_socket_.set_verify_callback()
+    remote_socket_.set_verify_callback(boost::bind(&HttpsProxyHandler::VerifyCertificate, this, _1, _2));
 }
 
 HttpsProxyHandler::~HttpsProxyHandler() {
@@ -51,7 +57,7 @@ void HttpsProxyHandler::ResolveRemote() {
 
     XDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
-    boost::asio::async_connect(remote_socket_, endpoint_iterator,
+    boost::asio::async_connect(remote_socket_.lowest_layer(), endpoint_iterator,
                                boost::bind(&HttpsProxyHandler::OnRemoteConnected,
                                            this,
                                            boost::asio::placeholders::error));
@@ -140,8 +146,8 @@ void HttpsProxyHandler::OnRemoteHeadersReceived(const boost::system::error_code&
 
     if(body_len <= 0) {
         XERROR << "The proxy server returns no body.";
-        boost::system::error_code ec;
-        remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        //boost::system::error_code ec;
+        //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         return;
     }
 
@@ -188,8 +194,8 @@ void HttpsProxyHandler::OnRemoteBodyReceived(const boost::system::error_code& e)
                                             this,
                                             boost::asio::placeholders::error));
     } else {
-        boost::system::error_code ec;
-        remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        //boost::system::error_code ec;
+        //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
 }
 
@@ -218,7 +224,7 @@ void HttpsProxyHandler::OnLocalDataSent(const boost::system::error_code& e,
     }
 }
 
-void HttpsProxyHandler::VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
+bool HttpsProxyHandler::VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
     // TODO enhance this function
     char subject_name[256];
     X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
