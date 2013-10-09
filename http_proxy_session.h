@@ -23,7 +23,7 @@ public:
     ~HttpProxySession();
     boost::asio::io_service& service() { return service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
-    boost::asio::ip::tcp::socket& RemoteSocket() { return remote_socket_; }
+    //boost::asio::ip::tcp::socket& RemoteSocket() { return remote_socket_; }
     void Start();
     void Stop();
     void Terminate();
@@ -33,7 +33,7 @@ private:
 
     boost::asio::io_service& service_;
     boost::asio::ip::tcp::socket local_socket_;
-    boost::asio::ip::tcp::socket remote_socket_;
+    //boost::asio::ip::tcp::socket remote_socket_;
     HttpProxySessionManager& manager_;
 
     boost::array<char, 4096> local_buffer_;

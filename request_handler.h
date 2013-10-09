@@ -13,10 +13,7 @@ public:
     typedef boost::shared_ptr<HttpRequest> HttpRequestPtr;
 
     static RequestHandler *CreateHandler(char *data, std::size_t size,
-                                         HttpProxySession& session,
-                                         boost::asio::io_service& service,
-                                         boost::asio::ip::tcp::socket& local_socket,
-                                         boost::asio::ip::tcp::socket& remote_socket);
+                                         HttpProxySession& session);
     virtual void HandleRequest() = 0;
     virtual ~RequestHandler();
 
@@ -25,10 +22,7 @@ protected:
 
 private:
     static RequestHandler *CreateHttpHandler(char *data, std::size_t size,
-                                             HttpProxySession& session,
-                                             boost::asio::io_service& service,
-                                             boost::asio::ip::tcp::socket& local_socket,
-                                             boost::asio::ip::tcp::socket& remote_socket);
+                                             HttpProxySession& session);
 };
 
 #endif // REQUEST_HANDLER_H

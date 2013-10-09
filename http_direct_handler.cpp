@@ -8,7 +8,7 @@
 HttpDirectHandler::HttpDirectHandler(HttpProxySession& session,
                                      HttpRequestPtr request)
     : session_(session), local_socket_(session.LocalSocket()),
-      remote_socket_(session.RemoteSocket()), resolver_(session.service()),
+      remote_socket_(session.service()), resolver_(session.service()),
       request_(request) {
     TRACE_THIS_PTR;
 }

@@ -11,11 +11,7 @@ class HttpProxySession;
 
 class HttpProxyHandler : public RequestHandler {
 public:
-    HttpProxyHandler(HttpProxySession& session,
-                      boost::asio::io_service& service,
-                      boost::asio::ip::tcp::socket& local_socket,
-                      boost::asio::ip::tcp::socket& remote_socket,
-                      HttpRequestPtr request);
+    HttpProxyHandler(HttpProxySession& session, HttpRequestPtr request);
     ~HttpProxyHandler();
 
     void HandleRequest();
@@ -33,7 +29,7 @@ private:
     HttpProxySession& session_;
 
     boost::asio::ip::tcp::socket& local_socket_;
-    boost::asio::ip::tcp::socket& remote_socket_;
+    boost::asio::ip::tcp::socket remote_socket_; // TODO close the socket?
     boost::asio::ip::tcp::resolver resolver_;
 
     boost::asio::streambuf remote_buffer_;

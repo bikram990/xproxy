@@ -6,7 +6,7 @@
 HttpProxySession::HttpProxySession(boost::asio::io_service& service,
                                    HttpProxySessionManager& manager)
     : service_(service), local_socket_(service),
-      remote_socket_(service), manager_(manager) {
+      /*remote_socket_(service),*/ manager_(manager) {
     TRACE_THIS_PTR;
 }
 
@@ -16,7 +16,7 @@ HttpProxySession::~HttpProxySession() {
 
 void HttpProxySession::Stop() {
     local_socket_.close();
-    remote_socket_.close();
+    //remote_socket_.close();
 
     // TODO maybe we remote this session from session manager here?
 }
@@ -41,7 +41,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         // second request, so this condition should be handled here
         // ...
     }
-    RequestHandler *h = RequestHandler::CreateHandler(local_buffer_.data(), size, *this, service_, local_socket_, remote_socket_);
+    RequestHandler *h = RequestHandler::CreateHandler(local_buffer_.data(), size, *this);
     if(h) {
         handler_.reset(h);
         handler_->HandleRequest();

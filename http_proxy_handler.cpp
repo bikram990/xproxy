@@ -9,12 +9,9 @@
 extern ProxyConfiguration g_config;
 
 HttpProxyHandler::HttpProxyHandler(HttpProxySession& session,
-                                   boost::asio::io_service& service,
-                                   boost::asio::ip::tcp::socket& local_socket,
-                                   boost::asio::ip::tcp::socket& remote_socket,
                                    HttpRequestPtr request)
-    : session_(session), local_socket_(local_socket),
-      remote_socket_(remote_socket), resolver_(service),
+    : session_(session), local_socket_(session.LocalSocket()),
+      remote_socket_(session.service()), resolver_(session.service()),
       origin_request_(request) {
         TRACE_THIS_PTR;
 }
