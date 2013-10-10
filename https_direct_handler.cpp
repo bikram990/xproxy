@@ -6,7 +6,7 @@
 #include "log.h"
 
 HttpsDirectHandler::HttpsDirectHandler(HttpProxySession &session,
-                                       RequestHandler::HttpRequestPtr request)
+                                       HttpRequestPtr request)
     : session_(session), local_socket_(session.LocalSocket()),
       context_(boost::asio::ssl::context::sslv23),
       remote_socket_(session.service(), context_),
@@ -19,9 +19,18 @@ HttpsDirectHandler::~HttpsDirectHandler() {
 }
 
 void HttpsDirectHandler::HandleRequest() {
-    XTRACE << "New request received, host: " << request_->host()
+    XTRACE << "Received a HTTPS request, host: " << request_->host()
            << ", port: " << request_->port();
-    ResolveRemote();
+    static std::string response("HTTP/1.1 200 Connection Established\r\nProxy-Connection: Keep-Alive\r\n\r\n");
+    boost::asio::async_write(session_.LocalSocket(), boost::asio::buffer(response),
+                             boost::bind(&HttpsDirectHandler::OnLocalDataSent,
+                                         this,
+                                         boost::asio::placeholders::error, false));
+}
+
+void HttpsDirectHandler::HandleRequest(char *begin, char *end) {
+    XTRACE << "Continuous HTTPS request.";
+    // TODO implement a small HTTPS server here
 }
 
 void HttpsDirectHandler::ResolveRemote() {

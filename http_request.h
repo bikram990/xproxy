@@ -29,6 +29,7 @@ public:
 
     const std::string& host() const { return host_; }
     short port() const { return port_; }
+    const std::string& method() const { return method_; }
 
     HttpRequest& method(const std::string& method) {
         method_ = method;
@@ -92,5 +93,7 @@ private:
     std::size_t body_length_;
     std::string body_;
 };
+
+typedef boost::shared_ptr<HttpRequest> HttpRequestPtr;
 
 #endif // HTTP_REQUEST_H

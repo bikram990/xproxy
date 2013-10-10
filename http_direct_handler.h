@@ -15,6 +15,7 @@ public:
     ~HttpDirectHandler() { TRACE_THIS_PTR; }
 
     void HandleRequest();
+    void HandleRequest(char *begin, char *end);
 
 private:
     void ResolveRemote();

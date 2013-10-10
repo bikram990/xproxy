@@ -9,20 +9,18 @@ class HttpProxySession;
 
 class RequestHandler {
 public:
-    typedef HttpRequest::State ResultType;
-    typedef boost::shared_ptr<HttpRequest> HttpRequestPtr;
-
-    static RequestHandler *CreateHandler(char *data, std::size_t size,
-                                         HttpProxySession& session);
+    static RequestHandler *CreateHandler(HttpProxySession& session,
+                                         HttpRequestPtr request);
     virtual void HandleRequest() = 0;
+    virtual void HandleRequest(char *begin, char *end) = 0;
     virtual ~RequestHandler();
 
 protected:
     RequestHandler();
 
 private:
-    static RequestHandler *CreateHttpHandler(char *data, std::size_t size,
-                                             HttpProxySession& session);
+    static RequestHandler *CreateHttpHandler(HttpProxySession& session,
+                                             HttpRequestPtr request);
 };
 
 #endif // REQUEST_HANDLER_H

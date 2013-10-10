@@ -37,11 +37,30 @@ void HttpProxySession::Start() {
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                        std::size_t size) {
     if(handler_) {
-        // TODO for those persistent connections, there will exist a handler for a
-        // second request, so this condition should be handled here
-        // ...
+        XTRACE << "A request handler is already exists.";
+        handler_->HandleRequest(local_buffer_.data(), local_buffer_.data() + size);
+        return;
     }
-    RequestHandler *h = RequestHandler::CreateHandler(local_buffer_.data(), size, *this);
+
+    XTRACE << "Dump data from local socket(size:" << size << "):\n"
+           << "--------------------------------------------\n"
+           << local_buffer_.data()
+           << "\n--------------------------------------------";
+
+    HttpRequestPtr request(boost::make_shared<HttpRequest>());
+    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_.data(), size, *request);
+
+    if(result == HttpRequest::kIncomplete) {
+        XWARN << "Not a complete request, but currently partial request is not supported.";
+        return;
+    } else if(result == HttpRequest::kBadRequest) {
+        XWARN << "Bad request: " << local_socket_.remote_endpoint().address()
+              << ":" << local_socket_.remote_endpoint().port();
+        // TODO here we should write a bad request response back
+        return;
+    }
+
+    RequestHandler *h = RequestHandler::CreateHandler(*this, request);
     if(h) {
         handler_.reset(h);
         handler_->HandleRequest();

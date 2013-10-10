@@ -17,6 +17,7 @@ public:
     ~HttpsProxyHandler();
 
     void HandleRequest();
+    void HandleRequest(char *begin, char *end);
 
 private:
     void BuildProxyRequest(HttpRequest& request);

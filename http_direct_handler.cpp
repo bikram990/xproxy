@@ -19,6 +19,12 @@ void HttpDirectHandler::HandleRequest() {
     ResolveRemote();
 }
 
+void HttpDirectHandler::HandleRequest(char *begin, char *end) {
+    XFATAL << "For http direct handler, it should never reach here.";
+    session_.Terminate();
+    return;
+}
+
 void HttpDirectHandler::ResolveRemote() {
     const std::string& host = request_->host();
     short port = request_->port();
