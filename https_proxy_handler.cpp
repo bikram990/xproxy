@@ -229,9 +229,10 @@ bool HttpsProxyHandler::VerifyCertificate(bool pre_verified, boost::asio::ssl::v
     char subject_name[256];
     X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
     X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-    std::cout << "Verifying:\n" << subject_name << std::endl;
+    XDEBUG << "Verify remote certificate, subject name: " << subject_name
+           << ", pre_verified value: " << pre_verified;
 
-    return pre_verified;
+    return true;
 }
 
 void HttpsProxyHandler::OnRemoteHandshaken(const boost::system::error_code& e) {
