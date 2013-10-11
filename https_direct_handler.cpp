@@ -7,11 +7,20 @@
 
 HttpsDirectHandler::HttpsDirectHandler(HttpProxySession &session,
                                        HttpRequestPtr request)
-    : session_(session), local_socket_(session.LocalSocket()),
-      context_(boost::asio::ssl::context::sslv23),
-      remote_socket_(session.service(), context_),
+    : session_(session), /*local_socket_(session.LocalSocket()),*/
+      local_ssl_context_(boost::asio::ssl::context::sslv23),
+      local_ssl_socket_(session.LocalSocket(), local_ssl_context_),
+      remote_ssl_context_(boost::asio::ssl::context::sslv23),
+      remote_socket_(session.service(), remote_ssl_context_),
       resolver_(session.service()), request_(request) {
     TRACE_THIS_PTR;
+
+    local_ssl_context_.set_options(boost::asio::ssl::context::default_workarounds
+                                   | boost::asio::ssl::context::single_dh_use);
+    local_ssl_context_.set_password_callback(boost::bind(&HttpsDirectHandler::GetSSLPassword, this));
+    local_ssl_context_.use_certificate_chain_file("xproxy.pem");
+    local_ssl_context_.use_private_key_file("xproxy.pem", boost::asio::ssl::context::pem);
+    local_ssl_context_.use_tmp_dh_file("dh512.pem");
 }
 
 HttpsDirectHandler::~HttpsDirectHandler() {
@@ -21,16 +30,17 @@ HttpsDirectHandler::~HttpsDirectHandler() {
 void HttpsDirectHandler::HandleRequest() {
     XTRACE << "Received a HTTPS request, host: " << request_->host()
            << ", port: " << request_->port();
-    static std::string response("HTTP/1.1 200 Connection Established\r\nProxy-Connection: Keep-Alive\r\n\r\n");
-    boost::asio::async_write(session_.LocalSocket(), boost::asio::buffer(response),
-                             boost::bind(&HttpsDirectHandler::OnLocalDataSent,
-                                         this,
-                                         boost::asio::placeholders::error, false));
+    ResolveRemote();
 }
 
 void HttpsDirectHandler::HandleRequest(char *begin, char *end) {
     XTRACE << "Continuous HTTPS request.";
     // TODO implement a small HTTPS server here
+}
+
+std::string HttpsDirectHandler::GetSSLPassword() {
+    // TODO enhance here
+    return "xproxy";
 }
 
 void HttpsDirectHandler::ResolveRemote() {
@@ -57,10 +67,22 @@ void HttpsDirectHandler::OnRemoteConnected(const boost::system::error_code& e) {
         return;
     }
 
-    remote_socket_.async_handshake(boost::asio::ssl::stream_base::client,
-                                   boost::bind(&HttpsDirectHandler::OnRemoteHandshaken,
-                                               this,
-                                               boost::asio::placeholders::error));
+    static std::string response("HTTP/1.1 200 Connection Established\r\nProxy-Connection: Keep-Alive\r\n\r\n");
+    boost::asio::async_write(local_ssl_socket_, boost::asio::buffer(response),
+                             boost::bind(&HttpsDirectHandler::OnLocalDataSent,
+                                         this,
+                                         boost::asio::placeholders::error, false));
+
+    local_ssl_socket_.async_handshake(boost::asio::ssl::stream_base::server,
+                                      boost::bind(&HttpsDirectHandler::OnLocalHandshaken,
+                                                  this,
+                                                  boost::asio::placeholders::error));
+
+    // do not do remote hand shake here, we do it after we receive local request
+//    remote_socket_.async_handshake(boost::asio::ssl::stream_base::client,
+//                                   boost::bind(&HttpsDirectHandler::OnRemoteHandshaken,
+//                                               this,
+//                                               boost::asio::placeholders::error));
 }
 
 void HttpsDirectHandler::OnRemoteDataSent(const boost::system::error_code& e) {
@@ -89,7 +111,7 @@ void HttpsDirectHandler::OnRemoteStatusLineReceived(const boost::system::error_c
 
     XDEBUG << "Status line from remote server: " << response_.status_line();
 
-    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.status_line()),
+    boost::asio::async_write(local_ssl_socket_, boost::asio::buffer(response_.status_line()),
                              boost::bind(&HttpsDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error, false));
@@ -145,7 +167,7 @@ void HttpsDirectHandler::OnRemoteHeadersReceived(const boost::system::error_code
         }
     }
 
-    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.headers()),
+    boost::asio::async_write(local_ssl_socket_, boost::asio::buffer(response_.headers()),
                              boost::bind(&HttpsDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error,
@@ -198,7 +220,7 @@ void HttpsDirectHandler::OnRemoteChunksReceived(const boost::system::error_code&
                     && response_.body()[copied - 2] == '\r' && response_.body()[copied - 1] == '\n')
             finished = true;
 
-    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
+    boost::asio::async_write(local_ssl_socket_, boost::asio::buffer(response_.body(), copied),
                              boost::bind(&HttpsDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error, finished));
@@ -212,6 +234,41 @@ void HttpsDirectHandler::OnRemoteChunksReceived(const boost::system::error_code&
         boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
+}
+
+void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e, std::size_t size) {
+    if(e) {
+        XWARN << "Failed to receive data from local socket, message: " << e.message();
+        session_.Terminate();
+        return;
+    }
+
+    XTRACE << "Dump ssl encrypted data from local socket(size:" << size << "):\n"
+           << "--------------------------------------------\n"
+           << &(local_buffer_[0])
+           << "\n--------------------------------------------";
+
+    // TODO can we build on the original request?
+    // TODO2 we should send the raw data directly, do not do parse and compose work
+    HttpRequest::State result = HttpRequest::BuildRequest(&(local_buffer_[0]), size, *request_);
+
+    if(result == HttpRequest::kIncomplete) {
+        XWARN << "Not a complete request, but currently partial request is not supported.";
+        session_.Terminate();
+        return;
+    } else if(result == HttpRequest::kBadRequest) {
+        XWARN << "Bad request: " << local_ssl_socket_.lowest_layer().remote_endpoint().address()
+              << ":" << local_ssl_socket_.lowest_layer().remote_endpoint().port();
+        // TODO here we should write a bad request response back
+        session_.Terminate();
+        return;
+    }
+
+    // do remote hand shake here, and then sends the request
+    remote_socket_.async_handshake(boost::asio::ssl::stream_base::client,
+                                   boost::bind(&HttpsDirectHandler::OnRemoteHandshaken,
+                                               this,
+                                               boost::asio::placeholders::error));
 }
 
 void HttpsDirectHandler::OnRemoteBodyReceived(const boost::system::error_code& e) {
@@ -233,7 +290,7 @@ void HttpsDirectHandler::OnRemoteBodyReceived(const boost::system::error_code& e
     XDEBUG << "Body copied from raw stream to response, copied: " << copied
            << ", response body size: " << response_.body().size();
 
-    boost::asio::async_write(local_socket_, boost::asio::buffer(response_.body(), copied),
+    boost::asio::async_write(local_ssl_socket_, boost::asio::buffer(response_.body(), copied),
                              boost::bind(&HttpsDirectHandler::OnLocalDataSent,
                                          this,
                                          boost::asio::placeholders::error, read >= response_.body_length()));
@@ -270,7 +327,7 @@ void HttpsDirectHandler::OnLocalDataSent(const boost::system::error_code& e,
 
     if(!e) {
         boost::system::error_code ec;
-        local_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        //local_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
 
@@ -291,9 +348,23 @@ bool HttpsDirectHandler::VerifyCertificate(bool pre_verified, boost::asio::ssl::
     return true;
 }
 
+void HttpsDirectHandler::OnLocalHandshaken(const boost::system::error_code& e) {
+    if(e) {
+        XWARN << "Failed to handshake with local client, message: " << e.message();
+        session_.Stop();
+        return;
+    }
+
+    local_ssl_socket_.async_read_some(boost::asio::buffer(local_buffer_),
+                                      boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
+                                                  this,
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred));
+}
+
 void HttpsDirectHandler::OnRemoteHandshaken(const boost::system::error_code& e) {
     if(e) {
-        XWARN << "Failed at handshake step, message: " << e.message();
+        XWARN << "Failed to handshake with remote server, message: " << e.message();
         session_.Stop();
         return;
     }
