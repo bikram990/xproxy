@@ -20,7 +20,7 @@ HttpsDirectHandler::HttpsDirectHandler(HttpProxySession &session,
     local_ssl_context_.set_password_callback(boost::bind(&HttpsDirectHandler::GetSSLPassword, this));
     local_ssl_context_.use_certificate_chain_file("xproxy.pem");
     local_ssl_context_.use_private_key_file("xproxy.pem", boost::asio::ssl::context::pem);
-    local_ssl_context_.use_tmp_dh_file("dh512.pem");
+    local_ssl_context_.use_tmp_dh_file("dh1024.pem");
 }
 
 HttpsDirectHandler::~HttpsDirectHandler() {
