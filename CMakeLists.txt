@@ -44,14 +44,15 @@ endif()
 # for OpenSSL library depended by boost::asio
 if(WIN32)
     set(OPENSSL_ROOT_DIR "D:/SDTs/OpenSSL")
-    find_package(OpenSSL)
-    if(OPENSSL_FOUND)
-        message(STATUS "OpenSSL is found at: " ${OPENSSL_INCLUDE_DIR} ", lib: " ${OPENSSL_LIBRARIES})
-        include_directories(${OPENSSL_INCLUDE_DIR})
-        target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES})
-    else()
-        message(FATAL_ERROR "OpenSSL is not found.")
-    endif()
+endif()
+
+find_package(OpenSSL)
+if(OPENSSL_FOUND)
+    message(STATUS "OpenSSL is found at: " ${OPENSSL_INCLUDE_DIR} ", lib: " ${OPENSSL_LIBRARIES})
+    include_directories(${OPENSSL_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES})
+else()
+    message(FATAL_ERROR "OpenSSL is not found.")
 endif()
 
 # copy configuration file
