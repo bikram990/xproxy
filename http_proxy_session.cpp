@@ -37,8 +37,7 @@ void HttpProxySession::Start() {
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                        std::size_t size) {
     if(handler_) {
-        XTRACE << "A request handler is already exists.";
-        handler_->HandleRequest(local_buffer_.data(), local_buffer_.data() + size);
+        XERROR << "A handler exists, it should never happen.";
         return;
     }
 
