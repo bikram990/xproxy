@@ -30,12 +30,6 @@ void HttpsProxyHandler::HandleRequest() {
     ResolveRemote();
 }
 
-void HttpsProxyHandler::HandleRequest(char *begin, char *end) {
-    XFATAL << "For https proxy handler, it should never reach here.";
-    session_.Terminate();
-    return;
-}
-
 void HttpsProxyHandler::BuildProxyRequest(HttpRequest& request) {
     // TODO improve this, refine the headers
     boost::asio::streambuf& origin_body_buf = origin_request_->OutboundBuffer();

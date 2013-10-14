@@ -12,7 +12,6 @@ public:
     static RequestHandler *CreateHandler(HttpProxySession& session,
                                          HttpRequestPtr request);
     virtual void HandleRequest() = 0;
-    virtual void HandleRequest(char *begin, char *end) = 0;
     virtual ~RequestHandler();
 
 protected:

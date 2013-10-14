@@ -19,7 +19,6 @@ public:
     ~HttpsDirectHandler();
 
     void HandleRequest();
-    void HandleRequest(char *begin, char *end);
 
 private:
     std::string GetSSLPassword();

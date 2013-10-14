@@ -33,11 +33,6 @@ void HttpsDirectHandler::HandleRequest() {
     ResolveRemote();
 }
 
-void HttpsDirectHandler::HandleRequest(char *begin, char *end) {
-    XTRACE << "Continuous HTTPS request.";
-    // TODO implement a small HTTPS server here
-}
-
 std::string HttpsDirectHandler::GetSSLPassword() {
     // TODO enhance here
     return "xproxy";
