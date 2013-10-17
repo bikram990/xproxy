@@ -4,7 +4,8 @@
 #include "proxy_server.h"
 
 ProxyServer::ProxyServer(short port)
-    : signals_(service_), acceptor_(service_) {
+    : signals_(service_), acceptor_(service_),
+      ssl_context_(service_, boost::asio::ssl::context::sslv23) {
     init(port);
     StartAccept();
 }
@@ -18,6 +19,14 @@ void ProxyServer::Stop() {
 }
 
 void ProxyServer::init(short port) {
+    ssl_context_.set_options(boost::asio::ssl::context::default_workarounds
+                             | boost::asio::ssl::context::no_sslv2
+                             | boost::asio::ssl::context::single_dh_use);
+    ssl_context_.set_password_callback(boost::bind(&ProxyServer::GetSSLPassword, this));
+    ssl_context_.use_certificate_chain_file("xproxy.pem");
+    ssl_context_.use_private_key_file("xproxy.pem", boost::asio::ssl::context::pem);
+    ssl_context_.use_tmp_dh_file("dh512.pem");
+
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
     // signals_.add(SIGQUIT); // TODO is this needed?
@@ -31,7 +40,7 @@ void ProxyServer::init(short port) {
 }
 
 void ProxyServer::StartAccept() {
-    current_session_.reset(new HttpProxySession(service_, session_manager_));
+    current_session_.reset(new HttpProxySession(service_, ssl_context_, session_manager_));
     acceptor_.async_accept(current_session_->LocalSocket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));

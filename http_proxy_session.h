@@ -3,6 +3,7 @@
 
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
@@ -19,11 +20,13 @@ class HttpProxySession
           private boost::noncopyable {
 public:
     HttpProxySession(boost::asio::io_service& service,
+                     boost::asio::ssl::context& context,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
     boost::asio::io_service& service() { return service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
     //boost::asio::ip::tcp::socket& RemoteSocket() { return remote_socket_; }
+    boost::asio::ssl::context& LocalSSLContext() { return local_ssl_context_; }
     void Start();
     void Stop();
     void Terminate();
@@ -32,6 +35,7 @@ private:
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
 
     boost::asio::io_service& service_;
+    boost::asio::ssl::context& local_ssl_context_;
     boost::asio::ip::tcp::socket local_socket_;
     //boost::asio::ip::tcp::socket remote_socket_;
     HttpProxySessionManager& manager_;

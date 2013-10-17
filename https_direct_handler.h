@@ -1,7 +1,6 @@
 #ifndef HTTPS_DIRECT_HANDLER_H
 #define HTTPS_DIRECT_HANDLER_H
 
-#include <vector>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include "http_request.h"
@@ -21,8 +20,6 @@ public:
     void HandleRequest();
 
 private:
-    std::string GetSSLPassword();
-
     void ResolveRemote();
     void OnRemoteConnected(const boost::system::error_code& e);
     void OnRemoteDataSent(const boost::system::error_code& e);
@@ -39,14 +36,14 @@ private:
 
     HttpProxySession& session_;
 
-    //boost::asio::ip::tcp::socket& local_socket_;
-    boost::asio::ssl::context local_ssl_context_;
+    boost::asio::ssl::context& local_ssl_context_;
     ssl_socket_ref local_ssl_socket_; // wrap the local socket
     boost::asio::ssl::context remote_ssl_context_;
     ssl_socket remote_socket_; // TODO close the socket?
     boost::asio::ip::tcp::resolver resolver_;
 
-    std::vector<char> local_buffer_;
+    char local_buffer_[4096]; // TODO do not hard code
+    int total_size_;
     boost::asio::streambuf remote_buffer_;
 
     HttpRequestPtr request_;

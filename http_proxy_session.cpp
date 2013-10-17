@@ -4,8 +4,10 @@
 #include "log.h"
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& service,
+                                   boost::asio::ssl::context& context,
                                    HttpProxySessionManager& manager)
     : service_(service), local_socket_(service),
+      local_ssl_context_(context),
       /*remote_socket_(service),*/ manager_(manager) {
     TRACE_THIS_PTR;
 }
