@@ -2,6 +2,7 @@
 #define HTTP_DIRECT_HANDLER_H
 
 #include <boost/asio.hpp>
+#include "http_client.h"
 #include "http_request.h"
 #include "http_response.h"
 #include "request_handler.h"
@@ -17,6 +18,8 @@ public:
     void HandleRequest();
 
 private:
+    void OnResponseReceived(const boost::system::error_code& e, HttpResponse *response = NULL);
+
     void ResolveRemote();
     void OnRemoteConnected(const boost::system::error_code& e);
     void OnRemoteDataSent(const boost::system::error_code& e);
@@ -36,6 +39,8 @@ private:
 
     HttpRequestPtr request_;
     HttpResponse response_;
+
+    HttpClient client_;
 };
 
 #endif // HTTP_DIRECT_HANDLER_H

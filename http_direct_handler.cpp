@@ -9,14 +9,27 @@ HttpDirectHandler::HttpDirectHandler(HttpProxySession& session,
                                      HttpRequestPtr request)
     : session_(session), local_socket_(session.LocalSocket()),
       remote_socket_(session.service()), resolver_(session.service()),
-      request_(request) {
+      request_(request), client_(session.service(), *request) {
     TRACE_THIS_PTR;
 }
 
 void HttpDirectHandler::HandleRequest() {
     XTRACE << "New request received, host: " << request_->host()
            << ", port: " << request_->port();
-    ResolveRemote();
+    client_.AsyncSendRequest(boost::bind(&HttpDirectHandler::OnResponseReceived,
+                                         this, _1, _2));
+    XTRACE << "Request is sent asynchronously.";
+    //ResolveRemote();
+}
+
+void HttpDirectHandler::OnResponseReceived(const boost::system::error_code& e, HttpResponse *response) {
+    if(e) {
+        XWARN << "Failed to send request, message: " << e.message();
+        session_.Terminate();
+        return;
+    }
+    // TODO complete here
+    XTRACE << "Response is back: " << response->status_line();
 }
 
 void HttpDirectHandler::ResolveRemote() {
