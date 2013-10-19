@@ -141,14 +141,16 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
             break;
         }
 
-        std::string::size_type sep_idx = header.find(": ");
+        std::string::size_type sep_idx = header.find(':');
         if(sep_idx == std::string::npos) {
             XWARN << "Invalid header: " << header;
             continue;
         }
 
         std::string name = header.substr(0, sep_idx);
-        std::string value = header.substr(sep_idx + 2, header.length() - 1 - name.length() - 2); // remove the last \r
+        std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
+        boost::algorithm::trim(name);
+        boost::algorithm::trim(value);
         response_.AddHeader(name, value);
 
         XTRACE << "header name: " << name << ", value: " << value;
