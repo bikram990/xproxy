@@ -94,7 +94,16 @@ HttpRequest::State HttpRequest::BuildRequest(char *buffer, std::size_t length,
         request.port_ = boost::lexical_cast<short>(host.substr(sep + 1));
     } else {
         request.host_ = host;
-        request.port_ = 80;
+
+        if(request.method_ == "CONNECT") {
+            std::string::size_type sep = request.uri_.find(':');
+            if(sep != std::string::npos)
+                request.port_ = boost::lexical_cast<short>(request.uri_.substr(sep + 1));
+            else
+                request.port_ = 443;
+        } else {
+            request.port_ = 80;
+        }
     }
 
     request.state_ = kComplete;
