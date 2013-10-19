@@ -1,10 +1,7 @@
 #ifndef HTTP_DIRECT_HANDLER_H
 #define HTTP_DIRECT_HANDLER_H
 
-#include <boost/asio.hpp>
 #include "http_client.h"
-#include "http_request.h"
-#include "http_response.h"
 #include "request_handler.h"
 
 
