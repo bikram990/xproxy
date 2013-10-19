@@ -31,6 +31,7 @@ void HttpClient::ResolveRemote() {
 
     XDEBUG << "Resolving remote address, host: " << host << ", port: " << port;
 
+    // TODO cache the DNS query result
     boost::asio::ip::tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
     boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver_.resolve(query);
 
@@ -104,7 +105,7 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
     // As async_read_until may return more data beyond the delimiter, so we only process the status line
     std::istream response(&remote_buffer_);
     std::getline(response, response_.status_line());
-    response_.status_line() += '\n'; // append the missing newline character
+    response_.status_line().erase(response_.status_line().size() - 1); // remove the last \r
 
     XTRACE << "Status line from remote server: " << response_.status_line();
 
@@ -216,22 +217,32 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     }
 
     std::size_t read = remote_buffer_.size();
-    std::size_t copied = boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
+    boost::asio::streambuf::mutable_buffers_type buf = response_.body().prepare(read);
+    std::size_t copied = boost::asio::buffer_copy(buf, remote_buffer_.data());
 
-    XTRACE << "Chunk from remote server, read size: " << read;
-    XTRACE << "Body copied from raw stream to response, copied: " << copied;
+    XTRACE << "Chunk from remote server, size: " << read
+           << ", body copied from raw stream to response, copied: " << copied;
 
     if(copied < read) {
-        // TODO here we should handle the condition that the buffer size is
-        // smaller than the raw stream size
+        // copied should always equal to read, so here just output an error log
+        XERROR << "The copied size(" << copied << ") is less than read size(" << read
+               << "), but this should never happen.";
     }
 
-    remote_buffer_.consume(read);
+    response_.body().commit(copied);
+    remote_buffer_.consume(copied);
 
     bool finished = false;
-    if(response_.body()[copied - 4] == '\r' && response_.body()[copied - 3] == '\n'
-                    && response_.body()[copied - 2] == '\r' && response_.body()[copied - 1] == '\n')
-            finished = true;
+    const char *body = boost::asio::buffer_cast<const char *>(response_.body().data());
+    std::size_t size = response_.body().size();
+    if(body[size - 4] == '\r'
+       && body[size -3] == '\n'
+       && body[size - 2] == '\r'
+       && body[size - 1] == '\n') {
+        XTRACE << "The end of all chunks has been reached.";
+        response_.body_lenth(size);
+        finished = true;
+    }
 
     if(!finished) {
         if(is_ssl_) {
@@ -267,21 +278,24 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
     }
 
     std::size_t read = remote_buffer_.size();
-    std::size_t copied = boost::asio::buffer_copy(boost::asio::buffer(response_.body()), remote_buffer_.data());
+    boost::asio::streambuf::mutable_buffers_type buf = response_.body().prepare(read);
+    std::size_t copied = boost::asio::buffer_copy(buf, remote_buffer_.data());
 
-    XDEBUG << "Body from remote server, size: " << read
-           << ", content:\n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
-    XDEBUG << "Body copied from raw stream to response, copied: " << copied
-           << ", response body size: " << response_.body().size();
+    XTRACE << "Body from remote server, size: " << read
+           << ", body copied from raw stream to response, copied: " << copied
+           << ", current body size: " << response_.body().size()
+           << ", desired body size: " << response_.body_length();
 
     if(copied < read) {
-        // TODO the response's body buffer is less than read content, try write again
+        // copied should always equal to read, so here just output an error log
+        XERROR << "The copied size(" << copied << ") is less than read size(" << read
+               << "), but this should never happen.";
     }
 
-    remote_buffer_.consume(read); // the read bytes are consumed
+    response_.body().commit(copied);
+    remote_buffer_.consume(copied);
 
-    if(read < response_.body_length()) { // there is more content
-        response_.body_lenth(response_.body_length() - read);
+    if(response_.body().size() < response_.body_length()) { // there is more content
         if(is_ssl_) {
             boost::asio::async_read(*ssl_socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
