@@ -26,7 +26,7 @@ void HttpsDirectHandler::HandleRequest() {
     static std::string response("HTTP/1.1 200 Connection Established\r\nProxy-Connection: Keep-Alive\r\n\r\n");
     boost::asio::async_write(local_ssl_socket_.next_layer(), boost::asio::buffer(response),
                              boost::bind(&HttpsDirectHandler::OnLocalSSLReplySent,
-                                         shared_from_this(),
+                                         boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                          boost::asio::placeholders::error));
 }
 
@@ -39,7 +39,7 @@ void HttpsDirectHandler::OnLocalSSLReplySent(const boost::system::error_code& e)
 
     local_ssl_socket_.async_handshake(boost::asio::ssl::stream_base::server,
                                       boost::bind(&HttpsDirectHandler::OnLocalHandshaken,
-                                                  shared_from_this(),
+                                                  boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                                   boost::asio::placeholders::error));
 }
 
@@ -53,7 +53,7 @@ void HttpsDirectHandler::OnLocalHandshaken(const boost::system::error_code& e) {
     boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
     local_ssl_socket_.async_read_some(buf,
                                       boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
-                                                  shared_from_this(),
+                                                  boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred));
 }
@@ -82,7 +82,7 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
         boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(2048); // TODO hard code
         local_ssl_socket_.async_read_some(buf,
                                           boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
-                                                      shared_from_this(),
+                                                      boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                                       boost::asio::placeholders::error,
                                                       boost::asio::placeholders::bytes_transferred));
         return;
@@ -101,7 +101,7 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
 //    }
 
     client_.AsyncSendRequest(boost::bind(&HttpsDirectHandler::OnResponseReceived,
-                                         shared_from_this(), _1, _2));
+                                         boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()), _1, _2));
     XTRACE << "Request is sent asynchronously.";
 }
 
@@ -116,7 +116,7 @@ void HttpsDirectHandler::OnResponseReceived(const boost::system::error_code& e, 
 
     boost::asio::async_write(local_ssl_socket_, response->OutboundBuffer(),
                              boost::bind(&HttpsDirectHandler::OnLocalDataSent,
-                                         shared_from_this(),
+                                         boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                          boost::asio::placeholders::error));
 }
 
