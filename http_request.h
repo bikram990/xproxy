@@ -18,6 +18,7 @@ public:
 
     static State BuildRequest(char *buffer, std::size_t length,
                               HttpRequest& request);
+    static void CanonicalizeUri(std::string& uri);
 
     HttpRequest() : buffer_built_(false), state_(kEmptyRequest), port_(80),
         method_("GET"), major_version_(1), minor_version_(1), body_length_(0) {

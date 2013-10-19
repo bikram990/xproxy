@@ -106,8 +106,35 @@ HttpRequest::State HttpRequest::BuildRequest(char *buffer, std::size_t length,
         }
     }
 
+    CanonicalizeUri(request.uri_);
+
     request.state_ = kComplete;
     return kComplete;
+}
+
+void HttpRequest::CanonicalizeUri(std::string& uri) {
+    XDEBUG << "Canonicalize URI: " << uri;
+
+    if(uri[0] == '/') { // already canonicalized
+        XDEBUG << "URI is already canonicalized: " << uri;
+        return;
+    }
+
+    std::string http("http://");
+    if(uri.compare(0, http.length(), http) != 0) {
+        XERROR << "The URI is in bad format: " << uri;
+        return;
+    }
+
+    std::string::size_type end = uri.find('/', http.length());
+    if(end == std::string::npos) {
+        XDEBUG << "No host end / found, consider as the root: " << uri;
+        uri = '/';
+        return;
+    }
+
+    uri.erase(0, end);
+    XDEBUG << "URI canonicalized: " << uri;
 }
 
 boost::asio::streambuf& HttpRequest::OutboundBuffer() {
