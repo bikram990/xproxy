@@ -18,7 +18,7 @@ void HttpDirectHandler::HandleRequest() {
 }
 
 void HttpDirectHandler::OnResponseReceived(const boost::system::error_code& e, HttpResponse *response) {
-    if(e) {
+    if(e && e != boost::asio::error::eof) {
         XWARN << "Failed to send request, message: " << e.message();
         session_.Terminate();
         return;
