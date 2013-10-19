@@ -1,13 +1,16 @@
 #ifndef HTTPS_DIRECT_HANDLER_H
 #define HTTPS_DIRECT_HANDLER_H
 
+#include <boost/enable_shared_from_this.hpp>
 #include "http_client.h"
 #include "request_handler.h"
 
 
 class HttpProxySession;
 
-class HttpsDirectHandler : public RequestHandler {
+class HttpsDirectHandler
+    : public RequestHandler,
+      public boost::enable_shared_from_this<HttpsDirectHandler> {
 public:
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> ssl_socket_ref;
 
@@ -35,3 +38,4 @@ private:
 };
 
 #endif // HTTPS_DIRECT_HANDLER_H
+
