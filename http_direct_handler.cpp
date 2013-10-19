@@ -13,7 +13,7 @@ void HttpDirectHandler::HandleRequest() {
     XTRACE << "New request received, host: " << request_->host()
            << ", port: " << request_->port();
     client_.AsyncSendRequest(boost::bind(&HttpDirectHandler::OnResponseReceived,
-                                         this, _1, _2));
+                                         shared_from_this(), _1, _2));
     XTRACE << "Request is sent asynchronously.";
 }
 
@@ -28,7 +28,7 @@ void HttpDirectHandler::OnResponseReceived(const boost::system::error_code& e, H
 
     boost::asio::async_write(local_socket_, response->OutboundBuffer(),
                              boost::bind(&HttpDirectHandler::OnLocalDataSent,
-                                         this,
+                                         shared_from_this(),
                                          boost::asio::placeholders::error));
 }
 
