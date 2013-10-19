@@ -10,10 +10,13 @@ HttpClient::HttpClient(boost::asio::io_service& service,
     : service_(service), resolver_(service), is_ssl_(context ? true : false),
       request_(request) {
     TRACE_THIS_PTR;
-    if(context)
+    if(context) {
         ssl_socket_.reset(new ssl_socket(service_, *context));
-    else
+        ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
+        ssl_socket_->set_verify_callback(boost::bind(&HttpClient::VerifyCertificate, this, _1, _2));
+    } else {
         socket_.reset(new socket(service_));
+    }
 }
 
 HttpClient::~HttpClient() {
@@ -315,4 +318,15 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
+}
+
+bool HttpClient::VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
+    // TODO enhance this function
+    char subject_name[256];
+    X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+    XDEBUG << "Verify remote certificate, subject name: " << subject_name
+           << ", pre_verified value: " << pre_verified;
+
+    return true;
 }

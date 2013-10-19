@@ -31,6 +31,8 @@ private:
     void OnRemoteChunksReceived(const boost::system::error_code& e);
     void OnRemoteBodyReceived(const boost::system::error_code& e);
 
+    bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
+
     boost::asio::io_service& service_;
     boost::asio::ip::tcp::resolver resolver_;
 
