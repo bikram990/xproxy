@@ -50,7 +50,8 @@ void HttpsDirectHandler::OnLocalHandshaken(const boost::system::error_code& e) {
         return;
     }
 
-    local_ssl_socket_.async_read_some(boost::asio::buffer(local_buffer_, 4096),
+    boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
+    local_ssl_socket_.async_read_some(buf,
                                       boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
                                                   this,
                                                   boost::asio::placeholders::error,
@@ -64,24 +65,27 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
         return;
     }
 
-    total_size_ += size;
+    local_buffer_.commit(size);
 
-    XTRACE << "Dump ssl encrypted data from local socket(size:" << total_size_ << "):\n"
+    XDEBUG << "Dump ssl encrypted data from local socket(size:" << size << "):\n"
            << "--------------------------------------------\n"
-           << std::string(local_buffer_, local_buffer_ + total_size_)
+           << boost::asio::buffer_cast<const char *>(local_buffer_.data())
            << "\n--------------------------------------------";
 
     // TODO can we build on the original request?
     // TODO2 we should send the raw data directly, do not do parse and compose work
-    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_, total_size_, *request_);
+    HttpRequest::State result = HttpRequest::BuildRequest(const_cast<char *>(boost::asio::buffer_cast<const char *>(local_buffer_.data())),
+                                                          local_buffer_.size(), *request_);
 
     if(result != HttpRequest::kComplete) {
         XWARN << "This request is not complete, continue to read from the ssl socket.";
-        local_ssl_socket_.async_read_some(boost::asio::buffer(local_buffer_ + total_size_, 4096 - total_size_),
+        boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(2048); // TODO hard code
+        local_ssl_socket_.async_read_some(buf,
                                           boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
                                                       this,
                                                       boost::asio::placeholders::error,
                                                       boost::asio::placeholders::bytes_transferred));
+        return;
     }
 
 //    if(result == HttpRequest::kIncomplete) {

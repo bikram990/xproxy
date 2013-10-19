@@ -28,8 +28,7 @@ private:
     ssl_socket_ref local_ssl_socket_; // wrap the local socket
     boost::asio::ssl::context remote_ssl_context_;
 
-    char local_buffer_[4096]; // TODO do not hard code
-    int total_size_;
+    boost::asio::streambuf local_buffer_;
 
     HttpRequestPtr request_;
     HttpClient client_;
