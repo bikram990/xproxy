@@ -283,7 +283,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
 
     XTRACE << "Body from remote server, size: " << read
            << ", body copied from raw stream to response, copied: " << copied
-           << ", current body size: " << response_.body().size()
+           << ", current body size: " << response_.body().size() + copied
            << ", desired body size: " << response_.body_length();
 
     if(copied < read) {
