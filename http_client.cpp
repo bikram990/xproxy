@@ -8,7 +8,7 @@ HttpClient::HttpClient(boost::asio::io_service& service,
                        HttpRequest& request,
                        boost::asio::ssl::context *context)
     : service_(service), resolver_(service), is_ssl_(context ? true : false),
-      request_(request) {
+      request_(request), host_(request.host()), port_(request.port()) {
     TRACE_THIS_PTR;
     if(context) {
         ssl_socket_.reset(new ssl_socket(service_, *context));
@@ -29,13 +29,10 @@ void HttpClient::AsyncSendRequest(handler_type handler) {
 }
 
 void HttpClient::ResolveRemote() {
-    const std::string host = request_.host();
-    short port = request_.port();
-
-    XDEBUG << "Resolving remote address, host: " << host << ", port: " << port;
+    XDEBUG << "Resolving remote address, host: " << host_ << ", port: " << port_;
 
     // TODO cache the DNS query result
-    boost::asio::ip::tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
+    boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
     boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver_.resolve(query);
 
     XDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();

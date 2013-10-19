@@ -45,6 +45,9 @@ private:
     HttpRequest& request_;
     HttpResponse response_;
 
+    std::string host_;
+    short port_;
+
     handler_type handler_;
 };
 
