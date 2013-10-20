@@ -19,6 +19,7 @@ public:
                boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
+    void UpdateRequest(HttpRequest& request);
     void AsyncSendRequest(handler_type handler);
 
 private:
