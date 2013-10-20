@@ -5,7 +5,7 @@
 HttpDirectHandler::HttpDirectHandler(HttpProxySession& session,
                                      HttpRequestPtr request)
     : session_(session), local_socket_(session.LocalSocket()),
-      request_(request), client_(session.service(), *request) {
+      request_(request), client_(session.service(), request.get()) {
     TRACE_THIS_PTR;
 }
 

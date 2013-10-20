@@ -11,7 +11,7 @@ HttpsDirectHandler::HttpsDirectHandler(HttpProxySession &session,
       local_ssl_socket_(session.LocalSocket(), local_ssl_context_),
       remote_ssl_context_(boost::asio::ssl::context::sslv23),
       request_(request),
-      client_(session.service(), *request, &remote_ssl_context_) {
+      client_(session.service(), request.get(), &remote_ssl_context_) {
     TRACE_THIS_PTR;
 }
 

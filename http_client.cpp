@@ -5,10 +5,10 @@
 #include "log.h"
 
 HttpClient::HttpClient(boost::asio::io_service& service,
-                       HttpRequest& request,
+                       HttpRequest *request,
                        boost::asio::ssl::context *context)
     : service_(service), resolver_(service), is_ssl_(context ? true : false),
-      request_(request), host_(request.host()), port_(request.port()) {
+      request_(request), host_(request->host()), port_(request->port()) {
     TRACE_THIS_PTR;
     if(context) {
         ssl_socket_.reset(new ssl_socket(service_, *context));
@@ -23,10 +23,10 @@ HttpClient::~HttpClient() {
     TRACE_THIS_PTR;
 }
 
-void HttpClient::UpdateRequest(HttpRequest& request) {
+void HttpClient::UpdateRequest(HttpRequest *request) {
     request_ = request;
-    host_ = request.host();
-    port_ = request.port();
+    host_ = request->host();
+    port_ = request->port();
 }
 
 void HttpClient::AsyncSendRequest(handler_type handler) {
@@ -57,9 +57,9 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
         return;
     }
 
-    XDEBUG << "Dump request before sending(size: " << request_.OutboundBuffer().size() << "):\n"
+    XDEBUG << "Dump request before sending(size: " << request_->OutboundBuffer().size() << "):\n"
            << "--------------------------------------------\n"
-           << boost::asio::buffer_cast<const char *>(request_.OutboundBuffer().data())
+           << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
            << "\n--------------------------------------------";
 
     if(is_ssl_) {
@@ -68,7 +68,7 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
                                                  this,
                                                  boost::asio::placeholders::error));
     } else {
-        boost::asio::async_write(*socket_, request_.OutboundBuffer(),
+        boost::asio::async_write(*socket_, request_->OutboundBuffer(),
                                  boost::bind(&HttpClient::OnRemoteDataSent,
                                              this,
                                              boost::asio::placeholders::error));
@@ -82,7 +82,7 @@ void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
         return;
     }
 
-    boost::asio::async_write(*ssl_socket_, request_.OutboundBuffer(),
+    boost::asio::async_write(*ssl_socket_, request_->OutboundBuffer(),
                              boost::bind(&HttpClient::OnRemoteDataSent,
                                          this,
                                          boost::asio::placeholders::error));

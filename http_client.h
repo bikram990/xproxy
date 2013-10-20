@@ -15,11 +15,11 @@ public:
     typedef boost::function<void(const boost::system::error_code&, HttpResponse*)> handler_type;
 
     HttpClient(boost::asio::io_service& service,
-               HttpRequest& request,
+               HttpRequest *request,
                boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
-    void UpdateRequest(HttpRequest& request);
+    void UpdateRequest(HttpRequest *request);
     void AsyncSendRequest(handler_type handler);
 
 private:
@@ -43,7 +43,7 @@ private:
 
     boost::asio::streambuf remote_buffer_;
 
-    HttpRequest& request_;
+    HttpRequest *request_;
     HttpResponse response_;
 
     std::string host_;
