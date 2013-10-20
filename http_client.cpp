@@ -23,12 +23,6 @@ HttpClient::~HttpClient() {
     TRACE_THIS_PTR;
 }
 
-void HttpClient::UpdateRequest(HttpRequest *request) {
-    request_ = request;
-    host_ = request->host();
-    port_ = request->port();
-}
-
 void HttpClient::AsyncSendRequest(handler_type handler) {
     handler_ = handler;
     ResolveRemote();

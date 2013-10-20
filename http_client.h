@@ -19,7 +19,9 @@ public:
                boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
-    void UpdateRequest(HttpRequest *request);
+    HttpClient& host(const std::string& host) { host_ = host; return *this; }
+    HttpClient& port(short port) { port_ = port; return *this; }
+    HttpClient& request(HttpRequest *request) { request_ = request; return *this; }
     void AsyncSendRequest(handler_type handler);
 
 private:
