@@ -2,11 +2,10 @@
 #define REQUEST_HANDLER_H
 
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/shared_ptr.hpp>
 #include "http_request.h"
 
-class HttpProxySession;
 
+class HttpProxySession;
 
 class RequestHandler : public boost::enable_shared_from_this<RequestHandler> {
 public:
@@ -17,10 +16,6 @@ public:
 
 protected:
     RequestHandler();
-
-private:
-    static RequestHandler *CreateHttpHandler(HttpProxySession& session,
-                                             HttpRequestPtr request);
 };
 
 #endif // REQUEST_HANDLER_H

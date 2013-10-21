@@ -1,7 +1,7 @@
-#include <iostream>
 #include "proxy_server.h"
 #include "log.h"
 #include "proxy_configuration.h"
+#include "proxy_rule_manager.h"
 
 ProxyConfiguration g_config;
 
@@ -13,6 +13,10 @@ int main(int argc, char* argv[]) {
         XFATAL << "Failed to load config, exit.";
         return -1;
     }
+
+    ProxyRuleManager::Instance() << "youtube.com"
+                                 << "facebook.com"
+                                 << "twitter.com";
 
     try {
         ProxyServer s(g_config.GetProxyPort());
