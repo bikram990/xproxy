@@ -23,9 +23,9 @@ public:
             it != domains_.end(); ++it) {
             XINFO << "Current rule is: " << *it;
 
-            if(it->length() < host.length())
+            if(host.length() < it->length())
                 continue;
-            if(it->compare(it->length() - host.length(), host.length(), host) == 0) {
+            if(host.compare(host.length() - it->length(), it->length(), *it) == 0) {
                 XINFO << "Host " << host << " matches rule " << *it << ", need proxy.";
                 return true;
             }
