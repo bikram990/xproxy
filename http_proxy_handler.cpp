@@ -4,9 +4,7 @@
 #include "http_proxy_handler.h"
 #include "http_proxy_session.h"
 #include "log.h"
-#include "proxy_configuration.h"
-
-extern ProxyConfiguration g_config;
+#include "resource_manager.h"
 
 HttpProxyHandler::HttpProxyHandler(HttpProxySession& session,
                                    HttpRequestPtr request)
@@ -21,7 +19,7 @@ void HttpProxyHandler::HandleRequest() {
     XTRACE << "New request received, host: " << origin_request_->host()
            << ", port: " << origin_request_->port();
     BuildProxyRequest(proxy_request_);
-    client_.host(g_config.GetGAEServerDomain()).port(443).request(&proxy_request_)
+    client_.host(ResourceManager::instance().GetServerConfig().GetGAEServerDomain()).port(443).request(&proxy_request_)
            .AsyncSendRequest(boost::bind(&HttpProxyHandler::OnResponseReceived,
                                          boost::static_pointer_cast<HttpProxyHandler>(shared_from_this()), _1, _2));
     XTRACE << "Request is sent asynchronously.";
@@ -34,7 +32,7 @@ void HttpProxyHandler::BuildProxyRequest(HttpRequest& request) {
     std::size_t length = origin_body_buf.size();
 
     request.method("POST").uri("/proxy").major_version(1).minor_version(1)
-           .AddHeader("Host", g_config.GetGAEAppId() + ".appspot.com")
+           .AddHeader("Host", ResourceManager::instance().GetServerConfig().GetGAEAppId() + ".appspot.com")
            .AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0")
            .AddHeader("Connection", "close")
            .AddHeader("Content-Length", boost::lexical_cast<std::string>(length))
