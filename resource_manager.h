@@ -1,9 +1,11 @@
 #ifndef RESOURCE_MANAGER_H
 #define RESOURCE_MANAGER_H
 
+#include <map>
 #include <boost/noncopyable.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <openssl/x509.h>
 #include "log.h"
 
 class ResourceManager : private boost::noncopyable {
@@ -11,11 +13,13 @@ class ResourceManager : private boost::noncopyable {
 public:
     class ServerConfig;
     class RuleConfig;
+    class CertManager;
 
     static ResourceManager& instance();
 
     ServerConfig& GetServerConfig();
     RuleConfig& GetRuleConfig();
+    CertManager& GetCertManager();
 
     bool init();
 
@@ -25,6 +29,7 @@ private:
 
     std::auto_ptr<ServerConfig> server_config_;
     std::auto_ptr<RuleConfig> rule_config_;
+    std::auto_ptr<CertManager> cert_manager_;
 };
 
 class ResourceManager::ServerConfig : private boost::noncopyable {
@@ -78,12 +83,42 @@ private:
     std::vector<std::string> domains_;
 };
 
+class ResourceManager::CertManager : private boost::noncopyable {
+    friend class ResourceManager;
+    friend class std::auto_ptr<CertManager>;
+public:
+    bool LoadRootCA(const std::string& cert_file = "xProxyRootCA.crt",
+                    const std::string& private_key_file = "xProxyRootCA.key");
+    bool GenerateCertificate(const std::string& host);
+
+private:
+    CertManager() {}
+    ~CertManager() {}
+
+    struct Cert {
+        X509 *cert;
+        ~Cert() { if(cert) ::X509_free(cert); }
+    };
+    struct Key {
+        EVP_PKEY *key;
+        ~Key() { if(key) ::EVP_PKEY_free(key); }
+    };
+
+    Cert root_cert_;
+    Key root_private_key_;
+    std::map<std::string, Cert> cert_map_;
+};
+
 inline ResourceManager::ServerConfig& ResourceManager::GetServerConfig() {
     return *server_config_;
 }
 
 inline ResourceManager::RuleConfig& ResourceManager::GetRuleConfig() {
     return *rule_config_;
+}
+
+inline ResourceManager::CertManager& ResourceManager::GetCertManager() {
+    return *cert_manager_;
 }
 
 inline bool ResourceManager::init() {
