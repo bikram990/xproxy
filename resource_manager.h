@@ -87,26 +87,27 @@ class ResourceManager::CertManager : private boost::noncopyable {
     friend class ResourceManager;
     friend class std::auto_ptr<CertManager>;
 public:
+    struct CA {
+        EVP_PKEY *key;
+        X509 *cert;
+        CA() : key(NULL), cert(NULL) {}
+        ~CA() { if(key) ::EVP_PKEY_free(key); if(cert) ::X509_free(cert); }
+    };
+
     bool LoadRootCA(const std::string& cert_file = "xProxyRootCA.crt",
                     const std::string& private_key_file = "xProxyRootCA.key");
-    bool GenerateCertificate(const std::string& host);
+    bool GenerateRootCA(CA& ca);
+    bool GenerateCertificate(const std::string& host, CA& ca);
+    bool SaveCertificate(const CA& ca,
+                         const std::string& cert_file,
+                         const std::string& private_key_file);
 
 private:
     CertManager() {}
     ~CertManager() {}
 
-    struct Cert {
-        X509 *cert;
-        ~Cert() { if(cert) ::X509_free(cert); }
-    };
-    struct Key {
-        EVP_PKEY *key;
-        ~Key() { if(key) ::EVP_PKEY_free(key); }
-    };
-
-    Cert root_cert_;
-    Key root_private_key_;
-    std::map<std::string, Cert> cert_map_;
+    CA root_ca_;
+    std::map<std::string, CA> ca_map_;
 };
 
 inline ResourceManager::ServerConfig& ResourceManager::GetServerConfig() {
