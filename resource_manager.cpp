@@ -64,8 +64,46 @@ bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
 }
 
 bool ResourceManager::CertManager::GenerateRootCA(CA& ca) {
-    // TODO implement this
-    return false;
+    X509 *x509 = NULL;
+    x509 = X509_new();
+    if(!x509) {
+        XERROR << "Failed to create X509 structure.";
+        return false;
+    }
+
+    // TODO should we always set the serial number to 1 ?
+    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+
+    // set the valid date, to 10 years
+    X509_gmtime_adj(X509_get_notBefore(x509), 0);
+    X509_gmtime_adj(X509_get_notAfter(x509), 60 * 60 * 24 * 365 * 10);
+
+    if(!GenerateKey(&ca.key)) {
+        XERROR << "Failed to generate key for root CA.";
+        X509_free(x509);
+        return false;
+    }
+    X509_set_pubkey(x509, ca.key);
+
+    X509_NAME *name = X509_get_subject_name(x509);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Root CA"), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy CA"),      -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy"),         -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Lan"),            -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Internet"),       -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("CN"),             -1, -1, 0);
+
+    X509_set_issuer_name(x509, name); //self signed
+
+    if(!X509_sign(x509, ca.key, EVP_sha1())) { // sign cert using sha1
+        XERROR << "Error signing root certificate.";
+        X509_free(x509);
+        EVP_PKEY_free(ca.key);
+        return false;
+    }
+
+    ca.cert = x509;
+    return true;
 }
 
 bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, CA& ca) {
@@ -78,4 +116,31 @@ bool ResourceManager::CertManager::SaveCertificate(const CA& ca,
                                                    const std::string& private_key_file) {
     // TODO implement this
     return false;
+}
+
+bool ResourceManager::CertManager::GenerateKey(EVP_PKEY **key) {
+    EVP_PKEY *k = NULL;
+    k = EVP_PKEY_new();
+    if(!k) {
+        XERROR << "Failed to create EVP_PKEY structure.";
+        return false;
+    }
+
+    RSA *rsa = NULL;
+    rsa = RSA_generate_key(2048, RSA_F4, NULL, NULL);
+    if(!rsa) {
+        XERROR << "Failed to generate 2048-bit RSA key.";
+        EVP_PKEY_free(k);
+        return false;
+    }
+
+    if(!EVP_PKEY_assign_RSA(k, rsa)) {
+        XERROR << "Failed to assign rsa key to EVP_PKEY structure.";
+        EVP_PKEY_free(k);
+        RSA_free(rsa);
+        return false;
+    }
+
+    *key = k;
+    return true;
 }

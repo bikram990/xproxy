@@ -106,6 +106,8 @@ private:
     CertManager() {}
     ~CertManager() {}
 
+    bool GenerateKey(EVP_PKEY **key);
+
     CA root_ca_;
     std::map<std::string, CA> ca_map_;
 };
