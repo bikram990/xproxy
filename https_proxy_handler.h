@@ -17,6 +17,8 @@ public:
     void HandleRequest();
 
 private:
+    void init();
+
     void OnLocalSSLReplySent(const boost::system::error_code& e);
     void OnLocalHandshaken(const boost::system::error_code& e);
     void OnLocalDataReceived(const boost::system::error_code& e, std::size_t size);
@@ -25,8 +27,8 @@ private:
     void OnLocalDataSent(const boost::system::error_code& e);
 
     HttpProxySession& session_;
-    boost::asio::ssl::context& local_ssl_context_;
-    ssl_socket_ref local_ssl_socket_; // wrap the local socket
+    std::auto_ptr<boost::asio::ssl::context> local_ssl_context_;
+    std::auto_ptr<ssl_socket_ref> local_ssl_socket_; // wrap the local socket
     boost::asio::ssl::context remote_ssl_context_;
 
     boost::asio::streambuf local_buffer_;
