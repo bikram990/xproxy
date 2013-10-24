@@ -63,6 +63,7 @@ ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate
 
 bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
                                               const std::string& private_key_file) {
+    root_ca_ = boost::make_shared<CA>();
     if(!LoadCertificate(cert_file, private_key_file, *root_ca_)) {
         XERROR << "Failed to load root CA.";
         return false;
