@@ -97,7 +97,17 @@ public:
     };
     typedef boost::shared_ptr<CA> CAPtr;
 
+    struct DHParameters : private boost::noncopyable {
+        DH *dh;
+        DHParameters() : dh(NULL) {}
+        ~DHParameters() { if(dh) ::DH_free(dh); }
+
+        operator bool() { return dh != NULL; }
+    };
+    typedef boost::shared_ptr<DHParameters> DHParametersPtr;
+
     CAPtr GetCertificate(const std::string& host);
+    DHParametersPtr GetDHParameters();
 
 private:
     CertManager() {}
@@ -115,10 +125,14 @@ private:
                          const std::string& private_key_file);
     bool GenerateRootCA();
     bool GenerateCertificate(const std::string& host, CA& ca);
+    bool LoadDHParameters(const std::string& dh_file = "dh.pem");
+    bool GenerateDHParameters();
+    bool SaveDHParameters(const std::string& dh_file = "dh.pem");
     bool GenerateKey(EVP_PKEY **key);
     bool GenerateRequest(const std::string& common_name, X509_REQ **request, EVP_PKEY **key);
 
     CAPtr root_ca_;
+    DHParametersPtr dh_;
     std::map<std::string, CAPtr> ca_map_;
 };
 
@@ -136,14 +150,24 @@ inline ResourceManager::CertManager& ResourceManager::GetCertManager() {
 
 inline bool ResourceManager::init() {
     bool s = server_config_->LoadConfig();
-    bool c = true;
+
+    bool cr = true;
     if(!cert_manager_->LoadRootCA()) {
         if(!cert_manager_->GenerateRootCA())
-            c = false;
+            cr = false;
         else
             cert_manager_->SaveRootCA();
     }
-    return s && c;
+
+    bool cd = true;
+    if(!cert_manager_->LoadDHParameters()) {
+        if(!cert_manager_->GenerateDHParameters())
+            cd = false;
+        else
+            cert_manager_->SaveDHParameters();
+    }
+
+    return s && cr && cd;
 }
 
 inline bool ResourceManager::ServerConfig::LoadConfig() {

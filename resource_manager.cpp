@@ -256,6 +256,56 @@ bool ResourceManager::CertManager::SaveCertificate(const CA& ca,
     return true;
 }
 
+bool ResourceManager::CertManager::LoadDHParameters(const std::string& dh_file) {
+    if(!dh_)
+        dh_ = boost::make_shared<DHParameters>();
+
+    FILE *fp = NULL;
+    fp = std::fopen(dh_file.c_str(), "rb");
+    if(!fp) {
+        XERROR << "Failed to open DH parameters file: " << dh_file;
+        return false;
+    }
+    dh_->dh = PEM_read_DHparams(fp, NULL, NULL, NULL);
+    if(!dh_->dh) {
+        XERROR << "Failed to read DH parameters from file " << dh_file;
+        std::fclose(fp);
+        return false;
+    }
+
+    std::fclose(fp);
+    XINFO << "DH parameters loaded.";
+    return true;
+}
+
+bool ResourceManager::CertManager::GenerateDHParameters() {
+    dh_->dh = DH_generate_parameters(512, DH_GENERATOR_2, NULL, NULL); // 512 bits
+    if(!dh_->dh) {
+        XERROR << "Failed to generate DH parameters.";
+        return false;
+    }
+    XINFO << "DH parameters generated.";
+    return true;
+}
+
+bool ResourceManager::CertManager::SaveDHParameters(const std::string& dh_file) {
+    FILE *fp = NULL;
+    fp = std::fopen(dh_file.c_str(), "wb");
+    if(!fp) {
+        XERROR << "Failed to open " << dh_file << " for writing.";
+        return false;
+    }
+    if(!::PEM_write_DHparams(fp, dh_->dh)) {
+        XERROR << "Failed to write DH parameters to " << dh_file;
+        std::fclose(fp);
+        return false;
+    }
+
+    std::fclose(fp);
+    XINFO << "DH parameters saved.";
+    return true;
+}
+
 bool ResourceManager::CertManager::GenerateKey(EVP_PKEY **key) {
     EVP_PKEY *k = NULL;
     k = EVP_PKEY_new();
