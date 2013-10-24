@@ -98,8 +98,9 @@ bool ResourceManager::CertManager::GenerateRootCA() {
         return false;
     }
 
-    // TODO should we always set the serial number to 1 ?
-    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+    // we should set the serial number to 0 for root CA, otherwise it will not
+    // be accepted by browsers
+    ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
 
     // set the valid date, to 10 years
     X509_gmtime_adj(X509_get_notBefore(x509), 0);
