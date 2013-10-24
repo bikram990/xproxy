@@ -146,6 +146,12 @@ bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, 
         XERROR << "Failed to Generate Certificate for host " << host;
         return false;
     }
+    if(X509_REQ_verify(req, key) != 1) {
+        XERROR << "Failed to verify certificate request for host " << host;
+        EVP_PKEY_free(key);
+        X509_REQ_free(req);
+        return false;
+    }
 
     X509 *cert = NULL;
     cert = X509_new();
