@@ -87,7 +87,7 @@ class ResourceManager::CertManager : private boost::noncopyable {
     friend class ResourceManager;
     friend class std::auto_ptr<CertManager>;
 public:
-    struct CA {
+    struct CA : private boost::noncopyable {// to prevent multi memory free
         EVP_PKEY *key;
         X509 *cert;
         CA() : key(NULL), cert(NULL) {}
@@ -95,6 +95,9 @@ public:
 
         operator bool() { return key && cert; }
     };
+    typedef boost::shared_ptr<CA> CAPtr;
+
+    CAPtr GetCertificate(const std::string& host);
 
 private:
     CertManager() {}
@@ -115,8 +118,8 @@ private:
     bool GenerateKey(EVP_PKEY **key);
     bool GenerateRequest(const std::string& common_name, X509_REQ **request, EVP_PKEY **key);
 
-    CA root_ca_;
-    std::map<std::string, CA> ca_map_;
+    CAPtr root_ca_;
+    std::map<std::string, CAPtr> ca_map_;
 };
 
 inline ResourceManager::ServerConfig& ResourceManager::GetServerConfig() {

@@ -31,9 +31,39 @@ ResourceManager::~ResourceManager() {
     TRACE_THIS_PTR;
 }
 
+ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate(const std::string& host) {
+    std::map<std::string, CAPtr>::iterator it = ca_map_.find(host);
+    if(it != ca_map_.end()) {
+        return it->second;
+    }
+
+    XINFO << "Certificate for host " << host << " is not found, try loading from file...";
+    CAPtr ca(boost::make_shared<CA>());
+    if(LoadCertificate(host + ".crt", host + ".key", *ca)) {
+        XINFO << "Certificate for host " << host << " is loaded from file.";
+        ca_map_.insert(std::make_pair(host, ca));
+        return ca;
+    }
+
+    XWARN << "Certificate for host " << host << " cannot be loaded from file, generating one...";
+    if(!root_ca_) {
+        XERROR << "Root CA is not initialized.";
+        return NULL;
+    }
+    if(GenerateCertificate(host, *ca)) {
+        XINFO << "Certificate for host " << host << " is generated.";
+        ca_map_.insert(std::make_pair(host, ca));
+        SaveCertificate(*ca, host + ".crt", host + ".key");
+        return ca;
+    }
+
+    XERROR << "Certificate for host " << host << " cannot be generated.";
+    return NULL;
+}
+
 bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
                                               const std::string& private_key_file) {
-    if(!LoadCertificate(cert_file, private_key_file, root_ca_)) {
+    if(!LoadCertificate(cert_file, private_key_file, *root_ca_)) {
         XERROR << "Failed to load root CA.";
         return false;
     }
@@ -44,7 +74,7 @@ bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
 
 bool ResourceManager::CertManager::SaveRootCA(const std::string& cert_file,
                                               const std::string& private_key_file) {
-    if(!SaveCertificate(root_ca_, cert_file, private_key_file)) {
+    if(!SaveCertificate(*root_ca_, cert_file, private_key_file)) {
         XERROR << "Failed to save root CA.";
         return false;
     }
@@ -106,12 +136,12 @@ bool ResourceManager::CertManager::GenerateRootCA() {
     X509_gmtime_adj(X509_get_notBefore(x509), 0);
     X509_gmtime_adj(X509_get_notAfter(x509), 60 * 60 * 24 * 365 * 10);
 
-    if(!GenerateKey(&root_ca_.key)) {
+    if(!GenerateKey(&root_ca_->key)) {
         XERROR << "Failed to generate key for root CA.";
         X509_free(x509);
         return false;
     }
-    X509_set_pubkey(x509, root_ca_.key);
+    X509_set_pubkey(x509, root_ca_->key);
 
     X509_NAME *name = X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Root CA"), -1, -1, 0);
@@ -123,14 +153,14 @@ bool ResourceManager::CertManager::GenerateRootCA() {
 
     X509_set_issuer_name(x509, name); //self signed
 
-    if(!X509_sign(x509, root_ca_.key, EVP_sha1())) { // sign cert using sha1
+    if(!X509_sign(x509, root_ca_->key, EVP_sha1())) { // sign cert using sha1
         XERROR << "Error signing root certificate.";
         X509_free(x509);
-        EVP_PKEY_free(root_ca_.key);
+        EVP_PKEY_free(root_ca_->key);
         return false;
     }
 
-    root_ca_.cert = x509;
+    root_ca_->cert = x509;
     XINFO << "Root CA generated.";
     return true;
 }
@@ -163,7 +193,7 @@ bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, 
         return false;
     }
 
-    X509_NAME *name = X509_get_subject_name(root_ca_.cert);
+    X509_NAME *name = X509_get_subject_name(root_ca_->cert);
     X509_set_issuer_name(cert, name);
     name = X509_REQ_get_subject_name(req);
     X509_set_subject_name(cert, name);
@@ -172,7 +202,7 @@ bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, 
     X509_gmtime_adj(X509_get_notBefore(cert), 0);
     X509_gmtime_adj(X509_get_notAfter(cert), 60 * 60 * 24 * 365 * 10);
 
-    if(!X509_sign(cert, root_ca_.key, EVP_sha1())) {
+    if(!X509_sign(cert, root_ca_->key, EVP_sha1())) {
         XERROR << "Error signing certificate.";
         EVP_PKEY_free(key);
         X509_REQ_free(req);
