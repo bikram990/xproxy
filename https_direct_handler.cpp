@@ -4,19 +4,33 @@
 #include "http_proxy_session.h"
 #include "https_direct_handler.h"
 #include "log.h"
+#include "resource_manager.h"
 
 HttpsDirectHandler::HttpsDirectHandler(HttpProxySession &session,
                                        HttpRequestPtr request)
-    : session_(session), local_ssl_context_(session.LocalSSLContext()),
-      local_ssl_socket_(session.LocalSocket(), local_ssl_context_),
+    : session_(session),
       remote_ssl_context_(boost::asio::ssl::context::sslv23),
       request_(request),
       client_(session.service(), request.get(), &remote_ssl_context_) {
     TRACE_THIS_PTR;
+    init();
 }
 
 HttpsDirectHandler::~HttpsDirectHandler() {
     TRACE_THIS_PTR;
+}
+
+void HttpsDirectHandler::init() {
+    local_ssl_context_.reset(new boost::asio::ssl::context(session_.service(), boost::asio::ssl::context::sslv23));
+    local_ssl_context_->set_options(boost::asio::ssl::context::default_workarounds
+                                    | boost::asio::ssl::context::no_sslv2
+                                    | boost::asio::ssl::context::single_dh_use);
+    ResourceManager::CertManager::CAPtr ca = ResourceManager::instance().GetCertManager().GetCertificate(request_->host());
+    ::SSL_CTX_use_certificate(local_ssl_context_->native_handle(), ca->cert);
+    ::SSL_CTX_use_PrivateKey(local_ssl_context_->native_handle(), ca->key);
+    // TODO make the following consistent with above
+    local_ssl_context_->use_tmp_dh_file("dh512.pem");
+    local_ssl_socket_.reset(new ssl_socket_ref(session_.LocalSocket(), *local_ssl_context_));
 }
 
 void HttpsDirectHandler::HandleRequest() {
@@ -24,7 +38,7 @@ void HttpsDirectHandler::HandleRequest() {
            << ", port: " << request_->port();
 
     static std::string response("HTTP/1.1 200 Connection Established\r\nProxy-Connection: Keep-Alive\r\n\r\n");
-    boost::asio::async_write(local_ssl_socket_.next_layer(), boost::asio::buffer(response),
+    boost::asio::async_write(local_ssl_socket_->next_layer(), boost::asio::buffer(response),
                              boost::bind(&HttpsDirectHandler::OnLocalSSLReplySent,
                                          boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                          boost::asio::placeholders::error));
@@ -37,7 +51,7 @@ void HttpsDirectHandler::OnLocalSSLReplySent(const boost::system::error_code& e)
         return;
     }
 
-    local_ssl_socket_.async_handshake(boost::asio::ssl::stream_base::server,
+    local_ssl_socket_->async_handshake(boost::asio::ssl::stream_base::server,
                                       boost::bind(&HttpsDirectHandler::OnLocalHandshaken,
                                                   boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                                   boost::asio::placeholders::error));
@@ -51,7 +65,7 @@ void HttpsDirectHandler::OnLocalHandshaken(const boost::system::error_code& e) {
     }
 
     boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
-    local_ssl_socket_.async_read_some(buf,
+    local_ssl_socket_->async_read_some(buf,
                                       boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
                                                   boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                                   boost::asio::placeholders::error,
@@ -80,7 +94,7 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
     if(result != HttpRequest::kComplete) {
         XWARN << "This request is not complete, continue to read from the ssl socket.";
         boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(2048); // TODO hard code
-        local_ssl_socket_.async_read_some(buf,
+        local_ssl_socket_->async_read_some(buf,
                                           boost::bind(&HttpsDirectHandler::OnLocalDataReceived,
                                                       boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                                       boost::asio::placeholders::error,
@@ -114,7 +128,7 @@ void HttpsDirectHandler::OnResponseReceived(const boost::system::error_code& e, 
 
     XTRACE << "Response is back, status line: " << response->status_line();
 
-    boost::asio::async_write(local_ssl_socket_, response->OutboundBuffer(),
+    boost::asio::async_write(*local_ssl_socket_, response->OutboundBuffer(),
                              boost::bind(&HttpsDirectHandler::OnLocalDataSent,
                                          boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()),
                                          boost::asio::placeholders::error));
