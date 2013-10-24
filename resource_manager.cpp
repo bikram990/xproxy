@@ -40,6 +40,17 @@ bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
     return true;
 }
 
+bool ResourceManager::CertManager::SaveRootCA(const std::string& cert_file,
+                                              const std::string& private_key_file) {
+    if(!SaveCertificate(root_ca_, cert_file, private_key_file)) {
+        XERROR << "Failed to save root CA.";
+        return false;
+    }
+
+    XINFO << "Root CA saved.";
+    return true;
+}
+
 bool ResourceManager::CertManager::LoadCertificate(const std::string& cert_file,
                                                    const std::string& private_key_file,
                                                    CA& ca) {

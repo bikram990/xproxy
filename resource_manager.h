@@ -102,6 +102,8 @@ private:
 
     bool LoadRootCA(const std::string& cert_file = "xProxyRootCA.crt",
                     const std::string& private_key_file = "xProxyRootCA.key");
+    bool SaveRootCA(const std::string& cert_file = "xProxyRootCA.crt",
+                    const std::string& private_key_file = "xProxyRootCA.key");
     bool LoadCertificate(const std::string& cert_file,
                          const std::string& private_key_file,
                          CA& ca);
