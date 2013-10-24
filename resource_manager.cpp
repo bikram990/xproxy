@@ -21,7 +21,9 @@ ResourceManager& ResourceManager::instance() {
 }
 
 ResourceManager::ResourceManager()
-    : server_config_(new ServerConfig()), rule_config_(new RuleConfig()) {
+    : server_config_(new ServerConfig()),
+      rule_config_(new RuleConfig()),
+      cert_manager_(new CertManager()) {
     TRACE_THIS_PTR;
 }
 
