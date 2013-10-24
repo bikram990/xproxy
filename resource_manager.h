@@ -135,7 +135,15 @@ inline ResourceManager::CertManager& ResourceManager::GetCertManager() {
 }
 
 inline bool ResourceManager::init() {
-    return server_config_->LoadConfig();
+    bool s = server_config_->LoadConfig();
+    bool c = true;
+    if(!cert_manager_->LoadRootCA()) {
+        if(!cert_manager_->GenerateRootCA())
+            c = false;
+        else
+            cert_manager_->SaveRootCA();
+    }
+    return s && c;
 }
 
 inline bool ResourceManager::ServerConfig::LoadConfig() {
