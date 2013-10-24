@@ -95,7 +95,7 @@ bool ResourceManager::CertManager::LoadCertificate(const std::string& cert_file,
         XERROR << "Failed to open certificate: " << cert_file;
         return false;
     }
-    ca.cert= PEM_read_X509(fp, NULL, NULL, NULL);
+    ca.cert = PEM_read_X509(fp, NULL, NULL, NULL);
     if(!ca.cert) {
         XERROR << "Failed to read Root CA certificate from file " << cert_file;
         std::fclose(fp);
