@@ -24,8 +24,8 @@ void HttpsProxyHandler::init() {
     ResourceManager::CertManager::CAPtr ca = ResourceManager::instance().GetCertManager().GetCertificate(origin_request_->host());
     ::SSL_CTX_use_certificate(local_ssl_context_->native_handle(), ca->cert);
     ::SSL_CTX_use_PrivateKey(local_ssl_context_->native_handle(), ca->key);
-    // TODO make the following consistent with above
-    local_ssl_context_->use_tmp_dh_file("dh512.pem");
+    ResourceManager::CertManager::DHParametersPtr dh = ResourceManager::instance().GetCertManager().GetDHParameters();
+    ::SSL_CTX_set_tmp_dh(local_ssl_context_->native_handle(), dh->dh);
     local_ssl_socket_.reset(new ssl_socket_ref(session_.LocalSocket(), *local_ssl_context_));
 }
 

@@ -61,6 +61,14 @@ ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate
     return CAPtr();
 }
 
+ResourceManager::CertManager::DHParametersPtr ResourceManager::CertManager::GetDHParameters() {
+    if(!dh_) {
+        XERROR << "DH parameters is not initialized.";
+        return DHParametersPtr();
+    }
+    return dh_;
+}
+
 bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
                                               const std::string& private_key_file) {
     if(!root_ca_)
