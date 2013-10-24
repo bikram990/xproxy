@@ -48,7 +48,7 @@ ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate
     XWARN << "Certificate for host " << host << " cannot be loaded from file, generating one...";
     if(!root_ca_) {
         XERROR << "Root CA is not initialized.";
-        return NULL;
+        return CAPtr();
     }
     if(GenerateCertificate(host, *ca)) {
         XINFO << "Certificate for host " << host << " is generated.";
@@ -58,7 +58,7 @@ ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate
     }
 
     XERROR << "Certificate for host " << host << " cannot be generated.";
-    return NULL;
+    return CAPtr();
 }
 
 bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
