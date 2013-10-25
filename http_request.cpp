@@ -6,6 +6,11 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
         XERROR << "The request cannot accept more data, it is either completed or bad request.";
         return state_;
     }
+    if(stream.size() <= 0) {
+        XERROR << "The stream is empty.";
+        state_ = kBadRequest;
+        return state_;
+    }
 
     std::istream s(&stream);
     s >> std::noskipws;
