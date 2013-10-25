@@ -1,8 +1,6 @@
 #ifndef HTTP_REQUEST_H
 #define HTTP_REQUEST_H
 
-#include <vector>
-#include <string>
 #include "http_header.h"
 #include "log.h"
 
@@ -16,8 +14,7 @@ public:
         kBadRequest
     };
 
-    static State BuildRequest(char *buffer, std::size_t length,
-                              HttpRequest& request);
+    static State BuildRequest(boost::asio::streambuf& stream, HttpRequest& request);
     static void CanonicalizeUri(std::string& uri);
 
     HttpRequest() : buffer_built_(false), state_(kEmptyRequest), port_(80),

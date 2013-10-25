@@ -88,8 +88,7 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
 
     // TODO can we build on the original request?
     // TODO2 we should send the raw data directly, do not do parse and compose work
-    HttpRequest::State result = HttpRequest::BuildRequest(const_cast<char *>(boost::asio::buffer_cast<const char *>(local_buffer_.data())),
-                                                          local_buffer_.size(), *request_);
+    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_, *request_);
 
     if(result != HttpRequest::kComplete) {
         XWARN << "This request is not complete, continue to read from the ssl socket.";

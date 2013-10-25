@@ -1,10 +1,8 @@
-#include <cctype>
-#include <sstream>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include "http_request.h"
 
-HttpRequest::State HttpRequest::BuildRequest(char *buffer, std::size_t length,
+HttpRequest::State HttpRequest::BuildRequest(boost::asio::streambuf& stream,
                                              HttpRequest& request) {
     if(request.state_ == kComplete) {
         XWARN << "Overwritting a valid request.";
@@ -13,11 +11,11 @@ HttpRequest::State HttpRequest::BuildRequest(char *buffer, std::size_t length,
     }
 
     // TODO should we care if there is null character in buffer?
-    std::stringstream req(buffer);
+    std::istream req(&stream);
     std::string line;
 
-    if(!buffer || length <= 0) {
-        XERROR << "The buffer is invalid: null pointer or zero length.";
+    if(stream.size() <= 0) {
+        XERROR << "The stream has no data";
         return kBadRequest;
     }
 

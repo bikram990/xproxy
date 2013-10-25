@@ -27,9 +27,8 @@ private:
     boost::asio::ip::tcp::socket local_socket_;
     HttpProxySessionManager& manager_;
 
-    boost::array<char, 4096> local_buffer_;
+    boost::asio::streambuf local_buffer_;
 
-    // TODO make the handler a generic handler after all types implemented
     boost::shared_ptr<RequestHandler> handler_;
 };
 

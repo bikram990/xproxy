@@ -25,28 +25,30 @@ void HttpProxySession::Terminate() {
 }
 
 void HttpProxySession::Start() {
-    local_socket_.async_read_some(
-                boost::asio::buffer(local_buffer_),
-                boost::bind(&HttpProxySession::OnRequestReceived,
-                            shared_from_this(),
-                            boost::asio::placeholders::error,
-                            boost::asio::placeholders::bytes_transferred));
+    boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
+    local_socket_.async_read_some(buf,
+                                  boost::bind(&HttpProxySession::OnRequestReceived,
+                                              shared_from_this(),
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred));
 }
 
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
-                                       std::size_t size) {
+                                         std::size_t size) {
     if(handler_) {
         XERROR << "A handler exists, it should never happen.";
         return;
     }
 
-    XTRACE << "Dump data from local socket(size:" << size << "):\n"
+    local_buffer_.commit(size);
+
+    XDEBUG << "Dump data from local socket(size:" << size << "):\n"
            << "--------------------------------------------\n"
-           << local_buffer_.data()
+           << boost::asio::buffer_cast<const char *>(local_buffer_.data())
            << "\n--------------------------------------------";
 
     HttpRequestPtr request(boost::make_shared<HttpRequest>());
-    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_.data(), size, *request);
+    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_, *request);
 
     if(result == HttpRequest::kIncomplete) {
         XWARN << "Not a complete request, but currently partial request is not supported.";
