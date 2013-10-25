@@ -73,6 +73,28 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
     return state_;
 }
 
+void HttpRequest::reset() {
+    XDEBUG << "Resetting request...";
+
+    if(buffer_built_) {
+        raw_buffer_.consume(raw_buffer_.size());
+        buffer_built_ = false;
+    }
+
+    state_ = kIncomplete;
+    build_state_ = kRequestStart;
+
+    host_ = "";
+    port_ = 80;
+    method_ = "";
+    uri_ = "";
+    major_version_ = 0;
+    minor_version_ = 0;
+    headers_.clear();
+    if(body_.size() > 0)
+        body_.consume(body_.size());
+}
+
 boost::asio::streambuf& HttpRequest::OutboundBuffer() {
     if(buffer_built_)
         return raw_buffer_;

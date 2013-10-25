@@ -22,6 +22,7 @@ public:
     ~HttpRequest() { TRACE_THIS_PTR; }
 
     State operator<<(boost::asio::streambuf& stream);
+    void reset();
     boost::asio::streambuf& OutboundBuffer();
 
     const std::string& host() const { return host_; }

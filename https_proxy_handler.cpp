@@ -60,6 +60,7 @@ void HttpsProxyHandler::OnLocalHandshaken(const boost::system::error_code& e) {
         return;
     }
 
+    origin_request_->reset();
     boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
     local_ssl_socket_->async_read_some(buf,
                                       boost::bind(&HttpsProxyHandler::OnLocalDataReceived,
