@@ -48,10 +48,15 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
            << "\n--------------------------------------------";
 
     HttpRequestPtr request(boost::make_shared<HttpRequest>());
-    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_, *request);
+    HttpRequest::State result = *request << local_buffer_;
 
     if(result == HttpRequest::kIncomplete) {
-        XWARN << "Not a complete request, but currently partial request is not supported.";
+        XWARN << "Not a complete request, continue reading...";
+        local_socket_.async_read_some(local_buffer_.prepare(2048), // TODO hard code
+                                      boost::bind(&HttpProxySession::OnRequestReceived,
+                                                  shared_from_this(),
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred));
         return;
     } else if(result == HttpRequest::kBadRequest) {
         XWARN << "Bad request: " << local_socket_.remote_endpoint().address()

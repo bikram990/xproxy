@@ -28,17 +28,13 @@ void HttpProxyHandler::HandleRequest() {
 void HttpProxyHandler::BuildProxyRequest(HttpRequest& request) {
     // TODO improve this, refine the headers
     boost::asio::streambuf& origin_body_buf = origin_request_->OutboundBuffer();
-    boost::asio::streambuf::const_buffers_type origin_body = origin_body_buf.data();
-    std::size_t length = origin_body_buf.size();
 
     request.method("POST").uri("/proxy").major_version(1).minor_version(1)
            .AddHeader("Host", ResourceManager::instance().GetServerConfig().GetGAEAppId() + ".appspot.com")
            .AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0")
            .AddHeader("Connection", "close")
-           .AddHeader("Content-Length", boost::lexical_cast<std::string>(length))
-           .body(boost::asio::buffers_begin(origin_body),
-                 boost::asio::buffers_end(origin_body))
-           .body_length(length);
+           .AddHeader("Content-Length", boost::lexical_cast<std::string>(origin_body_buf.size()))
+           .body(origin_body_buf);
 }
 
 void HttpProxyHandler::OnResponseReceived(const boost::system::error_code& e, HttpResponse *response) {

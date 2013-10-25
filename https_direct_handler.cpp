@@ -88,9 +88,9 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
 
     // TODO can we build on the original request?
     // TODO2 we should send the raw data directly, do not do parse and compose work
-    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_, *request_);
+    HttpRequest::State result = *request_ << local_buffer_;
 
-    if(result != HttpRequest::kComplete) {
+    if(result == HttpRequest::kIncomplete) {
         XWARN << "This request is not complete, continue to read from the ssl socket.";
         boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(2048); // TODO hard code
         local_ssl_socket_->async_read_some(buf,
@@ -99,19 +99,13 @@ void HttpsDirectHandler::OnLocalDataReceived(const boost::system::error_code& e,
                                                       boost::asio::placeholders::error,
                                                       boost::asio::placeholders::bytes_transferred));
         return;
+    } else if(result == HttpRequest::kBadRequest) {
+        XWARN << "Bad request: " << local_ssl_socket_->lowest_layer().remote_endpoint().address()
+              << ":" << local_ssl_socket_->lowest_layer().remote_endpoint().port();
+        // TODO here we should write a bad request response back
+        session_.Terminate();
+        return;
     }
-
-//    if(result == HttpRequest::kIncomplete) {
-//        XWARN << "Not a complete request, but currently partial request is not supported.";
-//        session_.Terminate();
-//        return;
-//    } else if(result == HttpRequest::kBadRequest) {
-//        XWARN << "Bad request: " << local_ssl_socket_.lowest_layer().remote_endpoint().address()
-//              << ":" << local_ssl_socket_.lowest_layer().remote_endpoint().port();
-//        // TODO here we should write a bad request response back
-//        session_.Terminate();
-//        return;
-//    }
 
     client_.AsyncSendRequest(boost::bind(&HttpsDirectHandler::OnResponseReceived,
                                          boost::static_pointer_cast<HttpsDirectHandler>(shared_from_this()), _1, _2));

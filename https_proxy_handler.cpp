@@ -84,9 +84,9 @@ void HttpsProxyHandler::OnLocalDataReceived(const boost::system::error_code& e, 
 
     // TODO can we build on the original request?
     // TODO2 we should send the raw data directly, do not do parse and compose work
-    HttpRequest::State result = HttpRequest::BuildRequest(local_buffer_, *origin_request_);
+    HttpRequest::State result = *origin_request_ << local_buffer_;
 
-    if(result != HttpRequest::kComplete) {
+    if(result == HttpRequest::kIncomplete) {
         XWARN << "This request is not complete, continue to read from the ssl socket.";
         boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(2048); // TODO hard code
         local_ssl_socket_->async_read_some(buf,
@@ -95,19 +95,13 @@ void HttpsProxyHandler::OnLocalDataReceived(const boost::system::error_code& e, 
                                                       boost::asio::placeholders::error,
                                                       boost::asio::placeholders::bytes_transferred));
         return;
+    } else if(result == HttpRequest::kBadRequest) {
+        XWARN << "Bad request: " << local_ssl_socket_->lowest_layer().remote_endpoint().address()
+              << ":" << local_ssl_socket_->lowest_layer().remote_endpoint().port();
+        // TODO here we should write a bad request response back
+        session_.Terminate();
+        return;
     }
-
-//    if(result == HttpRequest::kIncomplete) {
-//        XWARN << "Not a complete request, but currently partial request is not supported.";
-//        session_.Terminate();
-//        return;
-//    } else if(result == HttpRequest::kBadRequest) {
-//        XWARN << "Bad request: " << local_ssl_socket_.lowest_layer().remote_endpoint().address()
-//              << ":" << local_ssl_socket_.lowest_layer().remote_endpoint().port();
-//        // TODO here we should write a bad request response back
-//        session_.Terminate();
-//        return;
-//    }
 
     BuildProxyRequest(proxy_request_);
     client_.host(ResourceManager::instance().GetServerConfig().GetGAEServerDomain()).port(443).request(&proxy_request_)
@@ -119,17 +113,13 @@ void HttpsProxyHandler::OnLocalDataReceived(const boost::system::error_code& e, 
 void HttpsProxyHandler::BuildProxyRequest(HttpRequest& request) {
     // TODO improve this, refine the headers
     boost::asio::streambuf& origin_body_buf = origin_request_->OutboundBuffer();
-    boost::asio::streambuf::const_buffers_type origin_body = origin_body_buf.data();
-    std::size_t length = origin_body_buf.size();
 
     request.method("POST").uri("/proxy").major_version(1).minor_version(1)
-            .AddHeader("Host", ResourceManager::instance().GetServerConfig().GetGAEAppId() + ".appspot.com")
+           .AddHeader("Host", ResourceManager::instance().GetServerConfig().GetGAEAppId() + ".appspot.com")
            .AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0")
            .AddHeader("Connection", "close")
-           .AddHeader("Content-Length", boost::lexical_cast<std::string>(length))
-           .body(boost::asio::buffers_begin(origin_body),
-                 boost::asio::buffers_end(origin_body))
-           .body_length(length);
+           .AddHeader("Content-Length", boost::lexical_cast<std::string>(origin_body_buf.size()))
+           .body(origin_body_buf);
 }
 
 void HttpsProxyHandler::OnResponseReceived(const boost::system::error_code& e, HttpResponse *response) {

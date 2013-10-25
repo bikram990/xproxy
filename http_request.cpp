@@ -1,138 +1,76 @@
-#include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include "http_request.h"
 
-HttpRequest::State HttpRequest::BuildRequest(boost::asio::streambuf& stream,
-                                             HttpRequest& request) {
-    if(request.state_ == kComplete) {
-        XWARN << "Overwritting a valid request.";
-        request.headers_.clear();
-        request.state_ = kEmptyRequest;
+HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
+    if(state_ != kIncomplete) {
+        XERROR << "The request cannot accept more data, it is either completed or bad request.";
+        return state_;
     }
 
-    // TODO should we care if there is null character in buffer?
-    std::istream req(&stream);
-    std::string line;
+    std::istream s(&stream);
+    s >> std::noskipws;
 
-    if(stream.size() <= 0) {
-        XERROR << "The stream has no data";
-        return kBadRequest;
-    }
-
-    if(!std::getline(req, line)) {
-        XDEBUG << "This request is incomplete.";
-        return kIncomplete;
-    }
-
-    if(request.ConsumeInitialLine(line) == kBadRequest) {
-        XERROR << "Invalid initial line: " << line;
-        return kBadRequest;
-    }
-
-    State ret = kIncomplete;
-    while(std::getline(req, line)) {
-        if(line == "\r") { // no more headers, so all headers are parsed
-            ret = kComplete;
+    char c = 0;
+    while(s >> c) {
+        state_ = consume(c);
+        if(state_ == kBadRequest || state_ == kComplete)
             break;
-        }
-        State r = request.ConsumeHeaderLine(line);
-        if(r == kBadRequest) {
-            XERROR << "Invalid header line: " << line;
-            return kBadRequest;
-        } else if(r == kIncomplete) {
-            XDEBUG << "The header line is incomplete: " << line;
-            return kIncomplete;
-        }
-    }
-    if(ret == kIncomplete) {// indicate not all headers are received
-        XDEBUG << "Headers are incomplete.";
-        return kIncomplete;
     }
 
-    if(request.method_ == "POST") {
-        const std::string& len = request.FindHeader("Content-Length");
-        if(!len.empty())
-            request.body_length(boost::lexical_cast<std::size_t>(len));
-        if(request.body_length_ > 0) {
-            // TODO enhance the logic here
-            std::string body;
-            if(!std::getline(req, body)) {
-                XERROR << "Failed to read body";
-                return kBadRequest;
-            }
-            if(body.length() < request.body_length_) {
-                XDEBUG << "Incomplete body.";
-                return kIncomplete;
-            }
-            request.body(body.begin(), body.end());
+    if(state_ != kComplete)
+        return state_;
+
+    std::string content_length;
+    if(FindHeader("Content-Length", content_length)) {
+        std::size_t body_len = boost::lexical_cast<std::size_t>(content_length);
+        if(body_len > stream.size()) {
+            state_ = kIncomplete;
+            return state_;
         }
+        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_len), stream.data());
+        XDEBUG << "The request body length is: " << body_.size();
+        body_.commit(copied);
+        stream.consume(copied);
     }
 
-    std::string host = request.FindHeader("Host");
-    if(host.empty()) {
-        // if host is empty, we would find host in uri
-        XDEBUG << "Host header not found, read host from the URI: " << request.uri_;
+    std::string host;
+    if(!FindHeader("Host", host)) {
+        XDEBUG << "Host header not found, read host from the URI: " << uri_;
         std::string http("http://");
-        if(request.uri_.compare(0, http.length(), http) != 0) {
+        if(uri_.compare(0, http.length(), http) != 0) {
             XERROR << "No valid host found.";
             return kBadRequest;
         }
-        std::string::size_type end = request.uri_.find('/', http.length());
+        std::string::size_type end = uri_.find('/', http.length());
         if(end == std::string::npos) {
             XERROR << "No valid host found.";
             return kBadRequest;
         }
-        host = request.uri_.substr(http.length(), end - http.length());
+        host = uri_.substr(http.length(), end - http.length());
         XDEBUG << "Host found in uri: " << host;
     }
 
     std::string::size_type sep = host.find(':');
     if(sep != std::string::npos) {
-        request.host_ = host.substr(0, sep);
-        request.port_ = boost::lexical_cast<short>(host.substr(sep + 1));
+        host_ = host.substr(0, sep);
+        port_ = boost::lexical_cast<short>(host.substr(sep + 1));
     } else {
-        request.host_ = host;
+        host_ = host;
 
-        if(request.method_ == "CONNECT") {
-            std::string::size_type sep = request.uri_.find(':');
+        if(method_ == "CONNECT") {
+            std::string::size_type sep = uri_.find(':');
             if(sep != std::string::npos)
-                request.port_ = boost::lexical_cast<short>(request.uri_.substr(sep + 1));
+                port_ = boost::lexical_cast<short>(uri_.substr(sep + 1));
             else
-                request.port_ = 443;
+                port_ = 443;
         } else {
-            request.port_ = 80;
+            port_ = 80;
         }
     }
 
-    CanonicalizeUri(request.uri_);
+    CanonicalizeUri();
 
-    request.state_ = kComplete;
-    return kComplete;
-}
-
-void HttpRequest::CanonicalizeUri(std::string& uri) {
-    XDEBUG << "Canonicalize URI: " << uri;
-
-    if(uri[0] == '/') { // already canonicalized
-        XDEBUG << "URI is already canonicalized: " << uri;
-        return;
-    }
-
-    std::string http("http://");
-    std::string::size_type end = std::string::npos;
-    if(uri.compare(0, http.length(), http) != 0)
-        end = uri.find('/');
-    else
-        end = uri.find('/', http.length());
-
-    if(end == std::string::npos) {
-        XDEBUG << "No host end / found, consider as the root: " << uri;
-        uri = '/';
-        return;
-    }
-
-    uri.erase(0, end);
-    XDEBUG << "URI canonicalized: " << uri;
+    return state_;
 }
 
 boost::asio::streambuf& HttpRequest::OutboundBuffer() {
@@ -150,56 +88,240 @@ boost::asio::streambuf& HttpRequest::OutboundBuffer() {
 
     buf << "\r\n";
 
-    if(body_length_ > 0)
-        buf << body_;
+    if(body_.size() > 0) {
+        std::size_t copied = boost::asio::buffer_copy(raw_buffer_.prepare(body_.size()), body_.data());
+        raw_buffer_.commit(copied);
+    }
 
     buffer_built_ = true;
     return raw_buffer_;
 }
 
-HttpRequest::State HttpRequest::ConsumeInitialLine(const std::string& line) {
-    std::stringstream ss(line);
-
-    if(!std::getline(ss, method_, ' '))
-        return kIncomplete;
-
-    if(!std::getline(ss, uri_, ' '))
-        return kIncomplete;
-
-    std::string item;
-
-    if(!std::getline(ss, item, '/')) // the "HTTP" string, do nothing here
-        return kIncomplete;
-
-    if(!std::getline(ss, item, '.')) // http major version
-        return kIncomplete;
-    major_version_ = boost::lexical_cast<int>(item);
-
-    if(!std::getline(ss, item, '\r')) // remember there is a \r character at the end of line
-        return kIncomplete;
-    minor_version_ = boost::lexical_cast<int>(item);
-
-    return kComplete;
-}
-
-HttpRequest::State HttpRequest::ConsumeHeaderLine(const std::string& line) {
-    if(line[line.length() - 1] != '\r')
-        return kIncomplete; // the last result of getline() may return incomplete header line, so we do this check here
-
-    std::string::size_type sep_idx = line.find(": ");
-    if(sep_idx == std::string::npos)
-        return kBadRequest;
-
-    std::string name = line.substr(0, sep_idx);
-    std::string value = line.substr(sep_idx + 2, line.length() - 1 - name.length() - 2); // remove the last \r character
-    AddHeader(name, value);
-
-    return kComplete;
-}
-
-const std::string& HttpRequest::FindHeader(const std::string& name) {
+inline bool HttpRequest::FindHeader(const std::string& name, std::string& value) {
     std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
                                                         headers_.end(),
                                                         HeaderFinder(name));
-    return it->value;
+    if(it == headers_.end())
+        return false;
+    value = it->value;
+    return true;
+}
+
+inline void HttpRequest::CanonicalizeUri() {
+    XDEBUG << "Canonicalize URI: " << uri_;
+
+    if(uri_[0] == '/') { // already canonicalized
+        XDEBUG << "URI is already canonicalized: " << uri_;
+        return;
+    }
+
+    std::string http("http://");
+    std::string::size_type end = std::string::npos;
+    if(uri_.compare(0, http.length(), http) != 0)
+        end = uri_.find('/');
+    else
+        end = uri_.find('/', http.length());
+
+    if(end == std::string::npos) {
+        XDEBUG << "No host end / found, consider as the root: " << uri_;
+        uri_ = '/';
+        return;
+    }
+
+    uri_.erase(0, end);
+    XDEBUG << "URI canonicalized: " << uri_;
+}
+
+inline HttpRequest::State HttpRequest::consume(char current_byte) {
+#define ERR HttpRequest::kBadRequest // bad request
+#define CTN HttpRequest::kIncomplete // continue
+#define DONE HttpRequest::kComplete  // complete
+
+    switch(build_state_) {
+    case kRequestStart:
+        if(!std::isalpha(current_byte))
+            return ERR;
+        build_state_ = kMethod;
+        method_.push_back(current_byte);
+        return CTN;
+    case kMethod:
+        if(current_byte == ' ') {
+            build_state_ = kUri;
+            return CTN;
+        }
+        if(!std::isalpha(current_byte))
+            return ERR;
+        method_.push_back(current_byte);
+        return CTN;
+    case kUri:
+        if(current_byte == ' ') {
+            build_state_ = kProtocolH;
+            return CTN;
+        }
+        if(std::iscntrl(current_byte))
+            return ERR;
+        uri_.push_back(current_byte);
+        return CTN;
+    case kProtocolH:
+        if(current_byte != 'H')
+            return ERR;
+        build_state_ = kProtocolT1;
+        return CTN;
+    case kProtocolT1:
+        if(current_byte != 'T')
+            return ERR;
+        build_state_ = kProtocolT2;
+        return CTN;
+    case kProtocolT2:
+        if(current_byte != 'T')
+            return ERR;
+        build_state_ = kProtocolP;
+        return CTN;
+    case kProtocolP:
+        if(current_byte != 'P')
+            return ERR;
+        build_state_ = kSlash;
+        return CTN;
+    case kSlash:
+        if(current_byte != '/')
+            return ERR;
+        major_version_ = 0;
+        minor_version_ = 0;
+        build_state_ = kMajorVersionStart;
+        return CTN;
+    case kMajorVersionStart:
+        if(!std::isdigit(current_byte))
+            return ERR;
+        major_version_ = major_version_ * 10 + current_byte - '0';
+        build_state_ = kMajorVersion;
+        return CTN;
+    case kMajorVersion:
+        if(current_byte == '.') {
+            build_state_ = kMinorVersionStart;
+            return CTN;
+        }
+        if(!std::isdigit(current_byte))
+            return ERR;
+        major_version_ = major_version_ * 10 + current_byte - '0';
+        return CTN;
+    case kMinorVersionStart:
+        if(!std::isdigit(current_byte))
+            return ERR;
+        minor_version_ = minor_version_ * 10 + current_byte - '0';
+        build_state_ = kMinorVersion;
+        return CTN;
+    case kMinorVersion:
+        if(current_byte == '\r') {
+            build_state_ = kNewLineHeader;
+            return CTN;
+        }
+        if(!std::isdigit(current_byte))
+            return ERR;
+        minor_version_ = minor_version_ * 10 + current_byte - '0';
+        return CTN;
+    case kNewLineHeader:
+        if(current_byte != '\n')
+            return ERR;
+        build_state_ = kHeaderStart;
+        return CTN;
+    case kHeaderStart:
+        if(current_byte == '\r') {
+            build_state_ = kNewLineBody;
+            return CTN;
+        }
+        if(!headers_.empty() && (current_byte == ' '
+                                 || current_byte == '\t')) {
+            build_state_ = kHeaderLWS;
+            return CTN;
+        }
+        if(!ischar(current_byte)
+           || std::iscntrl(current_byte)
+           || istspecial(current_byte))
+            return ERR;
+        if(!headers_.empty()) {
+            if(headers_.back().name == "Host") {
+                std::string& target = headers_.back().value;
+                std::string::size_type seperator = target.find(':');
+                if(seperator != std::string::npos) {
+                    host_ = target.substr(0, seperator);
+                    port_ = boost::lexical_cast<short>(target.substr(seperator + 1));
+                } else {
+                    host_ = target;
+                    port_ = 80;
+                }
+            }
+        }
+        headers_.push_back(HttpHeader());
+        headers_.back().name.push_back(current_byte);
+        build_state_ = kHeaderName;
+        return CTN;
+    case kHeaderLWS:
+        if(current_byte == '\r') {
+            build_state_ = kNewLineHeaderContinue;
+            return CTN;
+        }
+        if(current_byte == ' ' || current_byte == '\t')
+            return CTN;
+        if(std::iscntrl(current_byte))
+            return ERR;
+        build_state_ = kHeaderValue;
+        headers_.back().value.push_back(current_byte);
+        return CTN;
+    case kHeaderName:
+        if(current_byte == ':') {
+            build_state_ = kHeaderValueSpaceBefore;
+            return CTN;
+        }
+        if(!ischar(current_byte)
+           || std::iscntrl(current_byte)
+           || istspecial(current_byte))
+            return ERR;
+        headers_.back().name.push_back(current_byte);
+        return CTN;
+    case kHeaderValueSpaceBefore:
+        if(current_byte != ' ')
+            return ERR;
+        build_state_ = kHeaderValue;
+        return CTN;
+    case kHeaderValue:
+        if(current_byte == '\r') {
+            build_state_ = kNewLineHeaderContinue;
+            return CTN;
+        }
+        if(std::iscntrl(current_byte))
+            return ERR;
+        headers_.back().value.push_back(current_byte);
+        return CTN;
+    case kNewLineHeaderContinue:
+        if(current_byte != '\n')
+            return ERR;
+        build_state_ = kHeaderStart;
+        return CTN;
+    case kNewLineBody:
+        if(current_byte != '\n')
+            return ERR;
+        return DONE;
+    default:
+        return ERR;
+    }
+
+#undef ERR
+#undef CTN
+#undef DONE
+}
+
+inline bool HttpRequest::ischar(int c) {
+    return c >= 0 && c <= 127;
+}
+
+inline bool HttpRequest::istspecial(int c) {
+    switch(c) {
+    case '(': case ')': case '<': case '>': case '@':
+    case ',': case ';': case ':': case '\\': case '"':
+    case '/': case '[': case ']': case '?': case '=':
+    case '{': case '}': case ' ': case '\t':
+        return true;
+    default:
+        return false;
+    }
 }
