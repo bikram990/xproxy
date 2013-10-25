@@ -113,23 +113,19 @@ private:
     CertManager() {}
     ~CertManager() {}
 
-    bool LoadRootCA(const std::string& cert_file = "xProxyRootCA.crt",
-                    const std::string& private_key_file = "xProxyRootCA.key");
-    bool SaveRootCA(const std::string& cert_file = "xProxyRootCA.crt",
-                    const std::string& private_key_file = "xProxyRootCA.key");
-    bool LoadCertificate(const std::string& cert_file,
-                         const std::string& private_key_file,
-                         CA& ca);
-    bool SaveCertificate(const CA& ca,
-                         const std::string& cert_file,
-                         const std::string& private_key_file);
+    bool LoadRootCA(const std::string& filename = "xProxyRootCA.crt");
+    bool SaveRootCA(const std::string& filename = "xProxyRootCA.crt");
+    bool LoadCertificate(const std::string& filename, CA& ca);
+    bool SaveCertificate(const std::string& filename, const CA& ca);
     bool GenerateRootCA();
-    bool GenerateCertificate(const std::string& host, CA& ca);
-    bool LoadDHParameters(const std::string& dh_file = "dh.pem");
+    bool GenerateCertificate(const std::string& common_name, CA& ca);
+    bool LoadDHParameters(const std::string& filename = "dh.pem");
     bool GenerateDHParameters();
-    bool SaveDHParameters(const std::string& dh_file = "dh.pem");
+    bool SaveDHParameters(const std::string& filename = "dh.pem");
     bool GenerateKey(EVP_PKEY **key);
     bool GenerateRequest(const std::string& common_name, X509_REQ **request, EVP_PKEY **key);
+    std::string GetCommonName(const std::string& host);
+    std::string GetCertificateFileName(const std::string& common_name);
 
     CAPtr root_ca_;
     DHParametersPtr dh_;

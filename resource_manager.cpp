@@ -32,33 +32,32 @@ ResourceManager::~ResourceManager() {
 }
 
 ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate(const std::string& host) {
-    std::map<std::string, CAPtr>::iterator it = ca_map_.find(host);
+    std::string common_name = GetCommonName(host);
+    std::map<std::string, CAPtr>::iterator it = ca_map_.find(common_name);
     if(it != ca_map_.end()) {
         return it->second;
     }
 
     XINFO << "Certificate for host " << host << " is not found, try loading from file...";
     CAPtr ca(boost::make_shared<CA>());
-    if(LoadCertificate(host + ".crt", host + ".key", *ca)) {
+    std::string filename = GetCertificateFileName(common_name);
+
+    if(LoadCertificate(filename, *ca)) {
         XINFO << "Certificate for host " << host << " is loaded from file.";
-        ca_map_.insert(std::make_pair(host, ca));
+        ca_map_.insert(std::make_pair(common_name, ca));
         return ca;
     }
 
     XWARN << "Certificate for host " << host << " cannot be loaded from file, generating one...";
-    if(!root_ca_) {
-        XERROR << "Root CA is not initialized.";
+    if(!GenerateCertificate(common_name, *ca)) {
+        XERROR << "Certificate for host " << host << " cannot be generated.";
         return CAPtr();
     }
-    if(GenerateCertificate(host, *ca)) {
-        XINFO << "Certificate for host " << host << " is generated.";
-        ca_map_.insert(std::make_pair(host, ca));
-        SaveCertificate(*ca, host + ".crt", host + ".key");
-        return ca;
-    }
 
-    XERROR << "Certificate for host " << host << " cannot be generated.";
-    return CAPtr();
+    XINFO << "Certificate for host " << host << " is generated.";
+    ca_map_.insert(std::make_pair(common_name, ca));
+    SaveCertificate(filename, *ca);
+    return ca;
 }
 
 ResourceManager::CertManager::DHParametersPtr ResourceManager::CertManager::GetDHParameters() {
@@ -69,13 +68,12 @@ ResourceManager::CertManager::DHParametersPtr ResourceManager::CertManager::GetD
     return dh_;
 }
 
-bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
-                                              const std::string& private_key_file) {
+bool ResourceManager::CertManager::LoadRootCA(const std::string& filename) {
     if(!root_ca_)
         root_ca_ = boost::make_shared<CA>();
 
-    if(!LoadCertificate(cert_file, private_key_file, *root_ca_)) {
-        XERROR << "Failed to load root CA.";
+    if(!LoadCertificate(filename, *root_ca_)) {
+        XWARN << "Unable to load root CA.";
         return false;
     }
 
@@ -83,10 +81,9 @@ bool ResourceManager::CertManager::LoadRootCA(const std::string& cert_file,
     return true;
 }
 
-bool ResourceManager::CertManager::SaveRootCA(const std::string& cert_file,
-                                              const std::string& private_key_file) {
-    if(!SaveCertificate(*root_ca_, cert_file, private_key_file)) {
-        XERROR << "Failed to save root CA.";
+bool ResourceManager::CertManager::SaveRootCA(const std::string& filename) {
+    if(!SaveCertificate(filename, *root_ca_)) {
+        XWARN << "Unable to save root CA.";
         return false;
     }
 
@@ -94,40 +91,30 @@ bool ResourceManager::CertManager::SaveRootCA(const std::string& cert_file,
     return true;
 }
 
-bool ResourceManager::CertManager::LoadCertificate(const std::string& cert_file,
-                                                   const std::string& private_key_file,
-                                                   CA& ca) {
+bool ResourceManager::CertManager::LoadCertificate(const std::string& filename, CA& ca) {
     FILE *fp = NULL;
-    fp = std::fopen(cert_file.c_str(), "rb");
+    fp = std::fopen(filename.c_str(), "rb");
     if(!fp) {
-        XERROR << "Failed to open certificate: " << cert_file;
+        XWARN << "Unable to open file: " << filename;
         return false;
     }
+
     ca.cert = PEM_read_X509(fp, NULL, NULL, NULL);
     if(!ca.cert) {
-        XERROR << "Failed to read Root CA certificate from file " << cert_file;
+        XERROR << "Failed to read certificate from file " << filename;
         std::fclose(fp);
         return false;
     }
 
-    std::fclose(fp);
-    fp = NULL;
-
-    fp = std::fopen(private_key_file.c_str(), "rb");
-    if(!fp) {
-        XERROR << "Failed to open Root CA private key file: " << private_key_file;
-        return false;
-    }
     ca.key= PEM_read_PrivateKey(fp, NULL, NULL, NULL);
     if(!ca.key) {
-        XERROR << "Failed to read Root CA private key from file " << private_key_file;
+        XERROR << "Failed to read private key from file " << filename;
         std::fclose(fp);
         return false;
     }
 
     std::fclose(fp);
-    XINFO << "Certificate " << cert_file << " loaded"
-          << ", private key " << private_key_file << " loaded.";
+    XINFO << "Certificate and private key are loaded from " << filename;
     return true;
 }
 
@@ -176,7 +163,7 @@ bool ResourceManager::CertManager::GenerateRootCA() {
     return true;
 }
 
-bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, CA& ca) {
+bool ResourceManager::CertManager::GenerateCertificate(const std::string& common_name, CA& ca) {
     if(!root_ca_) {
         XERROR << "Root CA does not exist.";
         return false;
@@ -184,12 +171,12 @@ bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, 
 
     X509_REQ *req = NULL;
     EVP_PKEY *key = NULL;
-    if(!GenerateRequest(host, &req, &key)) { // TODO process the host here
-        XERROR << "Failed to Generate Certificate for host " << host;
+    if(!GenerateRequest(common_name, &req, &key)) {
+        XERROR << "Failed to Generate Certificate for common name " << common_name;
         return false;
     }
     if(X509_REQ_verify(req, key) != 1) {
-        XERROR << "Failed to verify certificate request for host " << host;
+        XERROR << "Failed to verify certificate request for common name " << common_name;
         EVP_PKEY_free(key);
         X509_REQ_free(req);
         return false;
@@ -224,59 +211,49 @@ bool ResourceManager::CertManager::GenerateCertificate(const std::string& host, 
     ca.cert = cert;
     ca.key = key;
     X509_REQ_free(req);
-    XINFO << "Certificate for host " << host << " generated.";
+    XINFO << "Certificate for common name " << common_name << " generated.";
     return true;
 }
 
-bool ResourceManager::CertManager::SaveCertificate(const CA& ca,
-                                                   const std::string& cert_file,
-                                                   const std::string& private_key_file) {
+bool ResourceManager::CertManager::SaveCertificate(const std::string& filename, const CA& ca) {
     FILE *fp = NULL;
-
-    fp = std::fopen(cert_file.c_str(), "wb");
+    fp = std::fopen(filename.c_str(), "wb");
     if(!fp) {
-        XERROR << "Failed to open " << cert_file << " for writing.";
+        XWARN << "Unable to open " << filename << " for writing.";
         return false;
     }
+
     if(!PEM_write_X509(fp, ca.cert)) {
-        XERROR << "Failed to write certificate to " << cert_file;
+        XERROR << "Failed to write certificate to " << filename;
         std::fclose(fp);
         return false;
     }
 
-    std::fclose(fp);
-    fp = NULL;
-
-    fp = std::fopen(private_key_file.c_str(), "wb");
-    if(!fp) {
-        XERROR << "Failed to open " << cert_file << " for writing.";
-        return false;
-    }
     if(!PEM_write_PrivateKey(fp, ca.key, NULL, NULL, 0, NULL, NULL)) {
-        XERROR << "Failed to write private key to " << private_key_file;
+        XERROR << "Failed to write private key to " << filename;
         std::fclose(fp);
         return false;
     }
 
     std::fclose(fp);
-    XINFO << "Certificate saved to " << cert_file
-          << ", private key saved to " << private_key_file;
+    XINFO << "Certificate and private key are saved to " << filename;
     return true;
 }
 
-bool ResourceManager::CertManager::LoadDHParameters(const std::string& dh_file) {
+bool ResourceManager::CertManager::LoadDHParameters(const std::string& filename) {
     if(!dh_)
         dh_ = boost::make_shared<DHParameters>();
 
     FILE *fp = NULL;
-    fp = std::fopen(dh_file.c_str(), "rb");
+    fp = std::fopen(filename.c_str(), "rb");
     if(!fp) {
-        XERROR << "Failed to open DH parameters file: " << dh_file;
+        XWARN << "Unable to open DH parameters file: " << filename;
         return false;
     }
+
     dh_->dh = PEM_read_DHparams(fp, NULL, NULL, NULL);
     if(!dh_->dh) {
-        XERROR << "Failed to read DH parameters from file " << dh_file;
+        XERROR << "Failed to read DH parameters from file " << filename;
         std::fclose(fp);
         return false;
     }
@@ -296,15 +273,16 @@ bool ResourceManager::CertManager::GenerateDHParameters() {
     return true;
 }
 
-bool ResourceManager::CertManager::SaveDHParameters(const std::string& dh_file) {
+bool ResourceManager::CertManager::SaveDHParameters(const std::string& filename) {
     FILE *fp = NULL;
-    fp = std::fopen(dh_file.c_str(), "wb");
+    fp = std::fopen(filename.c_str(), "wb");
     if(!fp) {
-        XERROR << "Failed to open " << dh_file << " for writing.";
+        XWARN << "Unable to open " << filename << " for writing.";
         return false;
     }
+
     if(!::PEM_write_DHparams(fp, dh_->dh)) {
-        XERROR << "Failed to write DH parameters to " << dh_file;
+        XERROR << "Failed to write DH parameters to " << filename;
         std::fclose(fp);
         return false;
     }
@@ -376,4 +354,30 @@ bool ResourceManager::CertManager::GenerateRequest(const std::string& common_nam
     *request = req;
     *key = k;
     return true;
+}
+
+std::string ResourceManager::CertManager::GetCommonName(const std::string& host) {
+    std::size_t dot_count = std::count(host.begin(), host.end(), '.');
+    std::string::size_type last = host.find_last_of('.');
+    std::string::size_type penult = host.find_last_of('.', last);
+    if(dot_count < 2 || last - penult <= 3)
+        // means something like "something.com", or "something.com.cn"
+        // not "www.something.com", or "sub.something.com"
+        return host;
+
+    std::string common_name(host);
+    std::string::size_type first = host.find('.');
+    common_name[first - 1] = '*';
+    common_name.erase(0, first - 1);
+    return common_name;
+}
+
+std::string ResourceManager::CertManager::GetCertificateFileName(const std::string& common_name) {
+    // TODO enhance this function
+    std::string filename(common_name);
+    if(filename[0] == '*')
+        filename.erase(0, 1); // erase the leading *
+
+    filename += ".crt"; // add extension
+    return filename;
 }
