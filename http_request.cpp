@@ -161,22 +161,22 @@ HttpRequest::State HttpRequest::ConsumeInitialLine(const std::string& line) {
     std::stringstream ss(line);
 
     if(!std::getline(ss, method_, ' '))
-        return kBadRequest;
+        return kIncomplete;
 
     if(!std::getline(ss, uri_, ' '))
-        return kBadRequest;
+        return kIncomplete;
 
     std::string item;
 
     if(!std::getline(ss, item, '/')) // the "HTTP" string, do nothing here
-        return kBadRequest;
+        return kIncomplete;
 
     if(!std::getline(ss, item, '.')) // http major version
-        return kBadRequest;
+        return kIncomplete;
     major_version_ = boost::lexical_cast<int>(item);
 
     if(!std::getline(ss, item, '\r')) // remember there is a \r character at the end of line
-        return kBadRequest;
+        return kIncomplete;
     minor_version_ = boost::lexical_cast<int>(item);
 
     return kComplete;
