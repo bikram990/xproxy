@@ -1,3 +1,4 @@
+#include <boost/date_time.hpp>
 #include <boost/thread.hpp>
 #include <openssl/pem.h>
 #include "resource_manager.h"
@@ -196,7 +197,13 @@ bool ResourceManager::CertManager::GenerateCertificate(const std::string& common
     name = X509_REQ_get_subject_name(req);
     X509_set_subject_name(cert, name);
     X509_set_pubkey(cert, key);
-    ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
+
+    // use exact time as cert's serial number to make it different, otherwise
+    // browsers will complain that too many certs use the same serial number
+    boost::posix_time::ptime time = boost::posix_time::microsec_clock::universal_time();
+    boost::posix_time::ptime epoch = boost::posix_time::time_from_string("1970-01-01 00:00:00.000");
+    ASN1_INTEGER_set(X509_get_serialNumber(cert), (time - epoch).total_microseconds());
+
     X509_gmtime_adj(X509_get_notBefore(cert), 0);
     X509_gmtime_adj(X509_get_notAfter(cert), 60 * 60 * 24 * 365 * 10);
 
@@ -338,7 +345,7 @@ bool ResourceManager::CertManager::GenerateRequest(const std::string& common_nam
 
     X509_NAME *name = X509_REQ_get_subject_name(req);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Generated"),  -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Security"),   -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Lan"),               -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Internet"),          -1, -1, 0);
@@ -358,11 +365,12 @@ bool ResourceManager::CertManager::GenerateRequest(const std::string& common_nam
 
 std::string ResourceManager::CertManager::GetCommonName(const std::string& host) {
     std::size_t dot_count = std::count(host.begin(), host.end(), '.');
+    if(dot_count < 2) // means something like "something.com", or even something like "localhost"
+        return host;
+
     std::string::size_type last = host.find_last_of('.');
-    std::string::size_type penult = host.find_last_of('.', last);
-    if(dot_count < 2 || last - penult <= 3)
-        // means something like "something.com", or "something.com.cn"
-        // not "www.something.com", or "sub.something.com"
+    std::string::size_type penult = host.find_last_of('.', last - 1);
+    if(last - penult <= 4) // means something like "something.com.cn"
         return host;
 
     std::string common_name(host);
@@ -376,7 +384,7 @@ std::string ResourceManager::CertManager::GetCertificateFileName(const std::stri
     // TODO enhance this function
     std::string filename(common_name);
     if(filename[0] == '*')
-        filename.erase(0, 1); // erase the leading *
+        filename[0] = '^';
 
     filename += ".crt"; // add extension
     return filename;
