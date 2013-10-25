@@ -57,3 +57,6 @@ endif()
 
 # copy configuration file
 configure_file(xproxy.conf xproxy.conf COPYONLY)
+
+# copy certificate directory
+file(COPY cert/ DESTINATION cert/)
