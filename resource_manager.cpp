@@ -61,14 +61,6 @@ ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate
     return ca;
 }
 
-ResourceManager::CertManager::DHParametersPtr ResourceManager::CertManager::GetDHParameters() {
-    if(!dh_) {
-        XERROR << "DH parameters is not initialized.";
-        return DHParametersPtr();
-    }
-    return dh_;
-}
-
 bool ResourceManager::CertManager::LoadRootCA(const std::string& filename) {
     if(!root_ca_)
         root_ca_ = boost::make_shared<CA>();
@@ -361,31 +353,4 @@ bool ResourceManager::CertManager::GenerateRequest(const std::string& common_nam
     *request = req;
     *key = k;
     return true;
-}
-
-std::string ResourceManager::CertManager::GetCommonName(const std::string& host) {
-    std::size_t dot_count = std::count(host.begin(), host.end(), '.');
-    if(dot_count < 2) // means something like "something.com", or even something like "localhost"
-        return host;
-
-    std::string::size_type last = host.find_last_of('.');
-    std::string::size_type penult = host.find_last_of('.', last - 1);
-    if(last - penult <= 4) // means something like "something.com.cn"
-        return host;
-
-    std::string common_name(host);
-    std::string::size_type first = host.find('.');
-    common_name[first - 1] = '*';
-    common_name.erase(0, first - 1);
-    return common_name;
-}
-
-std::string ResourceManager::CertManager::GetCertificateFileName(const std::string& common_name) {
-    // TODO enhance this function
-    std::string filename(common_name);
-    if(filename[0] == '*')
-        filename[0] = '^';
-
-    filename += ".crt"; // add extension
-    return filename;
 }

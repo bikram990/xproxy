@@ -108,25 +108,27 @@ public:
 
     CAPtr GetCertificate(const std::string& host);
     DHParametersPtr GetDHParameters();
+    void SetCertificateDirectory(const std::string& directory);
 
 private:
-    CertManager() {}
+    CertManager() : cert_dir_("cert/") {}
     ~CertManager() {}
 
-    bool LoadRootCA(const std::string& filename = "xProxyRootCA.crt");
-    bool SaveRootCA(const std::string& filename = "xProxyRootCA.crt");
+    bool LoadRootCA(const std::string& filename = "cert/xProxyRootCA.crt");
+    bool SaveRootCA(const std::string& filename = "cert/xProxyRootCA.crt");
     bool LoadCertificate(const std::string& filename, CA& ca);
     bool SaveCertificate(const std::string& filename, const CA& ca);
     bool GenerateRootCA();
     bool GenerateCertificate(const std::string& common_name, CA& ca);
-    bool LoadDHParameters(const std::string& filename = "dh.pem");
+    bool LoadDHParameters(const std::string& filename = "cert/dh.pem");
     bool GenerateDHParameters();
-    bool SaveDHParameters(const std::string& filename = "dh.pem");
+    bool SaveDHParameters(const std::string& filename = "cert/dh.pem");
     bool GenerateKey(EVP_PKEY **key);
     bool GenerateRequest(const std::string& common_name, X509_REQ **request, EVP_PKEY **key);
     std::string GetCommonName(const std::string& host);
     std::string GetCertificateFileName(const std::string& common_name);
 
+    std::string cert_dir_;
     CAPtr root_ca_;
     DHParametersPtr dh_;
     std::map<std::string, CAPtr> ca_map_;
@@ -219,6 +221,44 @@ inline bool ResourceManager::RuleConfig::RequestProxy(const std::string& host) {
 
     XINFO << "Host " << host << " does not need proxy.";
     return false;
+}
+
+inline ResourceManager::CertManager::DHParametersPtr ResourceManager::CertManager::GetDHParameters() {
+    if(!dh_) {
+        XERROR << "DH parameters is not initialized.";
+        return DHParametersPtr();
+    }
+    return dh_;
+}
+
+inline void ResourceManager::CertManager::SetCertificateDirectory(const std::string& directory) {
+    cert_dir_ = directory;
+}
+
+inline std::string ResourceManager::CertManager::GetCommonName(const std::string& host) {
+    std::size_t dot_count = std::count(host.begin(), host.end(), '.');
+    if(dot_count < 2) // means something like "something.com", or even something like "localhost"
+        return host;
+
+    std::string::size_type last = host.find_last_of('.');
+    std::string::size_type penult = host.find_last_of('.', last - 1);
+    if(last - penult <= 4) // means something like "something.com.cn"
+        return host;
+
+    std::string common_name(host);
+    std::string::size_type first = host.find('.');
+    common_name[first - 1] = '*';
+    common_name.erase(0, first - 1);
+    return common_name;
+}
+
+inline std::string ResourceManager::CertManager::GetCertificateFileName(const std::string& common_name) {
+    // TODO enhance this function
+    std::string filename(common_name);
+    if(filename[0] == '*')
+        filename[0] = '^';
+
+    return cert_dir_ + filename + ".crt";
 }
 
 #endif // RESOURCE_MANAGER_H
