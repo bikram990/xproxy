@@ -5,7 +5,7 @@
 std::map<HttpResponse::StatusCode, HttpResponse::ResponseTemplate>
 HttpResponse::status_messages_ =
     boost::assign::map_list_of<HttpResponse::StatusCode, HttpResponse::ResponseTemplate>
-(HttpResponse::kBadRequest, {"Bad Request", "This is a bad request"});
+(HttpResponse::kBadRequest, ResponseTemplate("Bad Request", "This is a bad request"));
 
 void HttpResponse::StockResponse(StatusCode status, HttpResponse& response) {
     StockResponse(status, status_messages_[status].message, status_messages_[status].body, response);

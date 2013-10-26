@@ -40,6 +40,9 @@ private:
     struct ResponseTemplate {
         std::string message;
         std::string body;
+        ResponseTemplate() {}
+        ResponseTemplate(const std::string& message, const std::string& body)
+            : message(message), body(body) {}
     };
 
     static std::map<StatusCode, ResponseTemplate> status_messages_;
