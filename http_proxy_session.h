@@ -1,7 +1,8 @@
 #ifndef HTTP_PROXY_SESSION_H
 #define HTTP_PROXY_SESSION_H
 
-#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+#include "http_response.h"
 #include "request_handler.h"
 
 
@@ -11,6 +12,25 @@ class HttpProxySession
         : public boost::enable_shared_from_this<HttpProxySession>,
           private boost::noncopyable {
 public:
+    typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> ssl_socket_ref;
+    typedef HttpProxySession this_type;
+
+    enum State {
+        kWaiting,
+        kContinueTransferring,
+        kCompleted,
+        kSSLReplying, // only stands for reply of CONNECT method
+        kFetching,
+        kSSLHandshaking,
+        kSSLWaiting,
+        kReplying // stands for all http/https replies
+    };
+
+    enum Mode {
+        HTTP,
+        HTTPS
+    };
+
     HttpProxySession(boost::asio::io_service& service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
@@ -22,13 +42,27 @@ public:
 
 private:
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
+    void OnSSLReplySent(const boost::system::error_code& e);
+    void OnHandshaken(const boost::system::error_code& e);
+    void OnResponseReceived(const boost::system::error_code& e, HttpResponse *response);
+    void OnResponseSent(const boost::system::error_code& e);
+
+    void ContinueReceiving();
+    void InitSSLContext();
+    void SendResponse(HttpResponse& response);
+
+    State state_;
+    Mode mode_;
 
     boost::asio::io_service& service_;
     boost::asio::ip::tcp::socket local_socket_;
+    std::auto_ptr<boost::asio::ssl::context> local_ssl_context_;
+    std::auto_ptr<ssl_socket_ref> local_ssl_socket_;
     HttpProxySessionManager& manager_;
 
     boost::asio::streambuf local_buffer_;
 
+    HttpRequestPtr request_;
     boost::shared_ptr<RequestHandler> handler_;
 };
 
