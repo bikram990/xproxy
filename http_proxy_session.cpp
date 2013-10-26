@@ -50,9 +50,9 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
            << boost::asio::buffer_cast<const char *>(local_buffer_.data())
            << "\n--------------------------------------------";
 
-    if(state_ = kWaiting)
+    if(state_ == kWaiting)
         request_.reset(new HttpRequest());
-    else if(state_ = kSSLWaiting)
+    else if(state_ == kSSLWaiting)
         request_->reset();
 
     HttpRequest::State result = *request_ << local_buffer_;
