@@ -47,7 +47,7 @@ void RequestHandler::AsyncHandleRequest() {
     if(!request || !client_)
         handler_(boost::asio::error::invalid_argument);
     else
-        client_->request(request).AsyncSendRequest(handler_);
+        client_->host(request->host()).port(request->port()).request(request).AsyncSendRequest(handler_);
 }
 
 HttpRequest *DirectHandler::WrapRequest() {
@@ -78,10 +78,13 @@ inline void ProxyHandler::BuildProxyRequest() {
     // TODO improve this, refine the headers
     boost::asio::streambuf& origin_body_buf = request_.OutboundBuffer();
 
-    proxy_request_->method("POST").uri("/proxy").major_version(1).minor_version(1)
+    proxy_request_->host(ResourceManager::instance().GetServerConfig().GetGAEServerDomain())
+           .port(443).method("POST").uri("/proxy").major_version(1).minor_version(1)
            .AddHeader("Host", ResourceManager::instance().GetServerConfig().GetGAEAppId() + ".appspot.com")
            .AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0")
            .AddHeader("Connection", "close")
            .AddHeader("Content-Length", boost::lexical_cast<std::string>(origin_body_buf.size()))
            .body(origin_body_buf);
+    if(session_.mode() == HttpProxySession::HTTPS)
+        proxy_request_->AddHeader("XProxy-Schema", "https://");
 }
