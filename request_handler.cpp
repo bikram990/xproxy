@@ -1,3 +1,4 @@
+#include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include "http_client.h"
 #include "http_proxy_session.h"
@@ -47,7 +48,19 @@ void RequestHandler::AsyncHandleRequest() {
     if(!request || !client_)
         handler_(boost::asio::error::invalid_argument);
     else
-        client_->host(request->host()).port(request->port()).request(request).AsyncSendRequest(handler_);
+        client_->host(request->host()).port(request->port()).request(request)
+                .AsyncSendRequest(boost::bind(&RequestHandler::HandleResponse,
+                                              this, _1));
+}
+
+void RequestHandler::HandleResponse(const boost::system::error_code& e) {
+    if(e && e != boost::asio::error::eof) {
+        handler_(e);
+        return;
+    }
+
+    ProcessResponse();
+    handler_(e);
 }
 
 HttpRequest *DirectHandler::WrapRequest() {
@@ -65,6 +78,32 @@ HttpRequest *ProxyHandler::WrapRequest() {
     proxy_request_ = new HttpRequest();
     BuildProxyRequest();
     return proxy_request_;
+}
+
+void ProxyHandler::ProcessResponse() {
+    // TODO improve this function here
+    std::istream in(&response_.body());
+    std::getline(in, response_.status_line());
+    response_.status_line().erase(response_.status_line().size() - 1); // remove the last \r
+    response_.ResetHeaders();
+    std::string header;
+    while(std::getline(in, header)) {
+        if(header == "\r")
+            break;
+
+        std::string::size_type sep_idx = header.find(':');
+        if(sep_idx == std::string::npos) {
+            XWARN << "Invalid header: " << header;
+            continue;
+        }
+
+        std::string name = header.substr(0, sep_idx);
+        std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
+        boost::algorithm::trim(name);
+        boost::algorithm::trim(value);
+        response_.AddHeader(name, value);
+    }
+    response_.body_lenth(response_.body().size());
 }
 
 void ProxyHandler::init() {

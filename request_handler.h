@@ -19,6 +19,7 @@ public:
                                          HttpResponse& response,
                                          handler_type handler);
     virtual void AsyncHandleRequest();
+    virtual void HandleResponse(const boost::system::error_code& e);
     virtual ~RequestHandler();
 
 protected:
@@ -28,6 +29,7 @@ protected:
                    handler_type handler);
 
     virtual HttpRequest *WrapRequest() = 0;
+    virtual void ProcessResponse() = 0;
     virtual void init() = 0;
 
     HttpProxySession& session_;
@@ -43,22 +45,21 @@ protected:
 
 class DirectHandler : public RequestHandler {
     friend class RequestHandler;
-public:
-    virtual HttpRequest *WrapRequest();
 private:
     DirectHandler(HttpProxySession& session,
                   HttpRequest& request,
                    HttpResponse& response,
                    handler_type handler)
         : RequestHandler(session, request, response, handler) { init(); }
+
+    virtual HttpRequest *WrapRequest();
+    virtual void ProcessResponse() {}
     virtual void init();
 };
 
 class ProxyHandler : public RequestHandler {
     friend class RequestHandler;
 public:
-    virtual HttpRequest *WrapRequest();
-
     virtual ~ProxyHandler() {
         if(proxy_request_) {
             delete proxy_request_;
@@ -72,6 +73,8 @@ private:
                    handler_type handler)
         : RequestHandler(session, request, response, handler), proxy_request_(NULL) { init(); }
 
+    virtual HttpRequest *WrapRequest();
+    virtual void ProcessResponse();
     virtual void init();
     void BuildProxyRequest();
 
