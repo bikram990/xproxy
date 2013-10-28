@@ -34,6 +34,8 @@ public:
     HttpProxySession(boost::asio::io_service& service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
+    State state() const { return state_; }
+    Mode mode() const { return mode_; }
     boost::asio::io_service& service() { return service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
     void Start();
@@ -44,7 +46,7 @@ private:
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
     void OnHandshaken(const boost::system::error_code& e);
-    void OnResponseReceived(const boost::system::error_code& e, HttpResponse *response);
+    void OnResponseReceived(const boost::system::error_code& e);
     void OnResponseSent(const boost::system::error_code& e);
 
     void ContinueReceiving();
@@ -63,6 +65,7 @@ private:
     boost::asio::streambuf local_buffer_;
 
     HttpRequestPtr request_;
+    boost::shared_ptr<HttpResponse> response_;
     boost::shared_ptr<RequestHandler> handler_;
 };
 

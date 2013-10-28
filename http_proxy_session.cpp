@@ -78,12 +78,10 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                              boost::asio::placeholders::error));
         state_ = kSSLReplying;
     } else {
-//        handler_.reset(RequestHandler::CreateHandler(*this, request_));
-//        if(handler_)
-//            handler_->HandleRequest();
-        // TODO add logic here
-//    client_.AsyncSendRequest(boost::bind(&this_type::OnResponseReceived,
-//                                         shared_from_this(), _1, _2));
+        response_.reset(new HttpResponse());
+        handler_.reset(RequestHandler::CreateHandler(*this, *request_, *response_, boost::bind(&this_type::OnResponseReceived, shared_from_this(), _1)));
+        if(handler_)
+            handler_->AsyncHandleRequest();
         XTRACE << "Request is sent asynchronously.";
         state_ = kFetching;
     }
@@ -121,14 +119,14 @@ void HttpProxySession::OnHandshaken(const boost::system::error_code& e) {
     state_ = kSSLWaiting;
 }
 
-void HttpProxySession::OnResponseReceived(const boost::system::error_code& e, HttpResponse *response) {
+void HttpProxySession::OnResponseReceived(const boost::system::error_code& e) {
     if(e && e != boost::asio::error::eof) {
         XWARN << "Failed to send request, message: " << e.message();
         Terminate();
         return;
     }
 
-    SendResponse(*response);
+    SendResponse(*response_);
 }
 
 void HttpProxySession::OnResponseSent(const boost::system::error_code& e) {

@@ -3,16 +3,15 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include <boost/function.hpp>
 #include "http_request.h"
 #include "http_response.h"
+#include "request_handler.h"
 
 
 class HttpClient {
 public:
     typedef boost::asio::ip::tcp::socket socket;
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket;
-    typedef boost::function<void(const boost::system::error_code&, HttpResponse*)> handler_type;
 
     HttpClient(boost::asio::io_service& service,
                HttpRequest *request,
@@ -22,7 +21,7 @@ public:
     HttpClient& host(const std::string& host) { host_ = host; return *this; }
     HttpClient& port(short port) { port_ = port; return *this; }
     HttpClient& request(HttpRequest *request) { request_ = request; return *this; }
-    void AsyncSendRequest(handler_type handler);
+    void AsyncSendRequest(RequestHandler::handler_type handler);
 
 private:
     void ResolveRemote();
@@ -51,7 +50,7 @@ private:
     std::string host_;
     short port_;
 
-    handler_type handler_;
+    RequestHandler::handler_type handler_;
 };
 
 #endif // HTTP_CLIENT_H

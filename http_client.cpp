@@ -23,7 +23,7 @@ HttpClient::~HttpClient() {
     TRACE_THIS_PTR;
 }
 
-void HttpClient::AsyncSendRequest(handler_type handler) {
+void HttpClient::AsyncSendRequest(RequestHandler::handler_type handler) {
     handler_ = handler;
     ResolveRemote();
 }
@@ -47,7 +47,7 @@ void HttpClient::ResolveRemote() {
 void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to connect to remote server, message: " << e.message();
-        handler_(e, NULL);
+        handler_(e);
         return;
     }
 
@@ -72,7 +72,7 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
 void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed at handshake step, message: " << e.message();
-        handler_(e, NULL);
+        handler_(e);
         return;
     }
 
@@ -85,7 +85,7 @@ void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
 void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to write request to remote server, message: " << e.message();
-        handler_(e, NULL);
+        handler_(e);
         return;
     }
     if(is_ssl_) {
@@ -104,7 +104,7 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
 void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read status line from remote server, message: " << e.message();
-        handler_(e, NULL);
+        handler_(e);
         return;
     }
 
@@ -131,7 +131,7 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
 void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read response header from remote server, message: " << e.message();
-        handler_(e, NULL);
+        handler_(e);
         return;
     }
 
@@ -194,7 +194,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 
     if(body_len <= 0) {
         XDEBUG << "This response seems have no body.";
-        handler_(e, &response_);
+        handler_(e);
         // TODO do something here
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -220,7 +220,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read chunk from remote server, message: " << e.message();
-        handler_(e, NULL);
+        handler_(e);
         return;
     }
 
@@ -268,7 +268,7 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
         }
     } else {
         // TODO do something here
-        handler_(e, &response_);
+        handler_(e);
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
@@ -280,7 +280,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
             XDEBUG << "The remote peer closed the connection.";
         else {
             XWARN << "Failed to read body from remote server, message: " << e.message();
-            handler_(e, NULL);
+            handler_(e);
             return;
         }
     }
@@ -319,7 +319,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         }
     } else {
         // TODO do something here
-        handler_(e, &response_);
+        handler_(e);
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
