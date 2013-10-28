@@ -29,6 +29,14 @@ public:
     short port() const { return port_; }
     const std::string& method() const { return method_; }
 
+    HttpRequest& host(const std::string& host) {
+        host_ = host;
+        return *this;
+    }
+    HttpRequest& port(short port) {
+        port_ = port;
+        return *this;
+    }
     HttpRequest& method(const std::string& method) {
         method_ = method;
         return *this;

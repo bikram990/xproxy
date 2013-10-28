@@ -78,6 +78,8 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                              boost::asio::placeholders::error));
         state_ = kSSLReplying;
     } else {
+        if(mode_ == HTTPS)
+            request_->port(443);
         response_.reset(new HttpResponse());
         handler_.reset(RequestHandler::CreateHandler(*this, *request_, *response_, boost::bind(&this_type::OnResponseReceived, shared_from_this(), _1)));
         if(handler_)
