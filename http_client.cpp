@@ -6,9 +6,10 @@
 
 HttpClient::HttpClient(boost::asio::io_service& service,
                        HttpRequest *request,
+                       HttpResponse& response,
                        boost::asio::ssl::context *context)
     : service_(service), resolver_(service), is_ssl_(context ? true : false),
-      request_(request), host_(request->host()), port_(request->port()) {
+      request_(request), response_(response), host_(request->host()), port_(request->port()) {
     TRACE_THIS_PTR;
     if(context) {
         ssl_socket_.reset(new ssl_socket(service_, *context));

@@ -15,6 +15,7 @@ public:
 
     HttpClient(boost::asio::io_service& service,
                HttpRequest *request,
+               HttpResponse& response,
                boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
@@ -45,7 +46,7 @@ private:
     boost::asio::streambuf remote_buffer_;
 
     HttpRequest *request_;
-    HttpResponse response_;
+    HttpResponse& response_;
 
     std::string host_;
     short port_;
