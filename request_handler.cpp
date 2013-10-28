@@ -57,7 +57,7 @@ HttpRequest *DirectHandler::WrapRequest() {
 void DirectHandler::init() {
     if(session_.mode() == HttpProxySession::HTTPS)
         remote_ssl_context_ = new boost::asio::ssl::context(boost::asio::ssl::context::sslv23);
-    client_ = new HttpClient(session_.service(), &request_, remote_ssl_context_);
+    client_ = new HttpClient(session_.service(), &request_, response_, remote_ssl_context_);
     inited_ = true;
 }
 
@@ -70,7 +70,7 @@ HttpRequest *ProxyHandler::WrapRequest() {
 void ProxyHandler::init() {
     if(session_.mode() == HttpProxySession::HTTPS)
         remote_ssl_context_ = new boost::asio::ssl::context(boost::asio::ssl::context::sslv23);
-    client_ = new HttpClient(session_.service(), &request_, remote_ssl_context_);
+    client_ = new HttpClient(session_.service(), &request_, response_, remote_ssl_context_);
     inited_ = true;
 }
 
