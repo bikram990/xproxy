@@ -30,6 +30,8 @@ public:
         return *this; // for chaining operation
     }
 
+    void ResetHeaders() { headers_.clear(); }
+
     void body_lenth(std::size_t length) {
         body_length_ = length;
     }
