@@ -47,7 +47,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
 
     XDEBUG << "Dump data from socket(size:" << size << "):\n"
            << "--------------------------------------------\n"
-           << boost::asio::buffer_cast<const char *>(local_buffer_.data())
+           << std::string(boost::asio::buffer_cast<const char *>(local_buffer_.data()), local_buffer_.size())
            << "\n--------------------------------------------";
 
     if(state_ == kWaiting)
