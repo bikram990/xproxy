@@ -143,16 +143,6 @@ boost::asio::streambuf& HttpRequest::OutboundBuffer() {
     return raw_buffer_;
 }
 
-inline bool HttpRequest::FindHeader(const std::string& name, std::string& value) {
-    std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
-                                                        headers_.end(),
-                                                        HeaderFinder(name));
-    if(it == headers_.end())
-        return false;
-    value = it->value;
-    return true;
-}
-
 inline void HttpRequest::CanonicalizeUri() {
     XDEBUG << "Canonicalize URI: " << uri_;
 

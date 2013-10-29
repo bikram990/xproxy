@@ -5,7 +5,7 @@
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& service,
                                    HttpProxySessionManager& manager)
-    : state_(kWaiting), mode_(HTTP),
+    : state_(kWaiting), mode_(HTTP), persistent_(false),
       service_(service), local_socket_(service), manager_(manager) {
     TRACE_THIS_PTR;
 }
@@ -45,7 +45,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
 
     local_buffer_.commit(size);
 
-    XDEBUG << "Dump data from socket(size:" << size << "):\n"
+    XDEBUG << "Dump data from socket(size:" << size << ", session: " << this << "):\n"
            << "--------------------------------------------\n"
            << std::string(boost::asio::buffer_cast<const char *>(local_buffer_.data()), local_buffer_.size())
            << "\n--------------------------------------------";
@@ -66,6 +66,13 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         // TODO here we should write a bad request response back
         state_ = kReplying;
         return;
+    }
+
+    std::string connection;
+    if(request_->FindHeader("Proxy-Connection", connection)) {
+        if(connection == "keep-alive")
+            persistent_ = true;
+        // TODO remove the Proxy-Connection header here
     }
 
     if(request_->method() == "CONNECT") {
@@ -140,18 +147,12 @@ void HttpProxySession::OnResponseSent(const boost::system::error_code& e) {
 
     XTRACE << "Content written to local socket.";
 
-    mode_ = HTTP; // reset mode to http
-    state_ = kCompleted;
-
-    // TODO persistent connection
-    if(!e) {
-        boost::system::error_code ec;
-        //local_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-    }
-
-    if(e != boost::asio::error::operation_aborted) {
-        //manager_.Stop(shared_from_this());
+    if(persistent_) {
+        XTRACE << "This is a persistent connection, continue to use this session.";
+        reset();
+        Start();
+    } else {
+        local_socket_.close();
         Terminate();
     }
 }
@@ -214,4 +215,15 @@ inline void HttpProxySession::SendResponse(HttpResponse& response) {
     }
 
     state_ = kReplying;
+}
+
+inline void HttpProxySession::reset() {
+    if(persistent_) {
+        state_ = kWaiting;
+        mode_ = HTTP;
+        persistent_ = false;
+        request_.reset();
+        response_.reset();
+        handler_.reset();
+    }
 }

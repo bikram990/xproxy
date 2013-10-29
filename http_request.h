@@ -65,6 +65,8 @@ public:
         return *this;
     }
 
+    bool FindHeader(const std::string& name, std::string& value);
+
 private:
     enum BuildState {
         kRequestStart, kMethod, kUri, kProtocolH, kProtocolT1, kProtocolT2, kProtocolP,
@@ -82,7 +84,6 @@ private:
         }
     };
 
-    bool FindHeader(const std::string& name, std::string& value);
     void CanonicalizeUri();
 
     State consume(char current_byte);
@@ -105,5 +106,15 @@ private:
     boost::asio::streambuf body_;
     std::size_t body_length_;
 };
+
+inline bool HttpRequest::FindHeader(const std::string& name, std::string& value) {
+    std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
+                                                        headers_.end(),
+                                                        HeaderFinder(name));
+    if(it == headers_.end())
+        return false;
+    value = it->value;
+    return true;
+}
 
 #endif // HTTP_REQUEST_H

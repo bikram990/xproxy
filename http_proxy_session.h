@@ -53,9 +53,11 @@ private:
     void ContinueReceiving();
     void InitSSLContext();
     void SendResponse(HttpResponse& response);
+    void reset();
 
     State state_;
     Mode mode_;
+    bool persistent_;
 
     boost::asio::io_service& service_;
     boost::asio::ip::tcp::socket local_socket_;
