@@ -11,6 +11,23 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
         state_ = kBadRequest;
         return state_;
     }
+    if(build_state_ == kHeadersDone) { // headers are parsed but it is still incomplete, so it should be body
+        if(body_length_ <= 0) {
+            XERROR << "The body length is 0, but the state is still incomplete.";
+            state_ = kBadRequest;
+            return state_;
+        }
+        if(body_length_ > stream.size()) {
+            state_ = kIncomplete;
+            return state_;
+        }
+        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_length_), stream.data());
+        body_.commit(copied);
+        stream.consume(copied);
+        XDEBUG << "The request body length is: " << body_.size();
+        state_ = kComplete;
+        return state_;
+    }
 
     std::istream s(&stream);
     s >> std::noskipws;
@@ -27,14 +44,14 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
 
     std::string content_length;
     if(FindHeader("Content-Length", content_length)) {
-        std::size_t body_len = boost::lexical_cast<std::size_t>(content_length);
-        XDEBUG << "The Content-Length header: " << body_len
+        body_length_ = boost::lexical_cast<std::size_t>(content_length);
+        XDEBUG << "The Content-Length header: " << body_length_
                << ", current stream size: " << stream.size();
-        if(body_len > stream.size()) {
+        if(body_length_ > stream.size()) {
             state_ = kIncomplete;
             return state_;
         }
-        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_len), stream.data());
+        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_length_), stream.data());
         body_.commit(copied);
         stream.consume(copied);
         XDEBUG << "The request body length is: " << body_.size();
@@ -329,6 +346,7 @@ inline HttpRequest::State HttpRequest::consume(char current_byte) {
     case kNewLineBody:
         if(current_byte != '\n')
             return ERR;
+        build_state_ = kHeadersDone;
         return DONE;
     default:
         return ERR;

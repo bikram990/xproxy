@@ -18,7 +18,7 @@ public:
 
     HttpRequest() : buffer_built_(false), state_(kIncomplete),
                     build_state_(kRequestStart), port_(80),
-                    major_version_(1), minor_version_(1) {
+                    major_version_(1), minor_version_(1), body_length_(0) {
         TRACE_THIS_PTR;
     }
     ~HttpRequest() { TRACE_THIS_PTR; }
@@ -70,7 +70,8 @@ private:
         kRequestStart, kMethod, kUri, kProtocolH, kProtocolT1, kProtocolT2, kProtocolP,
         kSlash, kMajorVersionStart, kMajorVersion, kMinorVersionStart, kMinorVersion,
         kNewLineHeader, kHeaderStart, kNewLineBody, kHeaderLWS, // linear white space
-        kHeaderName, kNewLineHeaderContinue, kHeaderValue, kHeaderValueSpaceBefore
+        kHeaderName, kNewLineHeaderContinue, kHeaderValue, kHeaderValueSpaceBefore,
+        kHeadersDone
     };
 
     struct HeaderFinder {
@@ -102,6 +103,7 @@ private:
     int minor_version_;
     std::vector<HttpHeader> headers_;
     boost::asio::streambuf body_;
+    std::size_t body_length_;
 };
 
 #endif // HTTP_REQUEST_H
