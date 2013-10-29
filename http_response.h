@@ -8,6 +8,8 @@
 
 class HttpResponse {
 public:
+    typedef boost::shared_ptr<HttpResponse> Ptr;
+
     enum StatusCode {
         kBadRequest = 400
         // TODO currently the only one is enough, may add others later

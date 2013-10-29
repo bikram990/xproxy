@@ -12,6 +12,7 @@ class HttpProxySession
         : public boost::enable_shared_from_this<HttpProxySession>,
           private boost::noncopyable {
 public:
+    typedef boost::shared_ptr<HttpProxySession> Ptr;
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> ssl_socket_ref;
     typedef HttpProxySession this_type;
 
@@ -64,11 +65,9 @@ private:
 
     boost::asio::streambuf local_buffer_;
 
-    HttpRequestPtr request_;
-    boost::shared_ptr<HttpResponse> response_;
-    boost::shared_ptr<RequestHandler> handler_;
+    HttpRequest::Ptr request_;
+    HttpResponse::Ptr response_;
+    RequestHandler::Ptr handler_;
 };
-
-typedef boost::shared_ptr<HttpProxySession> HttpProxySessionPtr;
 
 #endif // HTTP_PROXY_SESSION_H

@@ -28,14 +28,16 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
     std::string content_length;
     if(FindHeader("Content-Length", content_length)) {
         std::size_t body_len = boost::lexical_cast<std::size_t>(content_length);
+        XDEBUG << "The Content-Length header: " << body_len
+               << ", current stream size: " << stream.size();
         if(body_len > stream.size()) {
             state_ = kIncomplete;
             return state_;
         }
         std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_len), stream.data());
-        XDEBUG << "The request body length is: " << body_.size();
         body_.commit(copied);
         stream.consume(copied);
+        XDEBUG << "The request body length is: " << body_.size();
     }
 
     std::string host;

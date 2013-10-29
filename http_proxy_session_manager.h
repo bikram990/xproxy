@@ -11,12 +11,12 @@ public:
     HttpProxySessionManager();
     ~HttpProxySessionManager();
 
-    void Start(HttpProxySessionPtr session);
-    void Stop(HttpProxySessionPtr session);
+    void Start(HttpProxySession::Ptr session);
+    void Stop(HttpProxySession::Ptr session);
     void StopAll();
 
 private:
-    std::set<HttpProxySessionPtr> sessions_;
+    std::set<HttpProxySession::Ptr> sessions_;
 };
 
 #endif // HTTP_PROXY_SESSION_MANAGER_H

@@ -14,14 +14,14 @@ public:
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket;
 
     HttpClient(boost::asio::io_service& service,
-               HttpRequest *request,
-               HttpResponse& response,
+               HttpRequest::Ptr request,
+               HttpResponse::Ptr response,
                boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
     HttpClient& host(const std::string& host) { host_ = host; return *this; }
     HttpClient& port(short port) { port_ = port; return *this; }
-    HttpClient& request(HttpRequest *request) { request_ = request; return *this; }
+    HttpClient& request(HttpRequest::Ptr request) { request_ = request; return *this; }
     void AsyncSendRequest(RequestHandler::handler_type handler);
 
 private:
@@ -45,8 +45,8 @@ private:
 
     boost::asio::streambuf remote_buffer_;
 
-    HttpRequest *request_;
-    HttpResponse& response_;
+    HttpRequest::Ptr request_;
+    HttpResponse::Ptr response_;
 
     std::string host_;
     short port_;

@@ -28,7 +28,7 @@ void HttpProxySession::Terminate() {
 void HttpProxySession::Start() {
     boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
     local_socket_.async_read_some(buf,
-                                  boost::bind(&HttpProxySession::OnRequestReceived,
+                                  boost::bind(&this_type::OnRequestReceived,
                                               shared_from_this(),
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::bytes_transferred));
@@ -81,7 +81,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         if(mode_ == HTTPS)
             request_->port(443);
         response_.reset(new HttpResponse());
-        handler_.reset(RequestHandler::CreateHandler(*this, *request_, *response_, boost::bind(&this_type::OnResponseReceived, shared_from_this(), _1)));
+        handler_.reset(RequestHandler::CreateHandler(shared_from_this(), request_, response_, boost::bind(&this_type::OnResponseReceived, shared_from_this(), _1)));
         if(handler_)
             handler_->AsyncHandleRequest();
         XTRACE << "Request is sent asynchronously.";

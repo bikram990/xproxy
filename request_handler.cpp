@@ -5,33 +5,25 @@
 #include "request_handler.h"
 #include "resource_manager.h"
 
-RequestHandler::RequestHandler(HttpProxySession& session,
-                               HttpRequest& request,
-                               HttpResponse& response,
+RequestHandler::RequestHandler(HttpProxySession::Ptr session,
+                               HttpRequest::Ptr request,
+                               HttpResponse::Ptr response,
                                handler_type handler)
     : session_(session), request_(request), response_(response),
-      handler_(handler), remote_ssl_context_(NULL), client_(NULL), inited_(false) {
+      handler_(handler), inited_(false) {
     TRACE_THIS_PTR;
 }
 
 RequestHandler::~RequestHandler() {
     TRACE_THIS_PTR;
-    if(client_) {
-        delete client_;
-        client_ = NULL;
-    }
-    if(remote_ssl_context_) {
-        delete remote_ssl_context_;
-        remote_ssl_context_ = NULL;
-    }
 }
 
-RequestHandler *RequestHandler::CreateHandler(HttpProxySession& session,
-                                              HttpRequest& request,
-                                              HttpResponse& response,
+RequestHandler *RequestHandler::CreateHandler(HttpProxySession::Ptr session,
+                                              HttpRequest::Ptr request,
+                                              HttpResponse::Ptr response,
                                               handler_type handler) {
     // TODO may add socks handler here
-    bool proxy = ResourceManager::instance().GetRuleConfig().RequestProxy(request.host());
+    bool proxy = ResourceManager::instance().GetRuleConfig().RequestProxy(request->host());
     RequestHandler *h= NULL;
     if(proxy)
         h= new ProxyHandler(session, request, response, handler);
@@ -44,13 +36,13 @@ void RequestHandler::AsyncHandleRequest() {
     if(!inited_)
         init();
 
-    HttpRequest *request = WrapRequest();
+    HttpRequest::Ptr request = WrapRequest();
     if(!request || !client_)
         handler_(boost::asio::error::invalid_argument);
     else
         client_->host(request->host()).port(request->port()).request(request)
                 .AsyncSendRequest(boost::bind(&RequestHandler::HandleResponse,
-                                              this, _1));
+                                              shared_from_this(), _1));
 }
 
 void RequestHandler::HandleResponse(const boost::system::error_code& e) {
@@ -63,29 +55,33 @@ void RequestHandler::HandleResponse(const boost::system::error_code& e) {
     handler_(e);
 }
 
-HttpRequest *DirectHandler::WrapRequest() {
-    return &request_;
+HttpRequest::Ptr DirectHandler::WrapRequest() {
+    return request_;
 }
 
 void DirectHandler::init() {
-    if(session_.mode() == HttpProxySession::HTTPS)
-        remote_ssl_context_ = new boost::asio::ssl::context(boost::asio::ssl::context::sslv23);
-    client_ = new HttpClient(session_.service(), &request_, response_, remote_ssl_context_);
+    if(session_->mode() == HttpProxySession::HTTPS)
+        remote_ssl_context_.reset(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
+    client_.reset(new HttpClient(session_->service(), request_, response_, remote_ssl_context_.get()));
     inited_ = true;
 }
 
-HttpRequest *ProxyHandler::WrapRequest() {
-    proxy_request_ = new HttpRequest();
+HttpRequest::Ptr ProxyHandler::WrapRequest() {
+    proxy_request_.reset(new HttpRequest());
     BuildProxyRequest();
     return proxy_request_;
 }
 
 void ProxyHandler::ProcessResponse() {
     // TODO improve this function here
-    std::istream in(&response_.body());
-    std::getline(in, response_.status_line());
-    response_.status_line().erase(response_.status_line().size() - 1); // remove the last \r
-    response_.ResetHeaders();
+    if(response_->body().size() <= 0) {
+        XERROR << "No response from remote proxy server.";
+        return;
+    }
+    std::istream in(&response_->body());
+    std::getline(in, response_->status_line());
+    response_->status_line().erase(response_->status_line().size() - 1); // remove the last \r
+    response_->ResetHeaders();
     std::string header;
     while(std::getline(in, header)) {
         if(header == "\r")
@@ -101,21 +97,21 @@ void ProxyHandler::ProcessResponse() {
         std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
         boost::algorithm::trim(name);
         boost::algorithm::trim(value);
-        response_.AddHeader(name, value);
+        response_->AddHeader(name, value);
     }
-    response_.body_lenth(response_.body().size());
+    response_->body_lenth(response_->body().size());
 }
 
 void ProxyHandler::init() {
-    if(session_.mode() == HttpProxySession::HTTPS)
-        remote_ssl_context_ = new boost::asio::ssl::context(boost::asio::ssl::context::sslv23);
-    client_ = new HttpClient(session_.service(), &request_, response_, remote_ssl_context_);
+    if(session_->mode() == HttpProxySession::HTTPS)
+        remote_ssl_context_.reset(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
+    client_.reset(new HttpClient(session_->service(), request_, response_, remote_ssl_context_.get()));
     inited_ = true;
 }
 
 inline void ProxyHandler::BuildProxyRequest() {
     // TODO improve this, refine the headers
-    boost::asio::streambuf& origin_body_buf = request_.OutboundBuffer();
+    boost::asio::streambuf& origin_body_buf = request_->OutboundBuffer();
 
     proxy_request_->host(ResourceManager::instance().GetServerConfig().GetGAEServerDomain())
            .port(443).method("POST").uri("/proxy").major_version(1).minor_version(1)
@@ -124,6 +120,6 @@ inline void ProxyHandler::BuildProxyRequest() {
            .AddHeader("Connection", "close")
            .AddHeader("Content-Length", boost::lexical_cast<std::string>(origin_body_buf.size()))
            .body(origin_body_buf);
-    if(session_.mode() == HttpProxySession::HTTPS)
+    if(session_->mode() == HttpProxySession::HTTPS)
         proxy_request_->AddHeader("XProxy-Schema", "https://");
 }

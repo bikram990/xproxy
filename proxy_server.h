@@ -22,7 +22,7 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    HttpProxySessionPtr current_session_;
+    HttpProxySession::Ptr current_session_;
     HttpProxySessionManager session_manager_;
 };
 

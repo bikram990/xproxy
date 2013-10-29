@@ -12,33 +12,34 @@ class HttpProxySession;
 
 class RequestHandler : public boost::enable_shared_from_this<RequestHandler> {
 public:
+    typedef boost::shared_ptr<RequestHandler> Ptr;
     typedef boost::function<void(const boost::system::error_code&)> handler_type;
 
-    static RequestHandler *CreateHandler(HttpProxySession& session,
-                                         HttpRequest& request,
-                                         HttpResponse& response,
+    static RequestHandler *CreateHandler(boost::shared_ptr<HttpProxySession> session,
+                                         HttpRequest::Ptr request,
+                                         HttpResponse::Ptr response,
                                          handler_type handler);
     virtual void AsyncHandleRequest();
     virtual void HandleResponse(const boost::system::error_code& e);
     virtual ~RequestHandler();
 
 protected:
-    RequestHandler(HttpProxySession& session,
-                   HttpRequest& request,
-                   HttpResponse& response,
+    RequestHandler(boost::shared_ptr<HttpProxySession> session,
+                   HttpRequest::Ptr request,
+                   HttpResponse::Ptr response,
                    handler_type handler);
 
-    virtual HttpRequest *WrapRequest() = 0;
+    virtual HttpRequest::Ptr WrapRequest() = 0;
     virtual void ProcessResponse() = 0;
     virtual void init() = 0;
 
-    HttpProxySession& session_;
-    HttpRequest& request_;
-    HttpResponse& response_;
+    boost::shared_ptr<HttpProxySession> session_;
+    HttpRequest::Ptr request_;
+    HttpResponse::Ptr response_;
 
     handler_type handler_;
-    boost::asio::ssl::context *remote_ssl_context_;
-    HttpClient *client_;
+    boost::shared_ptr<boost::asio::ssl::context> remote_ssl_context_;
+    boost::shared_ptr<HttpClient> client_;
 
     bool inited_;
 };
@@ -46,39 +47,32 @@ protected:
 class DirectHandler : public RequestHandler {
     friend class RequestHandler;
 private:
-    DirectHandler(HttpProxySession& session,
-                  HttpRequest& request,
-                   HttpResponse& response,
+    DirectHandler(boost::shared_ptr<HttpProxySession> session,
+                  HttpRequest::Ptr request,
+                   HttpResponse::Ptr response,
                    handler_type handler)
         : RequestHandler(session, request, response, handler) { init(); }
 
-    virtual HttpRequest *WrapRequest();
+    virtual HttpRequest::Ptr WrapRequest();
     virtual void ProcessResponse() {}
     virtual void init();
 };
 
 class ProxyHandler : public RequestHandler {
     friend class RequestHandler;
-public:
-    virtual ~ProxyHandler() {
-        if(proxy_request_) {
-            delete proxy_request_;
-            proxy_request_ = NULL;
-        }
-    }
 private:
-    ProxyHandler(HttpProxySession& session,
-                 HttpRequest& request,
-                   HttpResponse& response,
+    ProxyHandler(boost::shared_ptr<HttpProxySession> session,
+                 HttpRequest::Ptr request,
+                   HttpResponse::Ptr response,
                    handler_type handler)
-        : RequestHandler(session, request, response, handler), proxy_request_(NULL) { init(); }
+        : RequestHandler(session, request, response, handler) { init(); }
 
-    virtual HttpRequest *WrapRequest();
+    virtual HttpRequest::Ptr WrapRequest();
     virtual void ProcessResponse();
     virtual void init();
     void BuildProxyRequest();
 
-    HttpRequest *proxy_request_;
+    HttpRequest::Ptr proxy_request_;
 };
 
 #endif // REQUEST_HANDLER_H

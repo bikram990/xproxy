@@ -8,6 +8,8 @@
 
 class HttpRequest {
 public:
+    typedef boost::shared_ptr<HttpRequest> Ptr;
+
     enum State {
         kComplete = 0, // request is complete
         kIncomplete, // request is incomplete, need to read more data from socket
@@ -101,7 +103,5 @@ private:
     std::vector<HttpHeader> headers_;
     boost::asio::streambuf body_;
 };
-
-typedef boost::shared_ptr<HttpRequest> HttpRequestPtr;
 
 #endif // HTTP_REQUEST_H
