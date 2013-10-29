@@ -1,5 +1,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 #include "http_client.h"
 #include "http_proxy_session.h"
 #include "request_handler.h"
@@ -97,7 +98,15 @@ void ProxyHandler::ProcessResponse() {
         std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
         boost::algorithm::trim(name);
         boost::algorithm::trim(value);
-        response_->AddHeader(name, value);
+        if(name == "Set-Cookie") {
+            std::string s("_e_0Pho_1=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.facebook.com; httponly, act=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.facebook.com; httponly, c_user=100004434630773; expires=Thu, 28-Nov-2013 11:19:09 GMT; path=/; domain=.facebook.com; secure, csm=2; expires=Thu, 28-Nov-2013 11:19:09 GMT; path=/; domain=.facebook.com, datr=7HVvUiWeQITVcvcKWnsRqqi0; expires=Thu, 29-Oct-2015 11:19:09 GMT; path=/; domain=.facebook.com; httponly, fr=0kZn8FVv5OxKw4Asm.AWXIzOEoQ71ftBfaITdeEzS9KMA.BSb5mt.dr.AAA.AWWtaqhk; expires=Thu, 28-Nov-2013 11:19:09 GMT; path=/; domain=.facebook.com; httponly, lu=ggjOhk2OdXT1Y5T7-8wq2aOw; expires=Thu, 29-Oct-2015 11:19:09 GMT; path=/; domain=.facebook.com; httponly, s=Aa5FXyc4stM-lIOz.BSb5mt; expires=Thu, 28-Nov-2013 11:19:09 GMT; path=/; domain=.facebook.com; secure; httponly, wd=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=/; domain=.facebook.com; httponly, xs=140%3AaGFeQwOWyUciOw%3A2%3A1383045549%3A11945; expires=Thu, 28-Nov-2013 11:19:09 GMT; path=/; domain=.facebook.com; secure; httponly");
+            boost::regex expr(", ([^ =]+(?:=|$))");
+            std::string replace("\r\nSet-Cookie: \\1");
+            value = boost::regex_replace(value, expr, replace);
+            response_->AddHeader(name, value);
+        } else {
+            response_->AddHeader(name, value);
+        }
     }
     response_->body_lenth(response_->body().size());
 }
