@@ -6,7 +6,7 @@
 
 class ProxyServer : private boost::noncopyable {
 public:
-    ProxyServer(short port = 7077);
+    ProxyServer(short port = 7077, int thread_count = 10);
 
     void Start();
     void Stop();
@@ -18,6 +18,7 @@ private:
     void OnConnectionAccepted(const boost::system::error_code& e);
     void OnStopSignalReceived();
 
+    int thread_pool_size_;
     boost::asio::io_service service_;
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;

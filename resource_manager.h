@@ -37,6 +37,7 @@ class ResourceManager::ServerConfig : private boost::noncopyable {
     friend class std::auto_ptr<ServerConfig>;
 public:
     const static std::string kConfPortKey;
+    const static std::string kConfThreadCountKey;
     const static std::string kConfGAEAppIdKey;
     const static std::string kConfGAEDomainKey;
 
@@ -44,6 +45,7 @@ public:
     bool LoadConfig(const std::string& conf_file);
 
     short GetProxyPort(short default_value = 7077);
+    int GetThreadCount(int default_value = 10);
     const std::string GetGAEAppId();
     const std::string GetGAEServerDomain(const std::string& default_value = "google.com.hk");
 
@@ -188,6 +190,11 @@ inline bool ResourceManager::ServerConfig::LoadConfig(const std::string& conf_fi
 inline short ResourceManager::ServerConfig::GetProxyPort(short default_value) {
     short result;
     return GetConfig(kConfPortKey, result) ? result : default_value;
+}
+
+inline int ResourceManager::ServerConfig::GetThreadCount(int default_value) {
+    int result;
+    return GetConfig(kConfThreadCountKey, result) ? result : default_value;
 }
 
 inline const std::string ResourceManager::ServerConfig::GetGAEAppId() {

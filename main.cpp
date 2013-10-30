@@ -13,10 +13,12 @@ int main(int argc, char* argv[]) {
 
     ResourceManager::instance().GetRuleConfig() << "youtube.com"
                                                 << "facebook.com"
+                                                << "google-analytics.com"
                                                 << "twitter.com";
 
     try {
-        ProxyServer s(ResourceManager::instance().GetServerConfig().GetProxyPort());
+        ProxyServer s(ResourceManager::instance().GetServerConfig().GetProxyPort(),
+                      ResourceManager::instance().GetServerConfig().GetThreadCount());
         s.Start();
     } catch (std::exception& e) {
         XERROR << "Exception occurred: " << e.what();

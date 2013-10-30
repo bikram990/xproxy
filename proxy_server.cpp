@@ -1,15 +1,25 @@
 #include <boost/bind.hpp>
+#include <boost/thread/thread.hpp>
 #include "log.h"
 #include "proxy_server.h"
 
-ProxyServer::ProxyServer(short port)
-    : signals_(service_), acceptor_(service_) {
+ProxyServer::ProxyServer(short port, int thread_count)
+    : thread_pool_size_(thread_count), signals_(service_), acceptor_(service_) {
     init(port);
     StartAccept();
 }
 
 void ProxyServer::Start() {
-    service_.run();
+    std::vector<boost::shared_ptr<boost::thread>> threads;
+    for(int i = 0; i < thread_pool_size_; i++) {
+        boost::shared_ptr<boost::thread> t(new boost::thread(boost::bind(&boost::asio::io_service::run, &service_)));
+        threads.push_back(t);
+    }
+    for(std::vector<boost::shared_ptr<boost::thread>>::iterator it = threads.begin();
+        it != threads.end(); it++) {
+        (*it)->join();
+    }
+    // service_.run();
 }
 
 void ProxyServer::Stop() {
