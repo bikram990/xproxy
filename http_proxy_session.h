@@ -60,6 +60,7 @@ private:
     bool persistent_;
 
     boost::asio::io_service& service_;
+    boost::asio::io_service::strand strand_;
     boost::asio::ip::tcp::socket local_socket_;
     std::auto_ptr<boost::asio::ssl::context> local_ssl_context_;
     std::auto_ptr<ssl_socket_ref> local_ssl_socket_;

@@ -6,7 +6,7 @@
 HttpProxySession::HttpProxySession(boost::asio::io_service& service,
                                    HttpProxySessionManager& manager)
     : state_(kWaiting), mode_(HTTP), persistent_(false),
-      service_(service), local_socket_(service), manager_(manager) {
+      service_(service), strand_(service), local_socket_(service), manager_(manager) {
     TRACE_THIS_PTR;
 }
 
@@ -28,10 +28,10 @@ void HttpProxySession::Terminate() {
 void HttpProxySession::Start() {
     boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
     local_socket_.async_read_some(buf,
-                                  boost::bind(&this_type::OnRequestReceived,
-                                              shared_from_this(),
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred));
+                                  strand_.wrap(boost::bind(&this_type::OnRequestReceived,
+                                                           shared_from_this(),
+                                                           boost::asio::placeholders::error,
+                                                           boost::asio::placeholders::bytes_transferred)));
     state_ = kWaiting;
 }
 
@@ -80,14 +80,15 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         mode_ = HTTPS;
         static std::string response("HTTP/1.1 200 Connection Established\r\nProxy-Connection: Keep-Alive\r\n\r\n");
         boost::asio::async_write(local_socket_, boost::asio::buffer(response),
-                                 boost::bind(&this_type::OnSSLReplySent,
-                                             shared_from_this(),
-                                             boost::asio::placeholders::error));
+                                 strand_.wrap(boost::bind(&this_type::OnSSLReplySent,
+                                                          shared_from_this(),
+                                                          boost::asio::placeholders::error)));
         state_ = kSSLReplying;
     } else {
         if(mode_ == HTTPS)
             request_->port(443);
         response_.reset(new HttpResponse());
+        // TODO should the following use strand_ to wrap?
         handler_.reset(RequestHandler::CreateHandler(shared_from_this(), request_, response_, boost::bind(&this_type::OnResponseReceived, shared_from_this(), _1)));
         if(handler_)
             handler_->AsyncHandleRequest();
@@ -106,9 +107,9 @@ void HttpProxySession::OnSSLReplySent(const boost::system::error_code& e) {
     InitSSLContext();
 
     local_ssl_socket_->async_handshake(boost::asio::ssl::stream_base::server,
-                                       boost::bind(&this_type::OnHandshaken,
-                                                  shared_from_this(),
-                                                  boost::asio::placeholders::error));
+                                       strand_.wrap(boost::bind(&this_type::OnHandshaken,
+                                                                shared_from_this(),
+                                                                boost::asio::placeholders::error)));
     state_ = kSSLHandshaking;
 }
 
@@ -119,12 +120,12 @@ void HttpProxySession::OnHandshaken(const boost::system::error_code& e) {
         return;
     }
 
-//    request_->reset();
+    //    request_->reset();
     local_ssl_socket_->async_read_some(local_buffer_.prepare(4096), // TODO hard code
-                                      boost::bind(&this_type::OnRequestReceived,
-                                                  shared_from_this(),
-                                                  boost::asio::placeholders::error,
-                                                  boost::asio::placeholders::bytes_transferred));
+                                       strand_.wrap(boost::bind(&this_type::OnRequestReceived,
+                                                                shared_from_this(),
+                                                                boost::asio::placeholders::error,
+                                                                boost::asio::placeholders::bytes_transferred)));
     state_ = kSSLWaiting;
 }
 
@@ -162,17 +163,17 @@ inline void HttpProxySession::ContinueReceiving() {
     switch(mode_) {
     case HTTP:
         local_socket_.async_read_some(local_buffer_.prepare(2048), // TODO hard code
-                                      boost::bind(&this_type::OnRequestReceived,
-                                                  shared_from_this(),
-                                                  boost::asio::placeholders::error,
-                                                  boost::asio::placeholders::bytes_transferred));
+                                      strand_.wrap(boost::bind(&this_type::OnRequestReceived,
+                                                               shared_from_this(),
+                                                               boost::asio::placeholders::error,
+                                                               boost::asio::placeholders::bytes_transferred)));
         break;
     case HTTPS:
         local_ssl_socket_->async_read_some(local_buffer_.prepare(2048), // TODO hard code
-                                           boost::bind(&this_type::OnRequestReceived,
-                                                       shared_from_this(),
-                                                       boost::asio::placeholders::error,
-                                                       boost::asio::placeholders::bytes_transferred));
+                                           strand_.wrap(boost::bind(&this_type::OnRequestReceived,
+                                                                    shared_from_this(),
+                                                                    boost::asio::placeholders::error,
+                                                                    boost::asio::placeholders::bytes_transferred)));
         break;
     default:
         XERROR << "Invalid mode: " << static_cast<int>(mode_);
@@ -200,15 +201,15 @@ inline void HttpProxySession::SendResponse(HttpResponse& response) {
     switch(mode_) {
     case HTTP:
         boost::asio::async_write(local_socket_, response.OutboundBuffer(),
-                                 boost::bind(&this_type::OnResponseSent,
-                                             shared_from_this(),
-                                             boost::asio::placeholders::error));
+                                 strand_.wrap(boost::bind(&this_type::OnResponseSent,
+                                                          shared_from_this(),
+                                                          boost::asio::placeholders::error)));
         break;
     case HTTPS:
         boost::asio::async_write(*local_ssl_socket_, response.OutboundBuffer(),
-                                 boost::bind(&this_type::OnResponseSent,
-                                             shared_from_this(),
-                                             boost::asio::placeholders::error));
+                                 strand_.wrap(boost::bind(&this_type::OnResponseSent,
+                                                          shared_from_this(),
+                                                          boost::asio::placeholders::error)));
         break;
     default:
         XERROR << "Invalid mode: " << static_cast<int>(mode_);

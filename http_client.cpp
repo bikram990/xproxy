@@ -8,12 +8,13 @@ HttpClient::HttpClient(boost::asio::io_service& service,
                        HttpRequest::Ptr request,
                        HttpResponse::Ptr response,
                        boost::asio::ssl::context *context)
-    : service_(service), resolver_(service), is_ssl_(context ? true : false),
+    : service_(service), strand_(service), resolver_(service), is_ssl_(context ? true : false),
       request_(request), response_(response), host_(request->host()), port_(request->port()) {
     TRACE_THIS_PTR;
     if(context) {
         ssl_socket_.reset(new ssl_socket(service_, *context));
         ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
+        // TODO should the following be wrapped with strand?
         ssl_socket_->set_verify_callback(boost::bind(&HttpClient::VerifyCertificate, this, _1, _2));
     } else {
         socket_.reset(new socket(service_));
@@ -40,9 +41,9 @@ void HttpClient::ResolveRemote() {
 
     boost::asio::async_connect(is_ssl_ ? ssl_socket_->lowest_layer() : *socket_,
                                endpoint_iterator,
-                               boost::bind(&HttpClient::OnRemoteConnected,
-                                           this,
-                                           boost::asio::placeholders::error));
+                               strand_.wrap(boost::bind(&HttpClient::OnRemoteConnected,
+                                                        this,
+                                                        boost::asio::placeholders::error)));
 }
 
 void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
@@ -59,14 +60,14 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
 
     if(is_ssl_) {
         ssl_socket_->async_handshake(boost::asio::ssl::stream_base::client,
-                                     boost::bind(&HttpClient::OnRemoteHandshaken,
-                                                 this,
-                                                 boost::asio::placeholders::error));
+                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteHandshaken,
+                                                              this,
+                                                              boost::asio::placeholders::error)));
     } else {
         boost::asio::async_write(*socket_, request_->OutboundBuffer(),
-                                 boost::bind(&HttpClient::OnRemoteDataSent,
-                                             this,
-                                             boost::asio::placeholders::error));
+                                 strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
+                                                          this,
+                                                          boost::asio::placeholders::error)));
     }
 }
 
@@ -78,9 +79,9 @@ void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
     }
 
     boost::asio::async_write(*ssl_socket_, request_->OutboundBuffer(),
-                             boost::bind(&HttpClient::OnRemoteDataSent,
-                                         this,
-                                         boost::asio::placeholders::error));
+                             strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
+                                                      this,
+                                                      boost::asio::placeholders::error)));
 }
 
 void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
@@ -91,14 +92,14 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
     }
     if(is_ssl_) {
         boost::asio::async_read_until(*ssl_socket_, remote_buffer_, "\r\n",
-                                      boost::bind(&HttpClient::OnRemoteStatusLineReceived,
-                                                  this,
-                                                  boost::asio::placeholders::error));
+                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
+                                                               this,
+                                                               boost::asio::placeholders::error)));
     } else {
         boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n",
-                                      boost::bind(&HttpClient::OnRemoteStatusLineReceived,
-                                                  this,
-                                                  boost::asio::placeholders::error));
+                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
+                                                               this,
+                                                               boost::asio::placeholders::error)));
     }
 }
 
@@ -118,14 +119,14 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
 
     if(is_ssl_) {
         boost::asio::async_read_until(*ssl_socket_, remote_buffer_, "\r\n\r\n",
-                                      boost::bind(&HttpClient::OnRemoteHeadersReceived,
-                                                  this,
-                                                  boost::asio::placeholders::error));
+                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteHeadersReceived,
+                                                               this,
+                                                               boost::asio::placeholders::error)));
     } else {
         boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n\r\n",
-                                      boost::bind(&HttpClient::OnRemoteHeadersReceived,
-                                                  this,
-                                                  boost::asio::placeholders::error));
+                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteHeadersReceived,
+                                                               this,
+                                                               boost::asio::placeholders::error)));
     }
 }
 
@@ -180,15 +181,15 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         if(is_ssl_) {
             boost::asio::async_read(*ssl_socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
-                                    boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                this,
-                                                boost::asio::placeholders::error));
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         } else {
             boost::asio::async_read(*socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
-                                    boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                this,
-                                                boost::asio::placeholders::error));
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         }
         return;
     }
@@ -206,15 +207,15 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     if(is_ssl_) {
         boost::asio::async_read(*ssl_socket_, remote_buffer_,
                                 boost::asio::transfer_at_least(1),
-                                boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                            this,
-                                            boost::asio::placeholders::error));
+                                strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                         this,
+                                                         boost::asio::placeholders::error)));
     } else {
         boost::asio::async_read(*socket_, remote_buffer_,
                                 boost::asio::transfer_at_least(1),
-                                boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                            this,
-                                            boost::asio::placeholders::error));
+                                strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                         this,
+                                                         boost::asio::placeholders::error)));
     }
 }
 
@@ -257,15 +258,15 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
         if(is_ssl_) {
             boost::asio::async_read(*ssl_socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
-                                    boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                this,
-                                                boost::asio::placeholders::error));
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         } else {
             boost::asio::async_read(*socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
-                                    boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                this,
-                                                boost::asio::placeholders::error));
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         }
     } else {
         // TODO do something here
@@ -308,15 +309,15 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         if(is_ssl_) {
             boost::asio::async_read(*ssl_socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
-                                    boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                this,
-                                                boost::asio::placeholders::error));
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         } else {
             boost::asio::async_read(*socket_, remote_buffer_,
                                     boost::asio::transfer_at_least(1),
-                                    boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                this,
-                                                boost::asio::placeholders::error));
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         }
     } else {
         // TODO do something here

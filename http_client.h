@@ -37,6 +37,7 @@ private:
     bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
 
     boost::asio::io_service& service_;
+    boost::asio::io_service::strand strand_;
     boost::asio::ip::tcp::resolver resolver_;
 
     bool is_ssl_;
