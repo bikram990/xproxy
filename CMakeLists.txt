@@ -7,7 +7,7 @@ message(STATUS "release c flags: " ${CMAKE_C_FLAGS_RELEASE})
 message(STATUS "debug c flags: " ${CMAKE_C_FLAGS_DEBUG})
 message(STATUS "release cxx flags: " ${CMAKE_CXX_FLAGS_RELEASE})
 message(STATUS "debug cxx flags: " ${CMAKE_CXX_FLAGS_DEBUG})
-message(STATUS ${CMAKE_BUILD_TYPE})
+message(STATUS "current build type: " ${CMAKE_BUILD_TYPE})
 message(STATUS "c flags: " ${CMAKE_C_FLAGS})
 message(STATUS "cxx flags: " ${CMAKE_CXX_FLAGS})
 
