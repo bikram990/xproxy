@@ -8,6 +8,17 @@
 
 class HttpResponse {
 public:
+    typedef boost::shared_ptr<HttpResponse> Ptr;
+
+    enum StatusCode {
+        kBadRequest = 400
+        // TODO currently the only one is enough, may add others later
+    };
+
+    static void StockResponse(StatusCode status, HttpResponse& response);
+    static void StockResponse(StatusCode status, const std::string& message,
+                              const std::string& body, HttpResponse& response);
+
     HttpResponse() : buffer_built_(false), body_length_(0) { TRACE_THIS_PTR; }
     ~HttpResponse() { TRACE_THIS_PTR; }
 
@@ -21,6 +32,8 @@ public:
         return *this; // for chaining operation
     }
 
+    void ResetHeaders() { headers_.clear(); }
+
     void body_lenth(std::size_t length) {
         body_length_ = length;
     }
@@ -28,6 +41,16 @@ public:
     std::size_t body_length() { return body_length_; }
 
 private:
+    struct ResponseTemplate {
+        std::string message;
+        std::string body;
+        ResponseTemplate() {}
+        ResponseTemplate(const std::string& message, const std::string& body)
+            : message(message), body(body) {}
+    };
+
+    static std::map<StatusCode, ResponseTemplate> status_messages_;
+
     bool buffer_built_;
     boost::asio::streambuf raw_buffer_;
 

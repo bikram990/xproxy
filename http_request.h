@@ -8,6 +8,8 @@
 
 class HttpRequest {
 public:
+    typedef boost::shared_ptr<HttpRequest> Ptr;
+
     enum State {
         kComplete = 0, // request is complete
         kIncomplete, // request is incomplete, need to read more data from socket
@@ -16,7 +18,7 @@ public:
 
     HttpRequest() : buffer_built_(false), state_(kIncomplete),
                     build_state_(kRequestStart), port_(80),
-                    major_version_(1), minor_version_(1) {
+                    major_version_(1), minor_version_(1), body_length_(0) {
         TRACE_THIS_PTR;
     }
     ~HttpRequest() { TRACE_THIS_PTR; }
@@ -29,6 +31,14 @@ public:
     short port() const { return port_; }
     const std::string& method() const { return method_; }
 
+    HttpRequest& host(const std::string& host) {
+        host_ = host;
+        return *this;
+    }
+    HttpRequest& port(short port) {
+        port_ = port;
+        return *this;
+    }
     HttpRequest& method(const std::string& method) {
         method_ = method;
         return *this;
@@ -55,12 +65,15 @@ public:
         return *this;
     }
 
+    bool FindHeader(const std::string& name, std::string& value);
+
 private:
     enum BuildState {
         kRequestStart, kMethod, kUri, kProtocolH, kProtocolT1, kProtocolT2, kProtocolP,
         kSlash, kMajorVersionStart, kMajorVersion, kMinorVersionStart, kMinorVersion,
         kNewLineHeader, kHeaderStart, kNewLineBody, kHeaderLWS, // linear white space
-        kHeaderName, kNewLineHeaderContinue, kHeaderValue, kHeaderValueSpaceBefore
+        kHeaderName, kNewLineHeaderContinue, kHeaderValue, kHeaderValueSpaceBefore,
+        kHeadersDone
     };
 
     struct HeaderFinder {
@@ -71,7 +84,6 @@ private:
         }
     };
 
-    bool FindHeader(const std::string& name, std::string& value);
     void CanonicalizeUri();
 
     State consume(char current_byte);
@@ -92,8 +104,17 @@ private:
     int minor_version_;
     std::vector<HttpHeader> headers_;
     boost::asio::streambuf body_;
+    std::size_t body_length_;
 };
 
-typedef boost::shared_ptr<HttpRequest> HttpRequestPtr;
+inline bool HttpRequest::FindHeader(const std::string& name, std::string& value) {
+    std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
+                                                        headers_.end(),
+                                                        HeaderFinder(name));
+    if(it == headers_.end())
+        return false;
+    value = it->value;
+    return true;
+}
 
 #endif // HTTP_REQUEST_H

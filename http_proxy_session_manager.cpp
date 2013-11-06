@@ -12,12 +12,12 @@ HttpProxySessionManager::~HttpProxySessionManager() {
     TRACE_THIS_PTR;
 }
 
-void HttpProxySessionManager::Start(HttpProxySessionPtr session) {
+void HttpProxySessionManager::Start(HttpProxySession::Ptr session) {
     sessions_.insert(session);
     session->Start();
 }
 
-void HttpProxySessionManager::Stop(HttpProxySessionPtr session) {
+void HttpProxySessionManager::Stop(HttpProxySession::Ptr session) {
     sessions_.erase(session);
     session->Stop();
 }

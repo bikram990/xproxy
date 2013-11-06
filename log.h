@@ -1,6 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <boost/make_shared.hpp>
 #include <boost/log/attributes/mutable_constant.hpp>
 #include <boost/log/expressions/attr.hpp>
 #include <boost/log/sources/record_ostream.hpp>
