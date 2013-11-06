@@ -9,8 +9,8 @@
 class HttpProxySessionManager;
 
 class HttpProxySession
-        : public boost::enable_shared_from_this<HttpProxySession>,
-          private boost::noncopyable {
+    : public boost::enable_shared_from_this<HttpProxySession>,
+      private boost::noncopyable {
 public:
     typedef boost::shared_ptr<HttpProxySession> Ptr;
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> ssl_socket_ref;
@@ -32,12 +32,14 @@ public:
         HTTPS
     };
 
-    HttpProxySession(boost::asio::io_service& service,
+    HttpProxySession(boost::asio::io_service& main_service,
+                     boost::asio::io_service& fetch_service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
     State state() const { return state_; }
     Mode mode() const { return mode_; }
-    boost::asio::io_service& service() { return service_; }
+    // boost::asio::io_service& service() { return service_; }
+    boost::asio::io_service& FetchService() { return fetch_service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
     void Start();
     void Stop();
@@ -59,7 +61,8 @@ private:
     Mode mode_;
     bool persistent_;
 
-    boost::asio::io_service& service_;
+    boost::asio::io_service& main_service_;
+    boost::asio::io_service& fetch_service_;
     boost::asio::io_service::strand strand_;
     boost::asio::ip::tcp::socket local_socket_;
     std::auto_ptr<boost::asio::ssl::context> local_ssl_context_;

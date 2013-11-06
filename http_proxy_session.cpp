@@ -3,10 +3,12 @@
 #include "http_proxy_session_manager.h"
 #include "resource_manager.h"
 
-HttpProxySession::HttpProxySession(boost::asio::io_service& service,
+HttpProxySession::HttpProxySession(boost::asio::io_service& main_service,
+                                   boost::asio::io_service& fetch_service,
                                    HttpProxySessionManager& manager)
     : state_(kWaiting), mode_(HTTP), persistent_(false),
-      service_(service), strand_(service), local_socket_(service), manager_(manager) {
+      main_service_(main_service), fetch_service_(fetch_service),
+      strand_(main_service), local_socket_(main_service), manager_(manager) {
     TRACE_THIS_PTR;
 }
 
@@ -183,7 +185,7 @@ inline void HttpProxySession::ContinueReceiving() {
 }
 
 inline void HttpProxySession::InitSSLContext() {
-    local_ssl_context_.reset(new boost::asio::ssl::context(service_, boost::asio::ssl::context::sslv23));
+    local_ssl_context_.reset(new boost::asio::ssl::context(main_service_, boost::asio::ssl::context::sslv23));
     local_ssl_context_->set_options(boost::asio::ssl::context::default_workarounds
                                     | boost::asio::ssl::context::no_sslv2
                                     | boost::asio::ssl::context::single_dh_use);

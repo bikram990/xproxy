@@ -18,7 +18,8 @@ int main(int argc, char* argv[]) {
 
     try {
         ProxyServer s(ResourceManager::instance().GetServerConfig().GetProxyPort(),
-                      ResourceManager::instance().GetServerConfig().GetThreadCount());
+                      ResourceManager::instance().GetServerConfig().GetMainThreadCount(),
+                      ResourceManager::instance().GetServerConfig().GetFetchThreadCount());
         s.Start();
     } catch (std::exception& e) {
         XERROR << "Exception occurred: " << e.what();

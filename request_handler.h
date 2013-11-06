@@ -49,8 +49,8 @@ class DirectHandler : public RequestHandler {
 private:
     DirectHandler(boost::shared_ptr<HttpProxySession> session,
                   HttpRequest::Ptr request,
-                   HttpResponse::Ptr response,
-                   handler_type handler)
+                  HttpResponse::Ptr response,
+                  handler_type handler)
         : RequestHandler(session, request, response, handler) { init(); }
 
     virtual HttpRequest::Ptr WrapRequest();
@@ -63,8 +63,8 @@ class ProxyHandler : public RequestHandler {
 private:
     ProxyHandler(boost::shared_ptr<HttpProxySession> session,
                  HttpRequest::Ptr request,
-                   HttpResponse::Ptr response,
-                   handler_type handler)
+                 HttpResponse::Ptr response,
+                 handler_type handler)
         : RequestHandler(session, request, response, handler) { init(); }
 
     virtual HttpRequest::Ptr WrapRequest();
