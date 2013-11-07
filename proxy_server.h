@@ -23,7 +23,7 @@ private:
     int main_thread_pool_size_;
     int fetch_thread_pool_size_;
 
-    std::auto_ptr<boost::asio::io_service::work> fetch_keeper_; // keep fetch service running
+    boost::asio::io_service::work *fetch_keeper_; // keep fetch service running
 
     boost::asio::io_service main_service_;  // communicate with browser
     boost::asio::io_service fetch_service_; // communicate with remote server

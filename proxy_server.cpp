@@ -1,5 +1,6 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
+#include "common.h"
 #include "log.h"
 #include "proxy_server.h"
 
@@ -7,13 +8,14 @@ ProxyServer::ProxyServer(short port,
                          int main_thread_count,
                          int fetch_thread_count)
     : main_thread_pool_size_(main_thread_count), fetch_thread_pool_size_(fetch_thread_count),
+      fetch_keeper_(NULL),
       signals_(main_service_), acceptor_(main_service_) {
     init(port);
     StartAccept();
 }
 
 void ProxyServer::Start() {
-    fetch_keeper_.reset(new boost::asio::io_service::work(fetch_service_));
+    fetch_keeper_ = new boost::asio::io_service::work(fetch_service_);
 
     std::vector<boost::shared_ptr<boost::thread>> main_threads;
     std::vector<boost::shared_ptr<boost::thread>> fetch_threads;
@@ -71,4 +73,5 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
 void ProxyServer::OnStopSignalReceived() {
     acceptor_.close();
     session_manager_.StopAll();
+    CLEAN_MEMBER(fetch_keeper_); // delete the keeper to make fetch service finish
 }
