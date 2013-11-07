@@ -220,10 +220,10 @@ inline ResourceManager::RuleConfig& ResourceManager::RuleConfig::operator<<(cons
 }
 
 inline bool ResourceManager::RuleConfig::RequestProxy(const std::string& host) {
-    XINFO << "Checking if host " << host << " needs proxy...";
+    XTRACE << "Checking if host " << host << " needs proxy...";
     for(std::vector<std::string>::iterator it = domains_.begin();
         it != domains_.end(); ++it) {
-            XINFO << "Current rule is: " << *it;
+            XDEBUG << "Current rule is: " << *it;
 
             if(host.length() < it->length())
                 continue;
@@ -233,7 +233,7 @@ inline bool ResourceManager::RuleConfig::RequestProxy(const std::string& host) {
             }
     }
 
-    XINFO << "Host " << host << " does not need proxy.";
+    XDEBUG << "Host " << host << " does not need proxy.";
     return false;
 }
 
