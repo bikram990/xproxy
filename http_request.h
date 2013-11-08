@@ -8,8 +8,6 @@
 
 class HttpRequest {
 public:
-    typedef boost::shared_ptr<HttpRequest> Ptr;
-
     enum State {
         kComplete = 0, // request is complete
         kIncomplete, // request is incomplete, need to read more data from socket

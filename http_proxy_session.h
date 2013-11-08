@@ -36,20 +36,24 @@ public:
                      boost::asio::io_service& fetch_service,
                      HttpProxySessionManager& manager);
     ~HttpProxySession();
+
     State state() const { return state_; }
     Mode mode() const { return mode_; }
-    // boost::asio::io_service& service() { return service_; }
     boost::asio::io_service& FetchService() { return fetch_service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
+    HttpRequest *Request() { return request_.get(); }
+    HttpResponse *Response() { return response_.get(); }
+
     void Start();
     void Stop();
     void Terminate();
+
+    void OnResponseReceived(const boost::system::error_code& e); // the callback
 
 private:
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
     void OnHandshaken(const boost::system::error_code& e);
-    void OnResponseReceived(const boost::system::error_code& e);
     void OnResponseSent(const boost::system::error_code& e);
 
     void ContinueReceiving();
@@ -71,9 +75,9 @@ private:
 
     boost::asio::streambuf local_buffer_;
 
-    HttpRequest::Ptr request_;
-    HttpResponse::Ptr response_;
-    RequestHandler::Ptr handler_;
+    std::auto_ptr<HttpRequest> request_;
+    std::auto_ptr<HttpResponse> response_;
+    std::auto_ptr<RequestHandler> handler_;
 };
 
 #endif // HTTP_PROXY_SESSION_H

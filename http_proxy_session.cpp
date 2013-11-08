@@ -91,8 +91,8 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
             request_->port(443);
         response_.reset(new HttpResponse());
         // TODO should the following use strand_ to wrap?
-        handler_.reset(RequestHandler::CreateHandler(shared_from_this(), request_, response_, boost::bind(&this_type::OnResponseReceived, shared_from_this(), _1)));
-        if(handler_)
+        handler_.reset(RequestHandler::CreateHandler(*this));
+        if(handler_.get())
             handler_->AsyncHandleRequest();
         XTRACE << "Request is sent asynchronously.";
         state_ = kFetching;
