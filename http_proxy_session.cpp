@@ -1,6 +1,7 @@
 #include <boost/bind.hpp>
 #include "http_proxy_session.h"
 #include "http_proxy_session_manager.h"
+#include "http_request.h"
 #include "resource_manager.h"
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& main_service,
