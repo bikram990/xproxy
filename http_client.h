@@ -3,26 +3,28 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include "http_request.h"
-#include "http_response.h"
-#include "request_handler.h"
+#include <boost/function.hpp>
 
+class HttpRequest;
+class HttpResponse;
 
 class HttpClient {
 public:
-    typedef boost::asio::ip::tcp::socket socket;
-    typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket;
+    typedef boost::asio::ip::tcp::socket socket_type;
+    typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket_type;
+    typedef boost::function<void(const boost::system::error_code&)> callback_type;
+
+    enum State {
+        kInUse,
+        kAvailable
+    };
 
     HttpClient(boost::asio::io_service& service,
-               HttpRequest::Ptr request,
-               HttpResponse::Ptr response,
                boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
-    HttpClient& host(const std::string& host) { host_ = host; return *this; }
-    HttpClient& port(short port) { port_ = port; return *this; }
-    HttpClient& request(HttpRequest::Ptr request) { request_ = request; return *this; }
-    void AsyncSendRequest(RequestHandler::handler_type handler);
+    State state() { return state_; }
+    void AsyncSendRequest(HttpRequest *request, HttpResponse *response, callback_type callback);
 
 private:
     void ResolveRemote();
@@ -36,23 +38,25 @@ private:
 
     bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
 
+    State state_;
+
     boost::asio::io_service& service_;
     boost::asio::io_service::strand strand_;
     boost::asio::ip::tcp::resolver resolver_;
 
     bool is_ssl_;
-    std::auto_ptr<socket> socket_;
-    std::auto_ptr<ssl_socket> ssl_socket_;
+    std::auto_ptr<socket_type> socket_;
+    std::auto_ptr<ssl_socket_type> ssl_socket_;
 
     boost::asio::streambuf remote_buffer_;
 
-    HttpRequest::Ptr request_;
-    HttpResponse::Ptr response_;
+    HttpRequest *request_;
+    HttpResponse *response_;
 
     std::string host_;
     short port_;
 
-    RequestHandler::handler_type handler_;
+    callback_type callback_;
 };
 
 #endif // HTTP_CLIENT_H

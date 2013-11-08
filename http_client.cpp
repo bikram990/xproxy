@@ -2,22 +2,23 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include "http_client.h"
+#include "http_request.h"
+#include "http_response.h"
 #include "log.h"
 
 HttpClient::HttpClient(boost::asio::io_service& service,
-                       HttpRequest::Ptr request,
-                       HttpResponse::Ptr response,
                        boost::asio::ssl::context *context)
-    : service_(service), strand_(service), resolver_(service), is_ssl_(context ? true : false),
-      request_(request), response_(response), host_(request->host()), port_(request->port()) {
+    : service_(service), strand_(service), resolver_(service),
+      is_ssl_(context ? true : false),
+      request_(NULL), response_(NULL), host_(), port_(0) {
     TRACE_THIS_PTR;
     if(context) {
-        ssl_socket_.reset(new ssl_socket(service_, *context));
+        ssl_socket_.reset(new ssl_socket_type(service_, *context));
         ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
         // TODO should the following be wrapped with strand?
         ssl_socket_->set_verify_callback(boost::bind(&HttpClient::VerifyCertificate, this, _1, _2));
     } else {
-        socket_.reset(new socket(service_));
+        socket_.reset(new socket_type(service_));
     }
 }
 
@@ -25,8 +26,28 @@ HttpClient::~HttpClient() {
     TRACE_THIS_PTR;
 }
 
-void HttpClient::AsyncSendRequest(RequestHandler::handler_type handler) {
-    handler_ = handler;
+void HttpClient::AsyncSendRequest(HttpRequest *request, HttpResponse *response, callback_type callback) {
+    if(!callback) {
+        XERROR << "Invalid callback parameter.";
+        return;
+    }
+    if(state_ != kAvailable) {
+        XERROR << "This http client is currently in use.";
+        callback(boost::asio::error::already_started);
+        return;
+    }
+    if(!request || !response) {
+        XERROR << "Invalid request or response.";
+        callback(boost::asio::error::invalid_argument);
+        return;
+    }
+
+    request_ = request;
+    response_ = response;
+    callback_ = callback;
+    host_ = request->host();
+    port_ = request->port();
+    state_ = kInUse;
     ResolveRemote();
 }
 
@@ -49,7 +70,7 @@ void HttpClient::ResolveRemote() {
 void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to connect to remote server, message: " << e.message();
-        handler_(e);
+        callback_(e);
         return;
     }
 
@@ -74,7 +95,7 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
 void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed at handshake step, message: " << e.message();
-        handler_(e);
+        callback_(e);
         return;
     }
 
@@ -87,7 +108,7 @@ void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
 void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to write request to remote server, message: " << e.message();
-        handler_(e);
+        callback_(e);
         return;
     }
     if(is_ssl_) {
@@ -106,7 +127,7 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
 void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read status line from remote server, message: " << e.message();
-        handler_(e);
+        callback_(e);
         return;
     }
 
@@ -133,7 +154,7 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
 void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read response header from remote server, message: " << e.message();
-        handler_(e);
+        callback_(e);
         return;
     }
 
@@ -196,7 +217,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 
     if(body_len <= 0) {
         XDEBUG << "This response seems have no body.";
-        handler_(e);
+        callback_(e);
         // TODO do something here
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -222,7 +243,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     if(e) {
         XWARN << "Failed to read chunk from remote server, message: " << e.message();
-        handler_(e);
+        callback_(e);
         return;
     }
 
@@ -270,7 +291,7 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
         }
     } else {
         // TODO do something here
-        handler_(e);
+        callback_(e);
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
@@ -282,7 +303,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
             XDEBUG << "The remote peer closed the connection.";
         else {
             XWARN << "Failed to read body from remote server, message: " << e.message();
-            handler_(e);
+            callback_(e);
             return;
         }
     }
@@ -321,7 +342,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         }
     } else {
         // TODO do something here
-        handler_(e);
+        callback_(e);
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
