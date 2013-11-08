@@ -1,8 +1,16 @@
 #ifndef HTTP_CLIENT_MANAGER_H
 #define HTTP_CLIENT_MANAGER_H
 
-#include "http_client.h"
+#include <list>
+#include <map>
+#include <string>
+#include <boost/asio.hpp>
+#include <boost/function.hpp>
+#include <boost/noncopyable.hpp>
 
+class HttpClient;
+class HttpRequest;
+class HttpResponse;
 
 class HttpClientManager : private boost::noncopyable {
 public:

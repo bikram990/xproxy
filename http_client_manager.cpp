@@ -1,4 +1,5 @@
 #include "http_client_manager.h"
+#include "log.h"
 
 HttpClientManager::HttpClientManager(boost::asio::io_service& fetch_service)
     : fetch_service_(fetch_service) {
