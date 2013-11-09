@@ -1,34 +1,58 @@
 #include "http_client_manager.h"
-#include "log.h"
+#include "http_request.h"
 
-HttpClientManager::HttpClientManager(boost::asio::io_service& fetch_service)
-    : fetch_service_(fetch_service) {
-    TRACE_THIS_PTR;
+namespace {
+    static Singleton<HttpClientManager> manager_;
 }
 
-HttpClientManager::~HttpClientManager() {
-    TRACE_THIS_PTR;
+inline HttpClientManager& HttpClientManager::instance() {
+    return manager_.get();
 }
 
 void HttpClientManager::AsyncHandleRequest(HttpRequest *request,
                                            HttpResponse *response,
                                            callback_type callback) {
-    HttpClient *client = get(request);
-    // TODO implement this function
+    if(!instance().fetch_service_) {
+        XERROR << "The fetch service is NOT initialized.";
+        callback(boost::asio::error::invalid_argument);
+        return;
+    }
+
+    HttpClient::Ptr client = instance().get(request);
+    if(!client) {
+        XERROR << "No http client available.";
+        callback(boost::asio::error::invalid_argument);
+        return;
+    }
+    client->AsyncSendRequest(request, response, callback);
 }
 
-inline HttpClient *HttpClientManager::get(HttpRequest *request) {
-    // TODO implement this function
-    return NULL;
-//    cache_iterator_type it = cache_.find(std::make_pair(request->host(), request->port()));
-//    if(it == cache_.end()) {
-//        std::auto_ptr<HttpClient> client(new HttpClient());
-//        std::pair key(request->host(), request->port());
-//        std::list value;
-//        value.push_front(client);
-//        cache_.insert(std::make_pair(key, value));
-//        return client.get();
-//    }
+inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
+    CacheKey key(request->host(), request->port());
+    cache_iterator_type cit = cache_.find(key);
+    if(cit == cache_.end()) {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        cit = cache_.find(key);
+        if(cit == cache_.end()) {
+            HttpClient::Ptr client(new HttpClient(*fetch_service_));
+            CacheValue value;
+            value.clients->push_back(client);
+            cache_.insert(std::make_pair(key, value));
+            client->state(HttpClient::kInUse);
+            return client;
+        }
+    }
 
-//    std::list& clients = it->second;
+    CacheValue& value = cit->second;
+    boost::lock_guard<boost::mutex> lock(*value.mutex);
+    value_iterator_type vit = std::find_if(value.clients->begin(), value.clients->end(), AvailabilitySearcher());
+    if(vit != value.clients->end()) {
+        (*vit)->state(HttpClient::kInUse);
+        return *vit;
+    }
+
+    HttpClient::Ptr client(new HttpClient(*fetch_service_));
+    value.clients->push_back(client);
+    client->state(HttpClient::kInUse);
+    return client;
 }
