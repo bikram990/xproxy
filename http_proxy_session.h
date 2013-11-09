@@ -5,9 +5,6 @@
 #include "http_response.h"
 #include "request_handler.h"
 
-
-class HttpProxySessionManager;
-
 class HttpProxySession
     : public boost::enable_shared_from_this<HttpProxySession>,
       private boost::noncopyable {
@@ -33,8 +30,7 @@ public:
     };
 
     HttpProxySession(boost::asio::io_service& main_service,
-                     boost::asio::io_service& fetch_service,
-                     HttpProxySessionManager& manager);
+                     boost::asio::io_service& fetch_service);
     ~HttpProxySession();
 
     State state() const { return state_; }
@@ -71,7 +67,6 @@ private:
     boost::asio::ip::tcp::socket local_socket_;
     std::auto_ptr<boost::asio::ssl::context> local_ssl_context_;
     std::auto_ptr<ssl_socket_ref> local_ssl_socket_;
-    HttpProxySessionManager& manager_;
 
     boost::asio::streambuf local_buffer_;
 

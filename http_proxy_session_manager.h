@@ -1,21 +1,21 @@
 #ifndef HTTP_PROXY_SESSION_MANAGER_H
 #define HTTP_PROXY_SESSION_MANAGER_H
 
-#include <set>
 #include "http_proxy_session.h"
-
-class ProxyServer;
+#include "singleton.h"
 
 class HttpProxySessionManager : private boost::noncopyable {
-    friend class ProxyServer;
+    friend class Singleton<HttpProxySessionManager>;
 public:
-    void Start(HttpProxySession::Ptr session);
-    void Stop(HttpProxySession::Ptr session);
-    void StopAll();
+    static void Start(HttpProxySession::Ptr session);
+    static void Stop(HttpProxySession::Ptr session);
+    static void StopAll();
+
+    static HttpProxySessionManager& instance();
 
 private:
-    HttpProxySessionManager();
-    ~HttpProxySessionManager();
+    DECLARE_GENERAL_CONSTRUCTOR(HttpProxySessionManager)
+    DECLARE_GENERAL_DESTRUCTOR(HttpProxySessionManager)
 
     std::set<HttpProxySession::Ptr> sessions_;
 };

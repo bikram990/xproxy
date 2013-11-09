@@ -5,11 +5,10 @@
 #include "resource_manager.h"
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& main_service,
-                                   boost::asio::io_service& fetch_service,
-                                   HttpProxySessionManager& manager)
+                                   boost::asio::io_service& fetch_service)
     : state_(kWaiting), mode_(HTTP), persistent_(false),
       main_service_(main_service), fetch_service_(fetch_service),
-      strand_(main_service), local_socket_(main_service), manager_(manager) {
+      strand_(main_service), local_socket_(main_service) {
     TRACE_THIS_PTR;
 }
 
@@ -25,7 +24,7 @@ void HttpProxySession::Stop() {
 }
 
 void HttpProxySession::Terminate() {
-    manager_.Stop(shared_from_this());
+    HttpProxySessionManager::Stop(shared_from_this());
 }
 
 void HttpProxySession::Start() {

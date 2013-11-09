@@ -1,6 +1,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 #include "common.h"
+#include "http_proxy_session_manager.h"
 #include "log.h"
 #include "proxy_server.h"
 
@@ -53,7 +54,7 @@ void ProxyServer::init(short port) {
 }
 
 void ProxyServer::StartAccept() {
-    current_session_.reset(new HttpProxySession(main_service_, fetch_service_, session_manager_));
+    current_session_.reset(new HttpProxySession(main_service_, fetch_service_));
     acceptor_.async_accept(current_session_->LocalSocket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));
@@ -65,13 +66,13 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
         return;
     }
     if(!e)
-        session_manager_.Start(current_session_);
+        HttpProxySessionManager::Start(current_session_);
 
     StartAccept();
 }
 
 void ProxyServer::OnStopSignalReceived() {
     acceptor_.close();
-    session_manager_.StopAll();
+    HttpProxySessionManager::StopAll();
     CLEAN_MEMBER(fetch_keeper_); // delete the keeper to make fetch service finish
 }

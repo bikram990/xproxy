@@ -2,28 +2,26 @@
 #include "http_proxy_session_manager.h"
 #include "log.h"
 
-HttpProxySessionManager::HttpProxySessionManager() {
-    TRACE_THIS_PTR;
+namespace {
+    static Singleton<HttpProxySessionManager> manager_;
 }
 
-HttpProxySessionManager::~HttpProxySessionManager() {
-    // do nothing here
-    // TODO should we clean sockets in dispatcher_ here?
-    TRACE_THIS_PTR;
+inline HttpProxySessionManager& HttpProxySessionManager::instance() {
+    return manager_.get();
 }
 
 void HttpProxySessionManager::Start(HttpProxySession::Ptr session) {
-    sessions_.insert(session);
+    instance().sessions_.insert(session);
     session->Start();
 }
 
 void HttpProxySessionManager::Stop(HttpProxySession::Ptr session) {
-    sessions_.erase(session);
+    instance().sessions_.erase(session);
     session->Stop();
 }
 
 void HttpProxySessionManager::StopAll() {
-    std::for_each(sessions_.begin(), sessions_.end(),
+    std::for_each(instance().sessions_.begin(), instance().sessions_.end(),
                   boost::bind(&HttpProxySession::Stop, _1));
-    sessions_.clear();
+    instance().sessions_.clear();
 }

@@ -1,8 +1,7 @@
 #ifndef PROXY_SERVER_H
 #define PROXY_SERVER_H
 
-#include "http_proxy_session_manager.h"
-
+#include "http_proxy_session.h"
 
 class ProxyServer : private boost::noncopyable {
 public:
@@ -31,7 +30,6 @@ private:
     boost::asio::ip::tcp::acceptor acceptor_;
 
     HttpProxySession::Ptr current_session_;
-    HttpProxySessionManager session_manager_;
 };
 
 #endif // PROXY_SERVER_H
