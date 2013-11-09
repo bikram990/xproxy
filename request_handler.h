@@ -22,36 +22,28 @@ protected:
 
     virtual HttpRequest *WrapRequest() = 0;
     virtual void ProcessResponse() = 0;
-    virtual void init() = 0;
 
     HttpProxySession& session_;
     HttpRequest *request_;
     HttpResponse *response_;
-
-    boost::shared_ptr<boost::asio::ssl::context> remote_ssl_context_;
-    boost::shared_ptr<HttpClient> client_;
-
-    bool inited_;
 };
 
 class DirectHandler : public RequestHandler {
     friend class RequestHandler;
 private:
-    DirectHandler(HttpProxySession& session) : RequestHandler(session) { init(); }
+    DirectHandler(HttpProxySession& session) : RequestHandler(session) {}
 
     virtual HttpRequest *WrapRequest();
     virtual void ProcessResponse() {}
-    virtual void init();
 };
 
 class ProxyHandler : public RequestHandler {
     friend class RequestHandler;
 private:
-    ProxyHandler(HttpProxySession& session) : RequestHandler(session) { init(); }
+    ProxyHandler(HttpProxySession& session) : RequestHandler(session) {}
 
     virtual HttpRequest *WrapRequest();
     virtual void ProcessResponse();
-    virtual void init();
     void BuildProxyRequest();
 
     std::auto_ptr<HttpRequest> proxy_request_;

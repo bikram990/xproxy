@@ -2,6 +2,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 #include "http_client.h"
+#include "http_client_manager.h"
 #include "http_proxy_session.h"
 #include "http_request.h"
 #include "request_handler.h"
@@ -9,8 +10,7 @@
 
 RequestHandler::RequestHandler(HttpProxySession& session)
     : session_(session),
-      request_(session.Request()), response_(session.Response()),
-      inited_(false) {
+      request_(session.Request()), response_(session.Response()) {
     TRACE_THIS_PTR;
 }
 
@@ -30,16 +30,16 @@ RequestHandler *RequestHandler::CreateHandler(HttpProxySession& session) {
 }
 
 void RequestHandler::AsyncHandleRequest() {
-    if(!inited_)
-        init();
-
     HttpRequest *request = WrapRequest();
-    if(!request || !client_)
-        (boost::asio::error::invalid_argument);
+
+    if(!request)
+        session_.OnResponseReceived(boost::asio::error::invalid_argument);
     else
-        client_->AsyncSendRequest(request, response_,
-                                  boost::bind(&RequestHandler::HandleResponse,
-                                              shared_from_this(), _1));
+        HttpClientManager::AsyncHandleRequest(session_.mode(),
+                                              request,
+                                              response_,
+                                              boost::bind(&RequestHandler::HandleResponse,
+                                                          shared_from_this(), _1));
 }
 
 void RequestHandler::HandleResponse(const boost::system::error_code& e) {
@@ -54,13 +54,6 @@ void RequestHandler::HandleResponse(const boost::system::error_code& e) {
 
 HttpRequest *DirectHandler::WrapRequest() {
     return request_;
-}
-
-void DirectHandler::init() {
-    if(session_.mode() == HttpProxySession::HTTPS)
-        remote_ssl_context_.reset(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
-    client_.reset(new HttpClient(session_.FetchService(), remote_ssl_context_.get()));
-    inited_ = true;
 }
 
 HttpRequest *ProxyHandler::WrapRequest() {
@@ -104,13 +97,6 @@ void ProxyHandler::ProcessResponse() {
         }
     }
     response_->body_lenth(response_->body().size());
-}
-
-void ProxyHandler::init() {
-    if(session_.mode() == HttpProxySession::HTTPS)
-        remote_ssl_context_.reset(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
-    client_.reset(new HttpClient(session_.FetchService(), remote_ssl_context_.get()));
-    inited_ = true;
 }
 
 inline void ProxyHandler::BuildProxyRequest() {
