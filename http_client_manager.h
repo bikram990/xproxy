@@ -53,7 +53,10 @@ public:
             instance().fetch_service_ = service;
     }
 
-    static void AsyncHandleRequest(HttpRequest *request, HttpResponse *response, callback_type callback);
+    static void AsyncHandleRequest(HttpProxySession::Mode mode,
+                                   HttpRequest *request,
+                                   HttpResponse *response,
+                                   callback_type callback);
 
 private:
     HttpClientManager() : fetch_service_(NULL) { TRACE_THIS_PTR; }

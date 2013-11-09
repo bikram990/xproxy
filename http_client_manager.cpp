@@ -9,7 +9,8 @@ inline HttpClientManager& HttpClientManager::instance() {
     return manager_.get();
 }
 
-void HttpClientManager::AsyncHandleRequest(HttpRequest *request,
+void HttpClientManager::AsyncHandleRequest(HttpProxySession::Mode mode,
+                                           HttpRequest *request,
                                            HttpResponse *response,
                                            callback_type callback) {
     if(!instance().fetch_service_) {
@@ -24,7 +25,7 @@ void HttpClientManager::AsyncHandleRequest(HttpRequest *request,
         callback(boost::asio::error::invalid_argument);
         return;
     }
-    client->AsyncSendRequest(request, response, callback);
+    client->AsyncSendRequest(mode, request, response, callback);
 }
 
 inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
