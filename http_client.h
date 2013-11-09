@@ -24,6 +24,7 @@ public:
     ~HttpClient();
 
     State state() { return state_; }
+    void state(State state) { state_ = state; }
     void AsyncSendRequest(HttpRequest *request, HttpResponse *response, callback_type callback);
 
 private:
