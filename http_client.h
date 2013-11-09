@@ -5,11 +5,14 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/function.hpp>
 
+class HttpClientManager;
 class HttpRequest;
 class HttpResponse;
 
-class HttpClient {
+class HttpClient : private boost::noncopyable {
+    friend class HttpClientManager;
 public:
+    typedef boost::shared_ptr<HttpClient> Ptr;
     typedef boost::asio::ip::tcp::socket socket_type;
     typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket_type;
     typedef boost::function<void(const boost::system::error_code&)> callback_type;
@@ -19,8 +22,6 @@ public:
         kAvailable
     };
 
-    HttpClient(boost::asio::io_service& service,
-               boost::asio::ssl::context *context = NULL);
     ~HttpClient();
 
     State state() { return state_; }
@@ -28,6 +29,9 @@ public:
     void AsyncSendRequest(HttpRequest *request, HttpResponse *response, callback_type callback);
 
 private:
+    HttpClient(boost::asio::io_service& service,
+               boost::asio::ssl::context *context = NULL);
+
     void ResolveRemote();
     void OnRemoteConnected(const boost::system::error_code& e);
     void OnRemoteHandshaken(const boost::system::error_code& e);
