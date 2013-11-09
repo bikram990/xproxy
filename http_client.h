@@ -1,9 +1,8 @@
 #ifndef HTTP_CLIENT_H
 #define HTTP_CLIENT_H
 
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
 #include <boost/function.hpp>
+#include "http_proxy_session.h"
 
 class HttpClientManager;
 class HttpRequest;
@@ -26,11 +25,13 @@ public:
 
     State state() { return state_; }
     void state(State state) { state_ = state; }
-    void AsyncSendRequest(HttpRequest *request, HttpResponse *response, callback_type callback);
+    void AsyncSendRequest(HttpProxySession::Mode mode,
+                          HttpRequest *request,
+                          HttpResponse *response,
+                          callback_type callback);
 
 private:
-    HttpClient(boost::asio::io_service& service,
-               boost::asio::ssl::context *context = NULL);
+    HttpClient(boost::asio::io_service& service);
 
     void ResolveRemote();
     void OnRemoteConnected(const boost::system::error_code& e);
@@ -50,7 +51,9 @@ private:
     boost::asio::ip::tcp::resolver resolver_;
 
     bool is_ssl_;
+    bool persistent_;
     std::auto_ptr<socket_type> socket_;
+    std::auto_ptr<boost::asio::ssl::context> ssl_context_;
     std::auto_ptr<ssl_socket_type> ssl_socket_;
 
     boost::asio::streambuf remote_buffer_;

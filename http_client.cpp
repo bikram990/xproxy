@@ -6,27 +6,21 @@
 #include "http_response.h"
 #include "log.h"
 
-HttpClient::HttpClient(boost::asio::io_service& service,
-                       boost::asio::ssl::context *context)
+HttpClient::HttpClient(boost::asio::io_service& service)
     : service_(service), strand_(service), resolver_(service),
-      is_ssl_(context ? true : false),
+      is_ssl_(false), persistent_(false),
       request_(NULL), response_(NULL), host_(), port_(0) {
     TRACE_THIS_PTR;
-    if(context) {
-        ssl_socket_.reset(new ssl_socket_type(service_, *context));
-        ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
-        // TODO should the following be wrapped with strand?
-        ssl_socket_->set_verify_callback(boost::bind(&HttpClient::VerifyCertificate, this, _1, _2));
-    } else {
-        socket_.reset(new socket_type(service_));
-    }
 }
 
 HttpClient::~HttpClient() {
     TRACE_THIS_PTR;
 }
 
-void HttpClient::AsyncSendRequest(HttpRequest *request, HttpResponse *response, callback_type callback) {
+void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
+                                  HttpRequest *request,
+                                  HttpResponse *response,
+                                  callback_type callback) {
     if(!callback) {
         XERROR << "Invalid callback parameter.";
         return;
@@ -48,7 +42,50 @@ void HttpClient::AsyncSendRequest(HttpRequest *request, HttpResponse *response, 
     host_ = request->host();
     port_ = request->port();
     state_ = kInUse;
-    ResolveRemote();
+
+    if(!persistent_) {
+        if(mode == HttpProxySession::HTTPS) {
+            is_ssl_ = true;
+            ssl_context_.reset(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
+            ssl_socket_.reset(new ssl_socket_type(service_, *ssl_context_));
+            ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
+            // TODO should the following be wrapped with strand?
+            ssl_socket_->set_verify_callback(boost::bind(&HttpClient::VerifyCertificate, this, _1, _2));
+        } else {
+            is_ssl_ = false;
+            socket_.reset(new socket_type(service_));
+        }
+        ResolveRemote();
+    } else {
+        if((is_ssl_ && mode != HttpProxySession::HTTPS) ||
+                (!is_ssl_ && mode == HttpProxySession::HTTPS)) {
+            XERROR << "Mismatch protocol type.";
+            callback(boost::asio::error::operation_not_supported);
+            return;
+        }
+        if(is_ssl_ && !ssl_socket_->lowest_layer().is_open()) {
+            XERROR << "SSL socket is already closed.";
+            callback(boost::asio::error::not_connected);
+            return;
+        }
+        if(!is_ssl_ && !socket_->is_open()) {
+            XERROR << "Socket is already closed.";
+            callback(boost::asio::error::not_connected);
+            return;
+        }
+
+        if(is_ssl_) {
+            boost::asio::async_write(*ssl_socket_, request_->OutboundBuffer(),
+                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
+                                                              this,
+                                                              boost::asio::placeholders::error)));
+        } else {
+            boost::asio::async_write(*socket_, request_->OutboundBuffer(),
+                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
+                                                              this,
+                                                              boost::asio::placeholders::error)));
+        }
+    }
 }
 
 void HttpClient::ResolveRemote() {
@@ -196,6 +233,11 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
             boost::algorithm::trim(value);
             body_len = boost::lexical_cast<std::size_t>(value);
         }
+
+        if(name == "Connection" && value == "keep-alive")
+            persistent_ = true;
+        else
+            persistent_ = false;
     }
 
     if(chunked_encoding) {
