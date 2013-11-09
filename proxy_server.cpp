@@ -17,8 +17,8 @@ ProxyServer::ProxyServer(short port,
 void ProxyServer::Start() {
     fetch_keeper_ = new boost::asio::io_service::work(fetch_service_);
 
-    std::vector<boost::shared_ptr<boost::thread>> main_threads;
-    std::vector<boost::shared_ptr<boost::thread>> fetch_threads;
+    std::vector<boost::shared_ptr<boost::thread> > main_threads;
+    std::vector<boost::shared_ptr<boost::thread> > fetch_threads;
 
     for(int i = 0; i < main_thread_pool_size_; ++i)
         main_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&boost::asio::io_service::run, &main_service_))));
@@ -26,11 +26,11 @@ void ProxyServer::Start() {
     for(int i = 0; i < fetch_thread_pool_size_; ++i)
         fetch_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&boost::asio::io_service::run, &fetch_service_))));
 
-    for(std::vector<boost::shared_ptr<boost::thread>>::iterator it = main_threads.begin();
+    for(std::vector<boost::shared_ptr<boost::thread> >::iterator it = main_threads.begin();
         it != main_threads.end(); it++)
         (*it)->join();
 
-    for(std::vector<boost::shared_ptr<boost::thread>>::iterator it = fetch_threads.begin();
+    for(std::vector<boost::shared_ptr<boost::thread> >::iterator it = fetch_threads.begin();
         it != fetch_threads.end(); it++)
         (*it)->join();
 }

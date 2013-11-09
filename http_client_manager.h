@@ -15,7 +15,7 @@ class HttpResponse;
 class HttpClientManager : private boost::noncopyable {
 public:
     typedef std::pair<std::string, short> key_type; // domain, port
-    typedef std::list<std::auto_ptr<HttpClient>> value_type;
+    typedef std::list<std::auto_ptr<HttpClient> > value_type;
     typedef std::map<key_type, value_type> cache_type; // TODO map or hash_map?
 
     typedef value_type::iterator value_iterator_type;
