@@ -1,5 +1,4 @@
 #include <boost/date_time.hpp>
-#include <boost/thread.hpp>
 #include <openssl/pem.h>
 #include "resource_manager.h"
 
@@ -10,17 +9,11 @@ const std::string ResourceManager::ServerConfig::kConfGAEAppIdKey("proxy_gae.app
 const std::string ResourceManager::ServerConfig::kConfGAEDomainKey("proxy_gae.domain");
 
 namespace {
-    static boost::mutex mutex_;
-    static std::auto_ptr<ResourceManager> manager_;
+    static Singleton<ResourceManager> manager_;
 }
 
 ResourceManager& ResourceManager::instance() {
-    if(!manager_.get()) {
-        boost::lock_guard<boost::mutex> s(mutex_);
-        if(!manager_.get())
-            manager_.reset(new ResourceManager);
-    }
-    return *manager_;
+    return manager_.get();
 }
 
 ResourceManager::ResourceManager()

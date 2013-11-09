@@ -1,15 +1,14 @@
 #ifndef RESOURCE_MANAGER_H
 #define RESOURCE_MANAGER_H
 
-#include <map>
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <openssl/x509.h>
 #include "log.h"
+#include "singleton.h"
 
 class ResourceManager : private boost::noncopyable {
-    friend class std::auto_ptr<ResourceManager>;
+    friend class Singleton<ResourceManager>;
 public:
     class ServerConfig;
     class RuleConfig;
