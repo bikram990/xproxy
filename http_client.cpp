@@ -25,11 +25,11 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
         XERROR << "Invalid callback parameter.";
         return;
     }
-    if(state_ != kAvailable) {
-        XERROR << "This http client is currently in use.";
-        callback(boost::asio::error::already_started);
-        return;
-    }
+//    if(state_ != kAvailable) {
+//        XERROR << "This http client is currently in use.";
+//        callback(boost::asio::error::already_started);
+//        return;
+//    }
     if(!request || !response) {
         XERROR << "Invalid request or response.";
         callback(boost::asio::error::invalid_argument);
