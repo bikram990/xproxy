@@ -1,6 +1,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 #include "common.h"
+#include "http_client_manager.h"
 #include "http_proxy_session_manager.h"
 #include "log.h"
 #include "proxy_server.h"
@@ -17,6 +18,8 @@ ProxyServer::ProxyServer(short port,
 
 void ProxyServer::Start() {
     fetch_keeper_ = new boost::asio::io_service::work(fetch_service_);
+
+    HttpClientManager::InitFetchService(&fetch_service_);
 
     std::vector<boost::shared_ptr<boost::thread> > main_threads;
     std::vector<boost::shared_ptr<boost::thread> > fetch_threads;
