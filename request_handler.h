@@ -2,14 +2,13 @@
 #define REQUEST_HANDLER_H
 
 #include <boost/asio/ssl.hpp>
-#include <boost/enable_shared_from_this.hpp>
 
 class HttpClient;
 class HttpProxySession;
 class HttpRequest;
 class HttpResponse;
 
-class RequestHandler : public boost::enable_shared_from_this<RequestHandler> {
+class RequestHandler {
 public:
     static RequestHandler *CreateHandler(HttpProxySession& session);
 

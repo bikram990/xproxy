@@ -39,7 +39,7 @@ void RequestHandler::AsyncHandleRequest() {
                                               request,
                                               response_,
                                               boost::bind(&RequestHandler::HandleResponse,
-                                                          shared_from_this(), _1));
+                                                          this, _1));
 }
 
 void RequestHandler::HandleResponse(const boost::system::error_code& e) {
