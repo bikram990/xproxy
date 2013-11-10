@@ -19,12 +19,11 @@ private:
     };
 
     struct CacheValue {
-        boost::mutex *mutex;
-        std::vector<HttpClient::Ptr> *clients;
+        boost::shared_ptr<boost::mutex> mutex;
+        boost::shared_ptr<std::vector<HttpClient::Ptr> > clients;
         CacheValue()
             : mutex(new boost::mutex),
-              clients(new std::vector<HttpClient::Ptr>()) {}
-        ~CacheValue() { delete mutex; delete clients; }
+              clients(new std::vector<HttpClient::Ptr>) {}
     };
 
     struct CacheKeyComparator { // the customized comparator function for cached key
