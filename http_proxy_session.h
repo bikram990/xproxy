@@ -2,6 +2,7 @@
 #define HTTP_PROXY_SESSION_H
 
 #include <boost/asio/ssl.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include "http_response.h"
 #include "request_handler.h"
 
