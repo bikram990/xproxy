@@ -1,7 +1,8 @@
 #include <boost/bind.hpp>
 #include "http_proxy_session.h"
 #include "http_proxy_session_manager.h"
-#include "http_request.h"
+#include "request_handler.h"
+#include "request_handler_manager.h"
 #include "resource_manager.h"
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& main_service,
@@ -90,10 +91,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         if(mode_ == HTTPS)
             request_->port(443);
         response_.reset(new HttpResponse());
-        // TODO should the following use strand_ to wrap?
-        handler_.reset(RequestHandler::CreateHandler(*this));
-        if(handler_.get())
-            handler_->AsyncHandleRequest();
+        RequestHandlerManager::AsyncHandleRequest(shared_from_this());
         XTRACE << "Request is sent asynchronously.";
         state_ = kFetching;
     }
@@ -227,6 +225,5 @@ inline void HttpProxySession::reset() {
         persistent_ = false;
         request_.reset();
         response_.reset();
-        handler_.reset();
     }
 }

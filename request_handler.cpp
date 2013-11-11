@@ -8,9 +8,9 @@
 #include "request_handler.h"
 #include "resource_manager.h"
 
-RequestHandler::RequestHandler(HttpProxySession& session)
+RequestHandler::RequestHandler(HttpProxySession::Ptr session)
     : session_(session),
-      request_(session.Request()), response_(session.Response()) {
+      request_(session->Request()), response_(session->Response()) {
     TRACE_THIS_PTR;
 }
 
@@ -18,24 +18,13 @@ RequestHandler::~RequestHandler() {
     TRACE_THIS_PTR;
 }
 
-RequestHandler *RequestHandler::CreateHandler(HttpProxySession& session) {
-    // TODO may add socks handler here
-    bool proxy = ResourceManager::instance().GetRuleConfig().RequestProxy(session.Request()->host());
-    RequestHandler *h= NULL;
-    if(proxy)
-        h= new ProxyHandler(session);
-    else
-        h= new DirectHandler(session);
-    return h;
-}
-
 void RequestHandler::AsyncHandleRequest() {
     HttpRequest *request = WrapRequest();
 
     if(!request)
-        session_.OnResponseReceived(boost::asio::error::invalid_argument);
+        session_->OnResponseReceived(boost::asio::error::invalid_argument);
     else
-        HttpClientManager::AsyncHandleRequest(session_.mode(),
+        HttpClientManager::AsyncHandleRequest(session_->mode(),
                                               request,
                                               response_,
                                               boost::bind(&RequestHandler::HandleResponse,
@@ -44,12 +33,13 @@ void RequestHandler::AsyncHandleRequest() {
 
 void RequestHandler::HandleResponse(const boost::system::error_code& e) {
     if(e && e != boost::asio::error::eof) {
-        session_.OnResponseReceived(e); // TODO change the interface name
+        session_->OnResponseReceived(e); // TODO change the interface name
         return;
     }
 
     ProcessResponse();
-    session_.OnResponseReceived(e); // TODO change the interface name
+    session_->OnResponseReceived(e); // TODO change the interface name
+    session_.reset();
 }
 
 HttpRequest *DirectHandler::WrapRequest() {
@@ -110,6 +100,6 @@ inline void ProxyHandler::BuildProxyRequest() {
         .AddHeader("Connection", "close")
         .AddHeader("Content-Length", boost::lexical_cast<std::string>(origin_body_buf.size()))
         .body(origin_body_buf);
-    if(session_.mode() == HttpProxySession::HTTPS)
+    if(session_->mode() == HttpProxySession::HTTPS)
         proxy_request_->AddHeader("XProxy-Schema", "https://");
 }

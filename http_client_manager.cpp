@@ -48,6 +48,7 @@ inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
     boost::lock_guard<boost::mutex> lock(*value.mutex);
     value_iterator_type vit = std::find_if(value.clients->begin(), value.clients->end(), AvailabilitySearcher());
     if(vit != value.clients->end()) {
+        XDEBUG << "Cached http client for host: " << request->host() << ", port: " << request->port() << " found.";
         (*vit)->state(HttpClient::kInUse);
         return *vit;
     }

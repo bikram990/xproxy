@@ -3,8 +3,8 @@
 
 #include <boost/asio/ssl.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include "http_request.h"
 #include "http_response.h"
-#include "request_handler.h"
 
 class HttpProxySession
     : public boost::enable_shared_from_this<HttpProxySession>,
@@ -73,7 +73,6 @@ private:
 
     std::auto_ptr<HttpRequest> request_;
     std::auto_ptr<HttpResponse> response_;
-    std::auto_ptr<RequestHandler> handler_;
 };
 
 #endif // HTTP_PROXY_SESSION_H

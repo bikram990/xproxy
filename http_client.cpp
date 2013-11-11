@@ -259,6 +259,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 
     if(body_len <= 0) {
         XDEBUG << "This response seems have no body.";
+        state_ = kAvailable;
         callback_(e);
         // TODO do something here
         //boost::system::error_code ec;
@@ -333,6 +334,7 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
         }
     } else {
         // TODO do something here
+        state_ = kAvailable;
         callback_(e);
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -384,6 +386,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         }
     } else {
         // TODO do something here
+        state_ = kAvailable;
         callback_(e);
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
