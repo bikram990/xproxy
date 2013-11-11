@@ -3,3 +3,7 @@ build_*/
 *.user
 
 test/temp*
+
+GPATH
+GRTAGS
+GTAGS
