@@ -1,6 +1,7 @@
 #ifndef HTTP_PROXY_SESSION_MANAGER_H
 #define HTTP_PROXY_SESSION_MANAGER_H
 
+#include <set>
 #include "http_proxy_session.h"
 #include "singleton.h"
 
