@@ -116,11 +116,6 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
         return;
     }
 
-    XDEBUG_WITH_ID << "Dump request before sending(size: " << request_->OutboundBuffer().size() << "):\n"
-           << "--------------------------------------------\n"
-           << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
-           << "\n--------------------------------------------";
-
     if(is_ssl_) {
         ssl_socket_->async_handshake(boost::asio::ssl::stream_base::client,
                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteHandshaken,
@@ -153,6 +148,12 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
         callback_(e);
         return;
     }
+
+    XDEBUG_WITH_ID << "Dump request after sending(size: " << request_->OutboundBuffer().size() << "):\n"
+           << "--------------------------------------------\n"
+           << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
+           << "\n--------------------------------------------";
+
     if(is_ssl_) {
         boost::asio::async_read_until(*ssl_socket_, remote_buffer_, "\r\n",
                                       strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
