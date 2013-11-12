@@ -89,6 +89,8 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
                                                               boost::asio::placeholders::error)));
         }
     }
+
+    persistent_ = false; // reset persistent_ to false
 }
 
 void HttpClient::ResolveRemote() {
@@ -243,10 +245,10 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
             body_len = boost::lexical_cast<std::size_t>(value);
         }
 
-        if(name == "Connection" && value == "keep-alive")
+        if(name == "Connection" && value == "keep-alive") {
             persistent_ = true;
-        else
-            persistent_ = false;
+            XDEBUG_WITH_ID << "This is a persistent connection.";
+        }
     }
 
     if(chunked_encoding) {
