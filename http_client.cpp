@@ -175,7 +175,7 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
 
     XTRACE << "Status line from remote server:\n"
            << "--------------------------------------------\n"
-           << response_->status_line();
+           << response_->status_line()
            << "\n--------------------------------------------";
 
     if(is_ssl_) {
