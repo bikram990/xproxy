@@ -6,8 +6,11 @@
 #include "http_response.h"
 #include "log.h"
 
+boost::atomic<std::size_t> HttpClient::counter_(0);
+
 HttpClient::HttpClient(boost::asio::io_service& service)
-    : service_(service), strand_(service), resolver_(service),
+    : id_(counter_), state_(kAvailable),
+      service_(service), strand_(service), resolver_(service),
       is_ssl_(false), persistent_(false),
       request_(NULL), response_(NULL), host_(), port_(0) {
     TRACE_THIS_PTR;

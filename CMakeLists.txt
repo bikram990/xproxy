@@ -25,7 +25,7 @@ if(WIN32)
     endif()
 endif()
 
-find_package(Boost 1.54.0 COMPONENTS system date_time regex log log_setup filesystem thread chrono REQUIRED)
+find_package(Boost 1.54.0 COMPONENTS atomic system date_time regex log log_setup filesystem thread chrono REQUIRED)
 if(Boost_FOUND)
     message(STATUS "Boost is found at: " ${Boost_INCLUDE_DIRS} ", lib: " ${Boost_LIBRARIES})
     if(NOT WIN32)

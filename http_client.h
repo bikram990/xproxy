@@ -1,6 +1,7 @@
 #ifndef HTTP_CLIENT_H
 #define HTTP_CLIENT_H
 
+#include <boost/atomic.hpp>
 #include <boost/function.hpp>
 #include "http_proxy_session.h"
 
@@ -9,7 +10,6 @@ class HttpRequest;
 class HttpResponse;
 
 class HttpClient : private boost::noncopyable {
-    friend class HttpClientManager;
 public:
     typedef boost::shared_ptr<HttpClient> Ptr;
     typedef boost::asio::ip::tcp::socket socket_type;
@@ -20,6 +20,11 @@ public:
         kInUse,
         kAvailable
     };
+
+    static HttpClient *Create(boost::asio::io_service& service) {
+        ++counter_;
+        return new HttpClient(service);
+    }
 
     ~HttpClient();
 
@@ -43,6 +48,10 @@ private:
     void OnRemoteBodyReceived(const boost::system::error_code& e);
 
     bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
+
+    static boost::atomic<std::size_t> counter_;
+
+    std::size_t id_; // the http client id, it will do good for debugging, and for statistic analysis
 
     State state_;
 

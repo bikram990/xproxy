@@ -35,7 +35,7 @@ inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
         boost::lock_guard<boost::mutex> lock(mutex_);
         cit = cache_.find(key);
         if(cit == cache_.end()) {
-            HttpClient::Ptr client(new HttpClient(*fetch_service_));
+            HttpClient::Ptr client(HttpClient::Create(*fetch_service_));
             CacheValue value;
             value.clients->push_back(client);
             cache_.insert(std::make_pair(key, value));
@@ -53,7 +53,7 @@ inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
         return *vit;
     }
 
-    HttpClient::Ptr client(new HttpClient(*fetch_service_));
+    HttpClient::Ptr client(HttpClient::Create(*fetch_service_));
     value.clients->push_back(client);
     client->state(HttpClient::kInUse);
     return client;
