@@ -12,11 +12,11 @@ HttpProxySession::HttpProxySession(boost::asio::io_service& main_service,
     : id_(counter_), state_(kWaiting), mode_(HTTP), persistent_(false),
       main_service_(main_service), fetch_service_(fetch_service),
       strand_(main_service), local_socket_(main_service) {
-    TRACE_THIS_PTR;
+    TRACE_THIS_PTR_WITH_ID;
 }
 
 HttpProxySession::~HttpProxySession() {
-    TRACE_THIS_PTR;
+    TRACE_THIS_PTR_WITH_ID;
 }
 
 void HttpProxySession::Stop() {
@@ -43,14 +43,14 @@ void HttpProxySession::Start() {
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                          std::size_t size) {
     if(e) {
-        XWARN << "Error occurred during receiving data from socket, message: " << e.message();
+        XWARN_WITH_ID << "Error occurred during receiving data from socket, message: " << e.message();
         Terminate();
         return;
     }
 
     local_buffer_.commit(size);
 
-    XDEBUG << "Dump data from socket(size:" << size << ", session: " << this << "):\n"
+    XDEBUG_WITH_ID << "Dump data from socket(size:" << size << ", session: " << this << "):\n"
            << "--------------------------------------------\n"
            << std::string(boost::asio::buffer_cast<const char *>(local_buffer_.data()), local_buffer_.size())
            << "\n--------------------------------------------";
@@ -66,7 +66,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         ContinueReceiving();
         return;
     } else if(result == HttpRequest::kBadRequest) {
-        XWARN << "Bad request: " << local_socket_.remote_endpoint().address()
+        XWARN_WITH_ID << "Bad request: " << local_socket_.remote_endpoint().address()
               << ":" << local_socket_.remote_endpoint().port();
         // TODO here we should write a bad request response back
         state_ = kReplying;
@@ -94,14 +94,14 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
             request_->port(443);
         response_.reset(new HttpResponse());
         RequestHandlerManager::AsyncHandleRequest(shared_from_this());
-        XTRACE << "Request is sent asynchronously.";
+        XTRACE_WITH_ID << "Request is sent asynchronously.";
         state_ = kFetching;
     }
 }
 
 void HttpProxySession::OnSSLReplySent(const boost::system::error_code& e) {
     if(e) {
-        XWARN << "Error occurred during writing SSL OK reply to socket, message: " << e.message();
+        XWARN_WITH_ID << "Error occurred during writing SSL OK reply to socket, message: " << e.message();
         Terminate();
         return;
     }
@@ -117,7 +117,7 @@ void HttpProxySession::OnSSLReplySent(const boost::system::error_code& e) {
 
 void HttpProxySession::OnHandshaken(const boost::system::error_code& e) {
     if(e) {
-        XWARN << "Error occurred during handshaking with browser, message: " << e.message();
+        XWARN_WITH_ID << "Error occurred during handshaking with browser, message: " << e.message();
         Terminate();
         return;
     }
@@ -133,7 +133,7 @@ void HttpProxySession::OnHandshaken(const boost::system::error_code& e) {
 
 void HttpProxySession::OnResponseReceived(const boost::system::error_code& e) {
     if(e && e != boost::asio::error::eof) {
-        XWARN << "Failed to send request, message: " << e.message();
+        XWARN_WITH_ID << "Failed to send request, message: " << e.message();
         Terminate();
         return;
     }
@@ -143,15 +143,15 @@ void HttpProxySession::OnResponseReceived(const boost::system::error_code& e) {
 
 void HttpProxySession::OnResponseSent(const boost::system::error_code& e) {
     if(e) {
-        XWARN << "Error occurred during writing response to socket, message: " << e.message();
+        XWARN_WITH_ID << "Error occurred during writing response to socket, message: " << e.message();
         Terminate();
         return;
     }
 
-    XTRACE << "Content written to local socket.";
+    XTRACE_WITH_ID << "Content written to local socket.";
 
     if(persistent_) {
-        XTRACE << "This is a persistent connection, continue to use this session.";
+        XTRACE_WITH_ID << "This is a persistent connection, continue to use this session.";
         reset();
         Start();
     } else {
@@ -161,7 +161,7 @@ void HttpProxySession::OnResponseSent(const boost::system::error_code& e) {
 }
 
 inline void HttpProxySession::ContinueReceiving() {
-    XTRACE << "This request is incomplete, continue to read from socket...";
+    XTRACE_WITH_ID << "This request is incomplete, continue to read from socket...";
     switch(mode_) {
     case HTTP:
         local_socket_.async_read_some(local_buffer_.prepare(2048), // TODO hard code
@@ -178,7 +178,7 @@ inline void HttpProxySession::ContinueReceiving() {
                                                                     boost::asio::placeholders::bytes_transferred)));
         break;
     default:
-        XERROR << "Invalid mode: " << static_cast<int>(mode_);
+        XERROR_WITH_ID << "Invalid mode: " << static_cast<int>(mode_);
     }
 
     state_ = kContinueTransferring;
@@ -198,7 +198,7 @@ inline void HttpProxySession::InitSSLContext() {
 }
 
 inline void HttpProxySession::SendResponse(HttpResponse& response) {
-    XTRACE << "Response is back, status line: " << response.status_line();
+    XTRACE_WITH_ID << "Response is back, status line: " << response.status_line();
 
     switch(mode_) {
     case HTTP:
@@ -214,7 +214,7 @@ inline void HttpProxySession::SendResponse(HttpResponse& response) {
                                                           boost::asio::placeholders::error)));
         break;
     default:
-        XERROR << "Invalid mode: " << static_cast<int>(mode_);
+        XERROR_WITH_ID << "Invalid mode: " << static_cast<int>(mode_);
     }
 
     state_ = kReplying;
