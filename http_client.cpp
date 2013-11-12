@@ -101,17 +101,22 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
 void HttpClient::ResolveRemote() {
     XDEBUG_WITH_ID << "Resolving remote address, host: " << host_ << ", port: " << port_;
 
-    // TODO cache the DNS query result
-    boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
-    boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver_.resolve(query);
+    try {
+        boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
+        boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver_.resolve(query);
 
-    XDEBUG_WITH_ID << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
+        XDEBUG_WITH_ID << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
-    boost::asio::async_connect(is_ssl_ ? ssl_socket_->lowest_layer() : *socket_,
-                               endpoint_iterator,
-                               strand_.wrap(boost::bind(&HttpClient::OnRemoteConnected,
-                                                        this,
-                                                        boost::asio::placeholders::error)));
+        boost::asio::async_connect(is_ssl_ ? ssl_socket_->lowest_layer() : *socket_,
+                                   endpoint_iterator,
+                                   strand_.wrap(boost::bind(&HttpClient::OnRemoteConnected,
+                                                            this,
+                                                            boost::asio::placeholders::error)));
+    } catch(const boost::system::system_error& e) {
+        XERROR_WITH_ID << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
+        callback_(e.code());
+        state_ = kAvailable;
+    }
 }
 
 void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
