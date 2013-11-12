@@ -82,6 +82,15 @@ void InitLogging();
 #define XERROR XLOG(*xproxy::log::g_logger, xproxy::log::kError)
 #define XFATAL XLOG(*xproxy::log::g_logger, xproxy::log::kFatal)
 
+#define XTRACE_WITH_ID XLOG(*xproxy::log::g_logger, xproxy::log::kTrace)   << "[id: " << id_ << "] "
+#define XDEBUG_WITH_ID XLOG(*xproxy::log::g_logger, xproxy::log::kDebug)   << "[id: " << id_ << "] "
+#define XINFO_WITH_ID  XLOG(*xproxy::log::g_logger, xproxy::log::kInfo)    << "[id: " << id_ << "] "
+#define XWARN_WITH_ID  XLOG(*xproxy::log::g_logger, xproxy::log::kWarning) << "[id: " << id_ << "] "
+#define XERROR_WITH_ID XLOG(*xproxy::log::g_logger, xproxy::log::kError)   << "[id: " << id_ << "] "
+#define XFATAL_WITH_ID XLOG(*xproxy::log::g_logger, xproxy::log::kFatal)   << "[id: " << id_ << "] "
+
 #define TRACE_THIS_PTR XTRACE << "Address of this pointer: [" << this << "]."
+
+#define TRACE_THIS_PTR_WITH_ID XTRACE << "Address of this pointer: [" << this << "], id: [" << id_ << "]."
 
 #endif // LOG_H
