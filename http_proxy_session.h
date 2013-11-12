@@ -2,6 +2,7 @@
 #define HTTP_PROXY_SESSION_H
 
 #include <boost/asio/ssl.hpp>
+#include <boost/atomic.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include "http_request.h"
 #include "http_response.h"
@@ -30,8 +31,12 @@ public:
         HTTPS
     };
 
-    HttpProxySession(boost::asio::io_service& main_service,
-                     boost::asio::io_service& fetch_service);
+    static HttpProxySession *Create(boost::asio::io_service& main_service,
+                                    boost::asio::io_service& fetch_service) {
+        ++counter_;
+        return new HttpProxySession(main_service, fetch_service);
+    }
+
     ~HttpProxySession();
 
     State state() const { return state_; }
@@ -48,6 +53,9 @@ public:
     void OnResponseReceived(const boost::system::error_code& e); // the callback
 
 private:
+    HttpProxySession(boost::asio::io_service& main_service,
+                     boost::asio::io_service& fetch_service);
+
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
     void OnHandshaken(const boost::system::error_code& e);
@@ -57,6 +65,10 @@ private:
     void InitSSLContext();
     void SendResponse(HttpResponse& response);
     void reset();
+
+    static boost::atomic<std::size_t> counter_;
+
+    std::size_t id_;
 
     State state_;
     Mode mode_;

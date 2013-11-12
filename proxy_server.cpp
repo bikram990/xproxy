@@ -57,7 +57,7 @@ void ProxyServer::init(short port) {
 }
 
 void ProxyServer::StartAccept() {
-    current_session_.reset(new HttpProxySession(main_service_, fetch_service_));
+    current_session_.reset(HttpProxySession::Create(main_service_, fetch_service_));
     acceptor_.async_accept(current_session_->LocalSocket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));
