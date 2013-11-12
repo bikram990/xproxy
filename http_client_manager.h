@@ -28,7 +28,10 @@ private:
 
     struct CacheKeyComparator { // the customized comparator function for cached key
         bool operator()(const CacheKey& lhs, const CacheKey& rhs) {
-            return lhs.domain < rhs.domain && lhs.port < rhs.port;
+            if(lhs.domain != rhs.domain)
+                return lhs.domain < rhs.domain;
+            else
+                return lhs.port < rhs.port;
         }
     };
 
