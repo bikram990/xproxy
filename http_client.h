@@ -28,6 +28,7 @@ public:
 
     ~HttpClient();
 
+    std::size_t id() { return id_; }
     State state() { return state_; }
     void state(State state) { state_ = state; }
     void AsyncSendRequest(HttpProxySession::Mode mode,
