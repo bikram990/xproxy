@@ -173,7 +173,10 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
     std::getline(response, response_->status_line());
     response_->status_line().erase(response_->status_line().size() - 1); // remove the last \r
 
-    XTRACE << "Status line from remote server: " << response_->status_line();
+    XTRACE << "Status line from remote server:\n"
+           << "--------------------------------------------\n"
+           << response_->status_line();
+           << "\n--------------------------------------------";
 
     if(is_ssl_) {
         boost::asio::async_read_until(*ssl_socket_, remote_buffer_, "\r\n\r\n",
@@ -195,7 +198,10 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         return;
     }
 
-    XTRACE << "Headers from remote server: \n" << boost::asio::buffer_cast<const char *>(remote_buffer_.data());
+    XTRACE << "Headers from remote server:\n"
+           << "--------------------------------------------\n"
+           << boost::asio::buffer_cast<const char *>(remote_buffer_.data())
+           << "\n--------------------------------------------";
 
     std::istream response(&remote_buffer_);
     std::string header;
@@ -203,7 +209,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     bool chunked_encoding = false;
     while(std::getline(response, header)) {
         if(header == "\r") { // there is no more headers
-            XDEBUG << "no more headers";
+//            XDEBUG << "no more headers";
             break;
         }
 
@@ -219,7 +225,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         boost::algorithm::trim(value);
         response_->AddHeader(name, value);
 
-        XTRACE << "header name: " << name << ", value: " << value;
+//        XTRACE << "header name: " << name << ", value: " << value;
 
         if(name == "Transfer-Encoding") {
             XINFO << "Transfer-Encoding header is found, value: " << value;
