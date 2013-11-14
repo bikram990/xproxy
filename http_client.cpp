@@ -294,8 +294,8 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
 
 void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
     if(e) {
-        if(e == boost::asio::error::eof)
-            XDEBUG_WITH_ID << "The remote peer closed the connection.";
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e))
+            XDEBUG_WITH_ID << "The remote peer closed the connection, socket: " << socket_->to_string() << ".";
         else {
             XWARN_WITH_ID << "Failed to read body from remote server, message: " << e.message();
             callback_(e);

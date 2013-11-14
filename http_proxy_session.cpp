@@ -43,7 +43,10 @@ void HttpProxySession::Start() {
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                          std::size_t size) {
     if(e) {
-        XWARN_WITH_ID << "Error occurred during receiving data from socket, message: " << e.message();
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e))
+            XDEBUG_WITH_ID << "Browser closed the socket: " << local_socket_->to_string() << ".";
+        else
+            XERROR_WITH_ID << "Error occurred during receiving data from socket, message: " << e.message();
         Terminate();
         return;
     }
@@ -106,18 +109,17 @@ void HttpProxySession::OnSSLReplySent(const boost::system::error_code& e) {
     }
 
     InitSSLContext();
-	local_socket_->async_read_some(local_buffer_.prepare(4096), // TODO hard code
+    local_socket_->async_read_some(local_buffer_.prepare(4096), // TODO hard code
                                    strand_.wrap(boost::bind(&this_type::OnRequestReceived,
                                                             shared_from_this(), boost::asio::placeholders::error,
                                                             boost::asio::placeholders::bytes_transferred)));
 
-    state_ = kSSLHandshaking;
     state_ = kSSLWaiting;
 }
 
 void HttpProxySession::OnResponseReceived(const boost::system::error_code& e) {
-    if(e && e != boost::asio::error::eof) {
-        XWARN_WITH_ID << "Failed to send request, message: " << e.message();
+    if(e && e != boost::asio::error::eof && !SSL_SHORT_READ(e)) {
+        XERROR_WITH_ID << "Error occurred during sending request to remote server, message: " << e.message();
         Terminate();
         return;
     }

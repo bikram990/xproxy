@@ -22,6 +22,16 @@
         member = NULL; \
     }
 
+/*
+ * Short read error in SSL mode.
+ *
+ * The actual code is 335544539, for how is the code generated, see function
+ * engine::map_error_code(...) in asio/ssl/detail/impl/engine.ipp.
+ *
+ * When we get short read error, we should treat it as EOF in normal mode.
+ */
+#define SSL_SHORT_READ(ec) ((ec.value() & 0xFF) == SSL_R_SHORT_READ)
+
 typedef boost::asio::ip::tcp::socket socket_type;
 typedef boost::asio::ssl::stream<socket_type> ssl_socket_type;
 typedef boost::asio::ssl::stream<socket_type&> ssl_socket_ref_type;

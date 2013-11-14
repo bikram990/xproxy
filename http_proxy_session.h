@@ -21,7 +21,6 @@ public:
         kCompleted,
         kSSLReplying, // only stands for reply of CONNECT method
         kFetching,
-        kSSLHandshaking,
         kSSLWaiting,
         kReplying // stands for all http/https replies
     };
