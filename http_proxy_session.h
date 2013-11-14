@@ -6,13 +6,13 @@
 #include <boost/enable_shared_from_this.hpp>
 #include "http_request.h"
 #include "http_response.h"
+#include "socket.h"
 
 class HttpProxySession
     : public boost::enable_shared_from_this<HttpProxySession>,
       private boost::noncopyable {
 public:
     typedef boost::shared_ptr<HttpProxySession> Ptr;
-    typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket&> ssl_socket_ref;
     typedef HttpProxySession this_type;
 
     enum State {
@@ -42,7 +42,7 @@ public:
     State state() const { return state_; }
     Mode mode() const { return mode_; }
     boost::asio::io_service& FetchService() { return fetch_service_; }
-    boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_; }
+    boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_->socket(); }
     HttpRequest *Request() { return request_.get(); }
     HttpResponse *Response() { return response_.get(); }
 
@@ -58,7 +58,6 @@ private:
 
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
-    void OnHandshaken(const boost::system::error_code& e);
     void OnResponseSent(const boost::system::error_code& e);
 
     void ContinueReceiving();
@@ -77,9 +76,7 @@ private:
     boost::asio::io_service& main_service_;
     boost::asio::io_service& fetch_service_;
     boost::asio::io_service::strand strand_;
-    boost::asio::ip::tcp::socket local_socket_;
-    std::auto_ptr<boost::asio::ssl::context> local_ssl_context_;
-    std::auto_ptr<ssl_socket_ref> local_ssl_socket_;
+    std::unique_ptr<Socket> local_socket_;
 
     boost::asio::streambuf local_buffer_;
 
