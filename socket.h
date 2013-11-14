@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "log.h"
-#include "resource_manager.h"
 
 class Socket {
 public:
@@ -13,9 +12,9 @@ public:
         return new Socket(service);
     }
 
+    template<typename SharedCAPtr, typename SharedDHPtr>
     void SwitchProtocol(Protocol protocol = kHttps, SSLMode mode = kClient,
-                        ResourceManager::CertManager::CAPtr ca = ResourceManager::CertManager::CAPtr(),
-                        ResourceManager::CertManager::DHParametersPtr dh = ResourceManager::CertManager::DHParametersPtr()) {
+                        SharedCAPtr ca = SharedCAPtr(), SharedDHPtr dh = SharedDHPtr()) {
         if(protocol == kHttp) {
             use_ssl_ = false;
             return;

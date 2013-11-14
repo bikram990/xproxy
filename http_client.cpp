@@ -5,6 +5,7 @@
 #include "http_request.h"
 #include "http_response.h"
 #include "log.h"
+#include "resource_manager.h"
 
 boost::atomic<std::size_t> HttpClient::counter_(0);
 
@@ -55,7 +56,8 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
         socket_.reset(Socket::Create(service_));
         if(mode == HttpProxySession::HTTPS) {
             is_ssl_ = true;
-            socket_->SwitchProtocol(kHttps);
+            socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
+                    ResourceManager::CertManager::DHParametersPtr> (kHttps);
         }
         ResolveRemote();
     } else {
