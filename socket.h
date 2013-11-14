@@ -71,10 +71,10 @@ public:
 
     void close() const {
         if(is_open()) {
-            use_ssl_ ? ssl_socket_->shutdown() :
-                       socket_->shutdown(socket_type::shutdown_both);
-            // ssl socket does not have close() method, use socket's close() instead
-            socket().close();
+            try {
+                socket_->shutdown(socket_type::shutdown_both);
+                socket().close();
+            } catch(boost::system::system_error&) {} catch(...) {} //ignore exceptions
         }
     }
 
@@ -135,15 +135,23 @@ public:
     }
 
     std::string to_string() const {
-        return "["
-                + lowest_layer().local_endpoint().address().to_string()
-                + ":"
-                + std::to_string(lowest_layer().local_endpoint().port())
-                + " <=> "
-                + lowest_layer().remote_endpoint().address().to_string()
-                + ":"
-                + std::to_string(lowest_layer().remote_endpoint().port())
-                + "]";
+        std::string local_addr("unknown");
+        std::string local_port("-1");
+        std::string remote_addr("unknown");
+        std::string remote_port("-1");
+
+        try {
+            socket_type::endpoint_type le = lowest_layer().local_endpoint();
+            local_addr = le.address().to_string();
+            local_port = std::to_string(le.port());
+
+            socket_type::endpoint_type re = lowest_layer().remote_endpoint();
+            remote_addr = re.address().to_string();
+            remote_port = std::to_string(re.port());
+        } catch(boost::system::system_error& e) {} catch(...) {} // ignore exceptions
+
+        return "[" + local_addr + ":" + local_port + " <=> "
+            + remote_addr + remote_port + "]";
     }
 
     ~Socket() { close(); }
