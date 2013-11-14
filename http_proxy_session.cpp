@@ -95,7 +95,8 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         if(mode_ == HTTPS)
             request_->port(443);
         response_.reset(new HttpResponse());
-        RequestHandlerManager::AsyncHandleRequest(shared_from_this());
+        fetch_service_.post(boost::bind(RequestHandlerManager::AsyncHandleRequest, shared_from_this()));
+        //RequestHandlerManager::AsyncHandleRequest(shared_from_this());
         XTRACE_WITH_ID << "Request is sent asynchronously.";
         state_ = kFetching;
     }
