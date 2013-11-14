@@ -87,18 +87,12 @@ public:
     template<typename MutableBufferSequence, typename ReadHandler>
     void async_read_some(const MutableBufferSequence& buffers, ReadHandler& handler) {
         if(use_ssl_) {
+            boost::system::error_code ec;
+            ssl_ready_ = PrepareSSLSocket(ec);
             if(!ssl_ready_) {
-                boost::system::error_code ec;
-                ssl_socket_->handshake(ssl_mode_ == kClient ? boost::asio::ssl::stream_base::client :
-                                                              boost::asio::ssl::stream_base::server,
-                                       ec);
-                if(ec) {
-                    // TODO add logic here
-                    handler(ec, 0);
-                    return;
-                }
-
-                ssl_ready_ = true;
+                // TODO add logic here
+                handler(ec, 0);
+                return;
             }
 
             ssl_socket_->async_read_some(buffers, handler);
@@ -110,18 +104,12 @@ public:
     template<typename ConstBufferSequence, typename WriteHandler>
     void async_write(ConstBufferSequence& buffers, WriteHandler& handler) {
         if(use_ssl_) {
+            boost::system::error_code ec;
+            ssl_ready_ = PrepareSSLSocket(ec);
             if(!ssl_ready_) {
-                boost::system::error_code ec;
-                ssl_socket_->handshake(ssl_mode_ == kClient ? boost::asio::ssl::stream_base::client :
-                                                              boost::asio::ssl::stream_base::server,
-                                       ec);
-                if(ec) {
-                    // TODO add logic here
-                    handler(ec);
-                    return;
-                }
-
-                ssl_ready_ = true;
+                // TODO add logic here
+                handler(ec);
+                return;
             }
 
             boost::asio::async_write(*ssl_socket_, buffers, handler);
@@ -173,6 +161,16 @@ private:
                << ", pre_verified value: " << pre_verified;
 
         return true;
+    }
+
+    bool PrepareSSLSocket(boost::system::error_code& e) {
+        if(ssl_ready_)
+            return true;
+
+        ssl_socket_->handshake(ssl_mode_ == kClient ? boost::asio::ssl::stream_base::client :
+                                                      boost::asio::ssl::stream_base::server,
+                               e);
+        return bool(e);
     }
 
     boost::asio::io_service& service_;
