@@ -187,7 +187,7 @@ private:
         ssl_socket_->handshake(ssl_mode_ == kClient ? boost::asio::ssl::stream_base::client :
                                                       boost::asio::ssl::stream_base::server,
                                e);
-        return bool(e);
+        return !e;
     }
 
     boost::asio::io_service& service_;
