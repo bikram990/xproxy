@@ -3,15 +3,16 @@
 
 #include "http_proxy_session.h"
 #include "request_handler.h"
-#include "singleton.h"
+
+class ProxyServer;
 
 class RequestHandlerManager : private boost::noncopyable {
-    friend class Singleton<RequestHandlerManager>;
+    friend class ProxyServer;
 public:
-    static void AsyncHandleRequest(HttpProxySession::Ptr session);
-private:
-    static RequestHandlerManager& instance();
+    void AsyncHandleRequest(HttpProxySession::Ptr session);
 
+    DECLARE_GENERAL_DESTRUCTOR(RequestHandlerManager)
+private:
     struct AvailabilitySearcher {
         bool operator()(const RequestHandler::Ptr& handler) {
             return handler->Available();
@@ -19,7 +20,6 @@ private:
     };
 
     DECLARE_GENERAL_CONSTRUCTOR(RequestHandlerManager)
-    DECLARE_GENERAL_DESTRUCTOR(RequestHandlerManager)
 
     std::vector<RequestHandler::Ptr> direct_handlers_;
     std::vector<RequestHandler::Ptr> proxy_handlers_;

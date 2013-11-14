@@ -8,14 +8,6 @@ const std::string ResourceManager::ServerConfig::kConfFetchThreadCountKey("basic
 const std::string ResourceManager::ServerConfig::kConfGAEAppIdKey("proxy_gae.app_id");
 const std::string ResourceManager::ServerConfig::kConfGAEDomainKey("proxy_gae.domain");
 
-namespace {
-    static Singleton<ResourceManager> manager_;
-}
-
-ResourceManager& ResourceManager::instance() {
-    return manager_.get();
-}
-
 ResourceManager::ResourceManager()
     : server_config_(new ServerConfig()),
       rule_config_(new RuleConfig()),

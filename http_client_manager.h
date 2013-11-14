@@ -3,13 +3,13 @@
 
 #include "http_client.h"
 #include "log.h"
-#include "singleton.h"
 
 class HttpRequest;
 class HttpResponse;
+class ProxyServer;
 
 class HttpClientManager : private boost::noncopyable {
-    friend class Singleton<HttpClientManager>;
+    friend class ProxyServer;
 private:
     struct CacheKey {
         std::string domain;
@@ -48,25 +48,20 @@ private:
     typedef boost::function<void(const boost::system::error_code&)> callback_type;
 
 public:
-    static HttpClientManager& instance();
+    void AsyncHandleRequest(HttpProxySession::Mode mode,
+                            HttpRequest *request,
+                            HttpResponse *response,
+                            callback_type callback);
 
-    static void InitFetchService(boost::asio::io_service *service) {
-        if(!instance().fetch_service_)
-            instance().fetch_service_ = service;
-    }
-
-    static void AsyncHandleRequest(HttpProxySession::Mode mode,
-                                   HttpRequest *request,
-                                   HttpResponse *response,
-                                   callback_type callback);
+    DECLARE_GENERAL_DESTRUCTOR(HttpClientManager)
 
 private:
-    HttpClientManager() : fetch_service_(NULL) { TRACE_THIS_PTR; }
-    DECLARE_GENERAL_DESTRUCTOR(HttpClientManager)
+    HttpClientManager(boost::asio::io_service& service)
+        : fetch_service_(service) { TRACE_THIS_PTR; }
 
     HttpClient::Ptr get(HttpRequest *request);
 
-    boost::asio::io_service *fetch_service_;
+    boost::asio::io_service& fetch_service_;
     boost::mutex mutex_;
     cache_type cache_;
 };

@@ -1,6 +1,7 @@
 #include <boost/bind.hpp>
 #include "http_proxy_session.h"
 #include "http_proxy_session_manager.h"
+#include "proxy_server.h"
 #include "request_handler.h"
 #include "request_handler_manager.h"
 #include "resource_manager.h"
@@ -27,7 +28,7 @@ void HttpProxySession::Stop() {
 }
 
 void HttpProxySession::Terminate() {
-    HttpProxySessionManager::Stop(shared_from_this());
+    ProxyServer::SessionManager().Stop(shared_from_this());
 }
 
 void HttpProxySession::Start() {
@@ -95,7 +96,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         if(mode_ == HTTPS)
             request_->port(443);
         response_.reset(new HttpResponse());
-        fetch_service_.post(boost::bind(RequestHandlerManager::AsyncHandleRequest, shared_from_this()));
+        fetch_service_.post(boost::bind(&RequestHandlerManager::AsyncHandleRequest, &ProxyServer::HandlerManager(), shared_from_this()));
         //RequestHandlerManager::AsyncHandleRequest(shared_from_this());
         XTRACE_WITH_ID << "Request is sent asynchronously.";
         state_ = kFetching;
@@ -158,8 +159,8 @@ inline void HttpProxySession::ContinueReceiving() {
 }
 
 inline void HttpProxySession::InitSSLContext() {
-    ResourceManager::CertManager::CAPtr ca = ResourceManager::instance().GetCertManager().GetCertificate(request_->host());
-    ResourceManager::CertManager::DHParametersPtr dh = ResourceManager::instance().GetCertManager().GetDHParameters();
+    ResourceManager::CertManager::CAPtr ca = ProxyServer::ResourceManager().GetCertManager().GetCertificate(request_->host());
+    ResourceManager::CertManager::DHParametersPtr dh = ProxyServer::ResourceManager().GetCertManager().GetDHParameters();
     local_socket_->SwitchProtocol(kHttps, kServer, ca, dh);
 }
 

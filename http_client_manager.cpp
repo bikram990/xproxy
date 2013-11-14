@@ -1,25 +1,11 @@
 #include "http_client_manager.h"
 #include "http_request.h"
 
-namespace {
-    static Singleton<HttpClientManager> manager_;
-}
-
-inline HttpClientManager& HttpClientManager::instance() {
-    return manager_.get();
-}
-
 void HttpClientManager::AsyncHandleRequest(HttpProxySession::Mode mode,
                                            HttpRequest *request,
                                            HttpResponse *response,
                                            callback_type callback) {
-    if(!instance().fetch_service_) {
-        XERROR << "The fetch service is NOT initialized.";
-        callback(boost::asio::error::invalid_argument);
-        return;
-    }
-
-    HttpClient::Ptr client = instance().get(request);
+    HttpClient::Ptr client = get(request);
     if(!client) {
         XERROR << "No http client available.";
         callback(boost::asio::error::invalid_argument);
@@ -35,7 +21,7 @@ inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
         boost::lock_guard<boost::mutex> lock(mutex_);
         cit = cache_.find(key);
         if(cit == cache_.end()) {
-            HttpClient::Ptr client(HttpClient::Create(*fetch_service_));
+            HttpClient::Ptr client(HttpClient::Create(fetch_service_));
             XDEBUG << "No http client for [" << request->host() << ":" << request->port()
                    << "] found, new one [id: " << client->id() << "] created.";
             CacheValue value;
@@ -56,7 +42,7 @@ inline HttpClient::Ptr HttpClientManager::get(HttpRequest *request) {
         return *vit;
     }
 
-    HttpClient::Ptr client(HttpClient::Create(*fetch_service_));
+    HttpClient::Ptr client(HttpClient::Create(fetch_service_));
     XDEBUG << "Http clients for [" << request->host() << ":" << request->port()
            << "] are all busy, new one [id: " << client->id() << "] created.";
     value.clients->push_back(client);

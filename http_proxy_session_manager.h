@@ -3,20 +3,20 @@
 
 #include <set>
 #include "http_proxy_session.h"
-#include "singleton.h"
+
+class ProxyServer;
 
 class HttpProxySessionManager : private boost::noncopyable {
-    friend class Singleton<HttpProxySessionManager>;
+    friend class ProxyServer;
 public:
-    static void Start(HttpProxySession::Ptr session);
-    static void Stop(HttpProxySession::Ptr session);
-    static void StopAll();
+    void Start(HttpProxySession::Ptr session);
+    void Stop(HttpProxySession::Ptr session);
+    void StopAll();
 
-    static HttpProxySessionManager& instance();
+    DECLARE_GENERAL_DESTRUCTOR(HttpProxySessionManager)
 
 private:
     DECLARE_GENERAL_CONSTRUCTOR(HttpProxySessionManager)
-    DECLARE_GENERAL_DESTRUCTOR(HttpProxySessionManager)
 
     std::set<HttpProxySession::Ptr> sessions_;
 };

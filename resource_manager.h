@@ -5,16 +5,15 @@
 #include <boost/property_tree/ptree.hpp>
 #include <openssl/x509.h>
 #include "log.h"
-#include "singleton.h"
+
+class ProxyServer;
 
 class ResourceManager : private boost::noncopyable {
-    friend class Singleton<ResourceManager>;
+    friend class ProxyServer;
 public:
     class ServerConfig;
     class RuleConfig;
     class CertManager;
-
-    static ResourceManager& instance();
 
     ServerConfig& GetServerConfig();
     RuleConfig& GetRuleConfig();
@@ -22,9 +21,10 @@ public:
 
     bool init();
 
+    ~ResourceManager();
+
 private:
     ResourceManager();
-    ~ResourceManager();
 
     std::auto_ptr<ServerConfig> server_config_;
     std::auto_ptr<RuleConfig> rule_config_;
