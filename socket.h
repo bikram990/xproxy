@@ -60,6 +60,11 @@ public:
                           socket_->lowest_layer();
     }
 
+    socket_type::lowest_layer_type& lowest_layer() {
+        return use_ssl_ ? ssl_socket_->lowest_layer() :
+                          socket_->lowest_layer();
+    }
+
     bool is_open() const {
         return use_ssl_? ssl_socket_->lowest_layer().is_open() :
                          socket_->lowest_layer().is_open();
@@ -74,10 +79,9 @@ public:
         }
     }
 
-    template<typename ConnectHandler>
-    void async_connect(boost::asio::ip::tcp::endpoint& endpoint,
-                       const ConnectHandler& handler) {
-        lowest_layer().async_connect(endpoint, handler);
+    template<typename Iterator, typename ConnectHandler>
+    void async_connect(Iterator begin, ConnectHandler& handler) {
+        boost::asio::async_connect(lowest_layer(), begin, handler);
     }
 
     template<typename MutableBufferSequence, typename ReadHandler>
