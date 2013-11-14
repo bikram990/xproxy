@@ -4,6 +4,7 @@
 #include <boost/atomic.hpp>
 #include <boost/function.hpp>
 #include "http_proxy_session.h"
+#include "socket.h"
 
 class HttpClientManager;
 class HttpRequest;
@@ -41,14 +42,11 @@ private:
 
     void ResolveRemote();
     void OnRemoteConnected(const boost::system::error_code& e);
-    void OnRemoteHandshaken(const boost::system::error_code& e);
     void OnRemoteDataSent(const boost::system::error_code& e);
     void OnRemoteStatusLineReceived(const boost::system::error_code& e);
     void OnRemoteHeadersReceived(const boost::system::error_code& e);
     void OnRemoteChunksReceived(const boost::system::error_code& e);
     void OnRemoteBodyReceived(const boost::system::error_code& e);
-
-    bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx);
 
     static boost::atomic<std::size_t> counter_;
 
@@ -62,9 +60,7 @@ private:
 
     bool is_ssl_;
     bool persistent_;
-    std::auto_ptr<socket_type> socket_;
-    std::auto_ptr<boost::asio::ssl::context> ssl_context_;
-    std::auto_ptr<ssl_socket_type> ssl_socket_;
+    std::unique_ptr<Socket> socket_;
 
     boost::asio::streambuf remote_buffer_;
 

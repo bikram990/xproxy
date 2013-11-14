@@ -38,6 +38,16 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
         callback(boost::asio::error::invalid_argument);
         return;
     }
+    if(persistent_) {
+        if(host_ != request->host() || port_ != request->port()) {
+            XERROR_WITH_ID << "Destination mismatch, required destination: ["
+                           << request->host() << ":" << request->port()
+                           << "], available persistent destination: ["
+                           << host_ << ":" << port_ << "].";
+            callback(boost::asio::error::address_in_use);
+            return;
+        }
+    }
 
     request_ = request;
     response_ = response;
@@ -47,31 +57,20 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
     state_ = kInUse;
 
     if(!persistent_) {
+        socket_.reset(Socket::Create(service_));
         if(mode == HttpProxySession::HTTPS) {
             is_ssl_ = true;
-            ssl_context_.reset(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
-            ssl_socket_.reset(new ssl_socket_type(service_, *ssl_context_));
-            ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
-            // TODO should the following be wrapped with strand?
-            ssl_socket_->set_verify_callback(boost::bind(&HttpClient::VerifyCertificate, this, _1, _2));
-        } else {
-            is_ssl_ = false;
-            socket_.reset(new socket_type(service_));
+            socket_->SwitchProtocol(kHttps);
         }
         ResolveRemote();
     } else {
         if((is_ssl_ && mode != HttpProxySession::HTTPS) ||
-                (!is_ssl_ && mode == HttpProxySession::HTTPS)) {
+           (!is_ssl_ && mode == HttpProxySession::HTTPS)) {
             XERROR_WITH_ID << "Mismatch protocol type.";
             callback(boost::asio::error::operation_not_supported);
             return;
         }
-        if(is_ssl_ && !ssl_socket_->lowest_layer().is_open()) {
-            XERROR_WITH_ID << "SSL socket is already closed.";
-            callback(boost::asio::error::not_connected);
-            return;
-        }
-        if(!is_ssl_ && !socket_->is_open()) {
+        if(!socket_->is_open()) {
             XERROR_WITH_ID << "Socket is already closed.";
             callback(boost::asio::error::not_connected);
             return;
@@ -82,17 +81,10 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
                        << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
                        << "\n--------------------------------------------";
 
-        if(is_ssl_) {
-            boost::asio::async_write(*ssl_socket_, request_->OutboundBuffer(),
-                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
-                                                              this,
-                                                              boost::asio::placeholders::error)));
-        } else {
-            boost::asio::async_write(*socket_, request_->OutboundBuffer(),
-                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
-                                                              this,
-                                                              boost::asio::placeholders::error)));
-        }
+        boost::asio::async_write(*socket_, request_->OutboundBuffer(),
+                                 strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
+                                                          this,
+                                                          boost::asio::placeholders::error)));
     }
 
     persistent_ = false; // reset persistent_ to false
@@ -107,11 +99,9 @@ void HttpClient::ResolveRemote() {
 
         XDEBUG_WITH_ID << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
-        boost::asio::async_connect(is_ssl_ ? ssl_socket_->lowest_layer() : *socket_,
-                                   endpoint_iterator,
-                                   strand_.wrap(boost::bind(&HttpClient::OnRemoteConnected,
-                                                            this,
-                                                            boost::asio::placeholders::error)));
+        socket_->async_connect(endpoint_iterator, strand_.wrap(boost::bind(&HttpClient::OnRemoteConnected,
+                                                                           this,
+                                                                           boost::asio::placeholders::error)));
     } catch(const boost::system::system_error& e) {
         XERROR_WITH_ID << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
         callback_(e.code());
@@ -127,31 +117,11 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
     }
 
     XDEBUG_WITH_ID << "Dump request before sending(size: " << request_->OutboundBuffer().size() << "):\n"
-           << "--------------------------------------------\n"
-           << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
-           << "\n--------------------------------------------";
+                   << "--------------------------------------------\n"
+                   << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
+                   << "\n--------------------------------------------";
 
-    if(is_ssl_) {
-        ssl_socket_->async_handshake(boost::asio::ssl::stream_base::client,
-                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteHandshaken,
-                                                              this,
-                                                              boost::asio::placeholders::error)));
-    } else {
-        boost::asio::async_write(*socket_, request_->OutboundBuffer(),
-                                 strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
-                                                          this,
-                                                          boost::asio::placeholders::error)));
-    }
-}
-
-void HttpClient::OnRemoteHandshaken(const boost::system::error_code& e) {
-    if(e) {
-        XWARN_WITH_ID << "Failed at handshake step, message: " << e.message();
-        callback_(e);
-        return;
-    }
-
-    boost::asio::async_write(*ssl_socket_, request_->OutboundBuffer(),
+    boost::asio::async_write(*socket_, request_->OutboundBuffer(),
                              strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
                                                       this,
                                                       boost::asio::placeholders::error)));
@@ -164,17 +134,10 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
         return;
     }
 
-    if(is_ssl_) {
-        boost::asio::async_read_until(*ssl_socket_, remote_buffer_, "\r\n",
-                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
-                                                               this,
-                                                               boost::asio::placeholders::error)));
-    } else {
-        boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n",
-                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
-                                                               this,
-                                                               boost::asio::placeholders::error)));
-    }
+    boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n",
+                                  strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
+                                                           this,
+                                                           boost::asio::placeholders::error)));
 }
 
 void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) {
@@ -190,21 +153,14 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
     response_->status_line().erase(response_->status_line().size() - 1); // remove the last \r
 
     XTRACE_WITH_ID << "Status line from remote server:\n"
-           << "--------------------------------------------\n"
-           << response_->status_line()
-           << "\n--------------------------------------------";
+                   << "--------------------------------------------\n"
+                   << response_->status_line()
+                   << "\n--------------------------------------------";
 
-    if(is_ssl_) {
-        boost::asio::async_read_until(*ssl_socket_, remote_buffer_, "\r\n\r\n",
-                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteHeadersReceived,
-                                                               this,
-                                                               boost::asio::placeholders::error)));
-    } else {
-        boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n\r\n",
-                                      strand_.wrap(boost::bind(&HttpClient::OnRemoteHeadersReceived,
-                                                               this,
-                                                               boost::asio::placeholders::error)));
-    }
+    boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n\r\n",
+                                  strand_.wrap(boost::bind(&HttpClient::OnRemoteHeadersReceived,
+                                                           this,
+                                                           boost::asio::placeholders::error)));
 }
 
 void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
@@ -215,9 +171,9 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     }
 
     XTRACE_WITH_ID << "Headers from remote server:\n"
-           << "--------------------------------------------\n"
-           << boost::asio::buffer_cast<const char *>(remote_buffer_.data())
-           << "\n--------------------------------------------";
+                   << "--------------------------------------------\n"
+                   << boost::asio::buffer_cast<const char *>(remote_buffer_.data())
+                   << "\n--------------------------------------------";
 
     std::istream response(&remote_buffer_);
     std::string header;
@@ -225,7 +181,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     bool chunked_encoding = false;
     while(std::getline(response, header)) {
         if(header == "\r") { // there is no more headers
-//            XDEBUG_WITH_ID << "no more headers";
+            //            XDEBUG_WITH_ID << "no more headers";
             break;
         }
 
@@ -241,7 +197,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         boost::algorithm::trim(value);
         response_->AddHeader(name, value);
 
-//        XTRACE_WITH_ID << "header name: " << name << ", value: " << value;
+        //        XTRACE_WITH_ID << "header name: " << name << ", value: " << value;
 
         if(name == "Transfer-Encoding") {
             XINFO_WITH_ID << "Transfer-Encoding header is found, value: " << value;
@@ -263,19 +219,11 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     }
 
     if(chunked_encoding) {
-        if(is_ssl_) {
-            boost::asio::async_read(*ssl_socket_, remote_buffer_,
-                                    boost::asio::transfer_at_least(1),
-                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                             this,
-                                                             boost::asio::placeholders::error)));
-        } else {
-            boost::asio::async_read(*socket_, remote_buffer_,
-                                    boost::asio::transfer_at_least(1),
-                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                             this,
-                                                             boost::asio::placeholders::error)));
-        }
+        boost::asio::async_read(*socket_, remote_buffer_,
+                                boost::asio::transfer_at_least(1),
+                                strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                         this,
+                                                         boost::asio::placeholders::error)));
         return;
     }
 
@@ -290,19 +238,11 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     }
 
     response_->body_lenth(body_len);
-    if(is_ssl_) {
-        boost::asio::async_read(*ssl_socket_, remote_buffer_,
-                                boost::asio::transfer_at_least(1),
-                                strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                         this,
-                                                         boost::asio::placeholders::error)));
-    } else {
-        boost::asio::async_read(*socket_, remote_buffer_,
-                                boost::asio::transfer_at_least(1),
-                                strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                         this,
-                                                         boost::asio::placeholders::error)));
-    }
+    boost::asio::async_read(*socket_, remote_buffer_,
+                            boost::asio::transfer_at_least(1),
+                            strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                     this,
+                                                     boost::asio::placeholders::error)));
 }
 
 void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
@@ -317,12 +257,12 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     std::size_t copied = boost::asio::buffer_copy(buf, remote_buffer_.data());
 
     XTRACE_WITH_ID << "Chunk from remote server, size: " << read
-           << ", body copied from raw stream to response, copied: " << copied;
+                   << ", body copied from raw stream to response, copied: " << copied;
 
     if(copied < read) {
         // copied should always equal to read, so here just output an error log
         XERROR_WITH_ID << "The copied size(" << copied << ") is less than read size(" << read
-               << "), but this should never happen.";
+                       << "), but this should never happen.";
     }
 
     response_->body().commit(copied);
@@ -341,19 +281,11 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     }
 
     if(!finished) {
-        if(is_ssl_) {
-            boost::asio::async_read(*ssl_socket_, remote_buffer_,
-                                    boost::asio::transfer_at_least(1),
-                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                             this,
-                                                             boost::asio::placeholders::error)));
-        } else {
-            boost::asio::async_read(*socket_, remote_buffer_,
-                                    boost::asio::transfer_at_least(1),
-                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                             this,
-                                                             boost::asio::placeholders::error)));
-        }
+        boost::asio::async_read(*socket_, remote_buffer_,
+                                boost::asio::transfer_at_least(1),
+                                strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                         this,
+                                                         boost::asio::placeholders::error)));
     } else {
         // TODO do something here
         state_ = kAvailable;
@@ -379,33 +311,25 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
     std::size_t copied = boost::asio::buffer_copy(buf, remote_buffer_.data());
 
     XTRACE_WITH_ID << "Body from remote server, size: " << read
-           << ", body copied from raw stream to response, copied: " << copied
-           << ", current body size: " << response_->body().size() + copied
-           << ", desired body size: " << response_->body_length();
+                   << ", body copied from raw stream to response, copied: " << copied
+                   << ", current body size: " << response_->body().size() + copied
+                   << ", desired body size: " << response_->body_length();
 
     if(copied < read) {
         // copied should always equal to read, so here just output an error log
         XERROR_WITH_ID << "The copied size(" << copied << ") is less than read size(" << read
-               << "), but this should never happen.";
+                       << "), but this should never happen.";
     }
 
     response_->body().commit(copied);
     remote_buffer_.consume(copied);
 
     if(response_->body().size() < response_->body_length()) { // there is more content
-        if(is_ssl_) {
-            boost::asio::async_read(*ssl_socket_, remote_buffer_,
-                                    boost::asio::transfer_at_least(1),
-                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                             this,
-                                                             boost::asio::placeholders::error)));
-        } else {
-            boost::asio::async_read(*socket_, remote_buffer_,
-                                    boost::asio::transfer_at_least(1),
-                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                             this,
-                                                             boost::asio::placeholders::error)));
-        }
+        boost::asio::async_read(*socket_, remote_buffer_,
+                                boost::asio::transfer_at_least(1),
+                                strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                         this,
+                                                         boost::asio::placeholders::error)));
     } else {
         // TODO do something here
         state_ = kAvailable;
@@ -413,15 +337,4 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         //boost::system::error_code ec;
         //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
     }
-}
-
-bool HttpClient::VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
-    // TODO enhance this function
-    char subject_name[256];
-    X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-    XDEBUG_WITH_ID << "Verify remote certificate, subject name: " << subject_name
-           << ", pre_verified value: " << pre_verified;
-
-    return true;
 }
