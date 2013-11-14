@@ -115,17 +115,6 @@ void HttpProxySession::OnSSLReplySent(const boost::system::error_code& e) {
     state_ = kSSLWaiting;
 }
 
-//void HttpProxySession::OnHandshaken(const boost::system::error_code& e) {
-//    if(e) {
-//        XWARN_WITH_ID << "Error occurred during handshaking with browser, message: " << e.message();
-//        Terminate();
-//        return;
-//    }
-
-//    //    request_->reset();
-//    state_ = kSSLWaiting;
-//}
-
 void HttpProxySession::OnResponseReceived(const boost::system::error_code& e) {
     if(e && e != boost::asio::error::eof) {
         XWARN_WITH_ID << "Failed to send request, message: " << e.message();
