@@ -48,10 +48,10 @@ public:
     }
 
     socket_type& socket() const {
-		if (use_ssl_)
-			return ssl_socket_->next_layer();
-		else
-			return *socket_;
+        if (use_ssl_)
+            return ssl_socket_->next_layer();
+        else
+            return *socket_;
     }
 
     const socket_type::lowest_layer_type& lowest_layer() const {
@@ -161,20 +161,6 @@ private:
         : service_(service),
           use_ssl_(false), ssl_ready_(false), ssl_mode_(kClient),
           socket_(new socket_type(service)) {}
-
-    template<typename BufferSequence, typename Handler, typename Callback>
-    void handle_handshake(const boost::system::error_code& e,
-                          const BufferSequence& buffers,
-                          const Handler& handler,
-                          const Callback& callback) {
-        if(e) {
-            // TODO do something here
-            return;
-        }
-
-        ssl_ready_ = true;
-        callback(buffers, handler);
-    }
 
     bool VerifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
         // TODO enhance this function
