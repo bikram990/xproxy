@@ -183,7 +183,6 @@ inline void HttpProxySession::SendResponse(HttpResponse& response) {
 inline void HttpProxySession::reset() {
     if(persistent_) {
         state_ = kWaiting;
-        mode_ = HTTP;
         persistent_ = false;
         request_.reset();
         response_.reset();
