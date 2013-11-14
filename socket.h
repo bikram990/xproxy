@@ -148,7 +148,7 @@ public:
             socket_type::endpoint_type re = lowest_layer().remote_endpoint();
             remote_addr = re.address().to_string();
             remote_port = std::to_string(re.port());
-        } catch(boost::system::system_error& e) {} catch(...) {} // ignore exceptions
+        } catch(boost::system::system_error&) {} catch(...) {} // ignore exceptions
 
         return "[" + local_addr + ":" + local_port + " <=> "
             + remote_addr + remote_port + "]";
