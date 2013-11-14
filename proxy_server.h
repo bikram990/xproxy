@@ -14,8 +14,8 @@ public:
         instance().start();
     }
 
-    static ResourceManager& ResourceManager() {
-        return *instance().resource_manager_;
+    static class ResourceManager& ResourceManager() {
+        return *(instance().resource_manager_);
     }
 
     static HttpProxySessionManager& SessionManager() {
