@@ -118,6 +118,23 @@ public:
         }
     }
 
+    template<typename ConstBufferSequence, typename WriteHandler>
+    void async_write_some(const ConstBufferSequence& buffers, WriteHandler& handler) {
+        if(use_ssl_) {
+            boost::system::error_code ec;
+            ssl_ready_ = PrepareSSLSocket(ec);
+            if(!ssl_ready_) {
+                // TODO add logic here
+                handler(ec, 0);
+                return;
+            }
+
+            ssl_socket_->async_write_some(buffers, handler);
+        } else {
+            socket_->async_write_some(buffers, handler);
+        }
+    }
+
     std::string to_string() const {
         return "["
                 + lowest_layer().local_endpoint().address().to_string()
