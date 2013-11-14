@@ -1,6 +1,7 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#include <boost/bind.hpp>
 #include "common.h"
 #include "log.h"
 

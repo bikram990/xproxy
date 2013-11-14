@@ -1,6 +1,7 @@
 #ifndef REQUEST_HANDLER_MANAGER_H
 #define REQUEST_HANDLER_MANAGER_H
 
+#include <boost/thread.hpp>
 #include "http_proxy_session.h"
 #include "request_handler.h"
 
