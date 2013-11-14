@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 2.8)
 aux_source_directory(. SRC_LIST)
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+    SET(CMAKE_CXX_FLAGS "-std=c++11")
+endif()
+
+
 message(STATUS "release c flags: " ${CMAKE_C_FLAGS_RELEASE})
 message(STATUS "debug c flags: " ${CMAKE_C_FLAGS_DEBUG})
 message(STATUS "release cxx flags: " ${CMAKE_CXX_FLAGS_RELEASE})
