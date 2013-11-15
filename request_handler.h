@@ -29,6 +29,12 @@ protected:
     virtual HttpRequest *WrapRequest() = 0;
     virtual void ProcessResponse() = 0;
 
+    virtual void reset() {
+        session_.reset();
+        request_ = NULL;
+        response_ = NULL;
+    }
+
     HttpProxySession::Ptr session_;
     HttpRequest *request_;
     HttpResponse *response_;
@@ -40,7 +46,7 @@ class DirectHandler : public RequestHandler {
 private:
     DirectHandler(HttpProxySession::Ptr session) : RequestHandler(session) {}
 
-    virtual HttpRequest *WrapRequest();
+    virtual HttpRequest *WrapRequest() { return request_; }
     virtual void ProcessResponse() {}
 };
 
@@ -53,6 +59,11 @@ private:
     virtual HttpRequest *WrapRequest();
     virtual void ProcessResponse();
     void BuildProxyRequest();
+
+    virtual void reset() {
+        RequestHandler::reset();
+        proxy_request_.reset();
+    }
 
     std::auto_ptr<HttpRequest> proxy_request_;
 };

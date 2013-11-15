@@ -22,29 +22,31 @@ RequestHandler::~RequestHandler() {
 void RequestHandler::AsyncHandleRequest() {
     HttpRequest *request = WrapRequest();
 
-    if(!request)
-        session_->OnResponseReceived(boost::asio::error::invalid_argument);
+    if(!request) {
+//        session_->OnResponseReceived(boost::asio::error::invalid_argument);
+        ProxyServer::MainService().post(boost::bind(&HttpProxySession::OnResponseReceived, session_, boost::asio::error::invalid_argument));
+        reset();
+    }
     else
         ProxyServer::ClientManager().AsyncHandleRequest(session_->mode(),
-                                              request,
-                                              response_,
-                                              boost::bind(&RequestHandler::HandleResponse,
-                                                          this, _1));
+                                                        request,
+                                                        response_,
+                                                        boost::bind(&RequestHandler::HandleResponse,
+                                                                    this, _1));
 }
 
 void RequestHandler::HandleResponse(const boost::system::error_code& e) {
-    if(e && e != boost::asio::error::eof) {
-        session_->OnResponseReceived(e); // TODO change the interface name
+    if(e && e != boost::asio::error::eof && !SSL_SHORT_READ(e)) {
+//        session_->OnResponseReceived(e); // TODO change the interface name
+        ProxyServer::MainService().post(boost::bind(&HttpProxySession::OnResponseReceived, session_, e));
+        reset();
         return;
     }
 
     ProcessResponse();
-    session_->OnResponseReceived(e); // TODO change the interface name
-    session_.reset();
-}
-
-HttpRequest *DirectHandler::WrapRequest() {
-    return request_;
+//    session_->OnResponseReceived(e); // TODO change the interface name
+    ProxyServer::MainService().post(boost::bind(&HttpProxySession::OnResponseReceived, session_, e));
+    reset();
 }
 
 HttpRequest *ProxyHandler::WrapRequest() {
