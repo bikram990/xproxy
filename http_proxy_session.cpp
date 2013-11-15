@@ -8,11 +8,10 @@
 
 boost::atomic<std::size_t> HttpProxySession::counter_(0);
 
-HttpProxySession::HttpProxySession(boost::asio::io_service& main_service,
-                                   boost::asio::io_service& fetch_service)
+HttpProxySession::HttpProxySession()
     : id_(counter_), state_(kWaiting), mode_(HTTP), persistent_(false),
-      main_service_(main_service), fetch_service_(fetch_service),
-      strand_(main_service), local_socket_(Socket::Create(main_service)) {
+      strand_(ProxyServer::MainService()),
+      local_socket_(Socket::Create(ProxyServer::MainService())) {
     TRACE_THIS_PTR_WITH_ID;
 }
 
@@ -96,7 +95,9 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         if(mode_ == HTTPS)
             request_->port(443);
         response_.reset(new HttpResponse());
-        fetch_service_.post(boost::bind(&RequestHandlerManager::AsyncHandleRequest, &ProxyServer::HandlerManager(), shared_from_this()));
+        ProxyServer::FetchService().post(boost::bind(&RequestHandlerManager::AsyncHandleRequest,
+                                                     &ProxyServer::HandlerManager(),
+                                                     shared_from_this()));
         //RequestHandlerManager::AsyncHandleRequest(shared_from_this());
         XTRACE_WITH_ID << "Request is sent asynchronously.";
         state_ = kFetching;

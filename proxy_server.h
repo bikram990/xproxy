@@ -15,7 +15,7 @@ public:
     }
 
     static class ResourceManager& ResourceManager() {
-        return *(instance().resource_manager_);
+        return *instance().resource_manager_;
     }
 
     static HttpProxySessionManager& SessionManager() {
@@ -28,6 +28,14 @@ public:
 
     static HttpClientManager& ClientManager() {
         return *instance().client_manager_;
+    }
+
+    static boost::asio::io_service& MainService() {
+        return instance().main_service_;
+    }
+
+    static boost::asio::io_service& FetchService() {
+        return instance().fetch_service_;
     }
 
 private:

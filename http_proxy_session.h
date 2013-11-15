@@ -30,17 +30,15 @@ public:
         HTTPS
     };
 
-    static HttpProxySession *Create(boost::asio::io_service& main_service,
-                                    boost::asio::io_service& fetch_service) {
+    static HttpProxySession *Create() {
         ++counter_;
-        return new HttpProxySession(main_service, fetch_service);
+        return new HttpProxySession();
     }
 
     ~HttpProxySession();
 
     State state() const { return state_; }
     Mode mode() const { return mode_; }
-    boost::asio::io_service& FetchService() { return fetch_service_; }
     boost::asio::ip::tcp::socket& LocalSocket() { return local_socket_->socket(); }
     HttpRequest *Request() { return request_.get(); }
     HttpResponse *Response() { return response_.get(); }
@@ -52,8 +50,7 @@ public:
     void OnResponseReceived(const boost::system::error_code& e); // the callback
 
 private:
-    HttpProxySession(boost::asio::io_service& main_service,
-                     boost::asio::io_service& fetch_service);
+    HttpProxySession();
 
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
@@ -72,8 +69,6 @@ private:
     Mode mode_;
     bool persistent_;
 
-    boost::asio::io_service& main_service_;
-    boost::asio::io_service& fetch_service_;
     boost::asio::io_service::strand strand_;
     std::unique_ptr<Socket> local_socket_;
 
