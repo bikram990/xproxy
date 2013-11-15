@@ -13,8 +13,6 @@ class HttpResponse;
 class HttpClient : private boost::noncopyable {
 public:
     typedef boost::shared_ptr<HttpClient> Ptr;
-    typedef boost::asio::ip::tcp::socket socket_type;
-    typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket_type;
     typedef boost::function<void(const boost::system::error_code&)> callback_type;
 
     enum State {
@@ -39,6 +37,19 @@ public:
 
 private:
     HttpClient(boost::asio::io_service& service);
+
+    void InvokeCallback(const boost::system::error_code& e) {
+        callback_(e);
+
+        // TODO should we close socket when any error occurs, or
+        // just when eof or short read occurs?
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
+            socket_->close();
+            persistent_ = false;
+        }
+
+        state_ = kAvailable;
+    }
 
     void ResolveRemote();
     void OnRemoteConnected(const boost::system::error_code& e);

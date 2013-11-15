@@ -27,11 +27,15 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
                                   callback_type callback) {
     if(!callback) {
         XERROR_WITH_ID << "Invalid callback parameter.";
+        state_ = kAvailable;
         return;
     }
+
+    callback_ = callback;
+
     if(!request || !response) {
         XERROR_WITH_ID << "Invalid request or response.";
-        callback(boost::asio::error::invalid_argument);
+        InvokeCallback(boost::asio::error::invalid_argument);
         return;
     }
     if(persistent_) {
@@ -40,14 +44,13 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
                            << request->host() << ":" << request->port()
                            << "], available persistent destination: ["
                            << host_ << ":" << port_ << "].";
-            callback(boost::asio::error::address_in_use);
+            InvokeCallback(boost::asio::error::address_in_use);
             return;
         }
     }
 
     request_ = request;
     response_ = response;
-    callback_ = callback;
     host_ = request->host();
     port_ = request->port();
     state_ = kInUse;
@@ -64,12 +67,12 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
         if((is_ssl_ && mode != HttpProxySession::HTTPS) ||
            (!is_ssl_ && mode == HttpProxySession::HTTPS)) {
             XERROR_WITH_ID << "Mismatch protocol type.";
-            callback(boost::asio::error::operation_not_supported);
+            InvokeCallback(boost::asio::error::operation_not_supported);
             return;
         }
         if(!socket_->is_open()) {
             XERROR_WITH_ID << "Socket is already closed.";
-            callback(boost::asio::error::not_connected);
+            InvokeCallback(boost::asio::error::not_connected);
             return;
         }
 
@@ -101,15 +104,14 @@ void HttpClient::ResolveRemote() {
                                                                            boost::asio::placeholders::error)));
     } catch(const boost::system::system_error& e) {
         XERROR_WITH_ID << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
-        callback_(e.code());
-        state_ = kAvailable;
+        InvokeCallback(e.code());
     }
 }
 
 void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
     if(e) {
-        XWARN_WITH_ID << "Failed to connect to remote server, message: " << e.message();
-        callback_(e);
+        XERROR_WITH_ID << "Failed to connect to remote server, message: " << e.message();
+        InvokeCallback(e);
         return;
     }
 
@@ -126,8 +128,8 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
 
 void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
     if(e) {
-        XWARN_WITH_ID << "Failed to write request to remote server, message: " << e.message();
-        callback_(e);
+        XERROR_WITH_ID << "Failed to write request to remote server, message: " << e.message();
+        InvokeCallback(e);
         return;
     }
 
@@ -139,8 +141,8 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
 
 void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) {
     if(e) {
-        XWARN_WITH_ID << "Failed to read status line from remote server, message: " << e.message();
-        callback_(e);
+        XERROR_WITH_ID << "Failed to read status line from remote server, message: " << e.message();
+        InvokeCallback(e);
         return;
     }
 
@@ -162,8 +164,8 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
 
 void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     if(e) {
-        XWARN_WITH_ID << "Failed to read response header from remote server, message: " << e.message();
-        callback_(e);
+        XERROR_WITH_ID << "Failed to read response header from remote server, message: " << e.message();
+        InvokeCallback(e);
         return;
     }
 
@@ -197,7 +199,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         //        XTRACE_WITH_ID << "header name: " << name << ", value: " << value;
 
         if(name == "Transfer-Encoding") {
-            XINFO_WITH_ID << "Transfer-Encoding header is found, value: " << value;
+            XDEBUG_WITH_ID << "Transfer-Encoding header is found, value: " << value;
             if(value == "chunked")
                 chunked_encoding = true;
         }
@@ -226,11 +228,10 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 
     if(body_len <= 0) {
         XDEBUG_WITH_ID << "This response seems have no body.";
-        state_ = kAvailable;
-        callback_(e);
         // TODO do something here
-        //boost::system::error_code ec;
-        //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        if(!persistent_)
+            socket_->close();
+        InvokeCallback(e);
         return;
     }
 
@@ -244,8 +245,8 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 
 void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     if(e) {
-        XWARN_WITH_ID << "Failed to read chunk from remote server, message: " << e.message();
-        callback_(e);
+        XERROR_WITH_ID << "Failed to read chunk from remote server, message: " << e.message();
+        InvokeCallback(e);
         return;
     }
 
@@ -285,20 +286,20 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
                                                          boost::asio::placeholders::error)));
     } else {
         // TODO do something here
-        state_ = kAvailable;
-        callback_(e);
-        //boost::system::error_code ec;
-        //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        if(!persistent_)
+            socket_->close();
+        InvokeCallback(e);
     }
 }
 
 void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
     if(e) {
-        if(e == boost::asio::error::eof || SSL_SHORT_READ(e))
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_WITH_ID << "The remote peer closed the connection, socket: " << socket_->to_string() << ".";
-        else {
-            XWARN_WITH_ID << "Failed to read body from remote server, message: " << e.message();
-            callback_(e);
+            persistent_ = false;
+        } else {
+            XERROR_WITH_ID << "Failed to read body from remote server, message: " << e.message();
+            InvokeCallback(e);
             return;
         }
     }
@@ -329,9 +330,8 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
                                                          boost::asio::placeholders::error)));
     } else {
         // TODO do something here
-        state_ = kAvailable;
-        callback_(e);
-        //boost::system::error_code ec;
-        //remote_socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        if(!persistent_)
+            socket_->close();
+        InvokeCallback(e);
     }
 }
