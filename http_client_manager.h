@@ -1,6 +1,7 @@
 #ifndef HTTP_CLIENT_MANAGER_H
 #define HTTP_CLIENT_MANAGER_H
 
+#include <boost/thread.hpp>
 #include "http_client.h"
 #include "log.h"
 
