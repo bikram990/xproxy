@@ -8,10 +8,9 @@
 
 boost::atomic<std::size_t> HttpProxySession::counter_(0);
 
-HttpProxySession::HttpProxySession()
+HttpProxySession::HttpProxySession(boost::asio::io_service& service)
     : id_(counter_), state_(kWaiting), mode_(HTTP), persistent_(false),
-      strand_(ProxyServer::MainService()),
-      local_socket_(Socket::Create(ProxyServer::MainService())) {
+      strand_(service), local_socket_(Socket::Create(service)) {
     TRACE_THIS_PTR_WITH_ID;
 }
 

@@ -30,9 +30,9 @@ public:
         HTTPS
     };
 
-    static HttpProxySession *Create() {
+    static HttpProxySession *Create(boost::asio::io_service& service) {
         ++counter_;
-        return new HttpProxySession();
+        return new HttpProxySession(service);
     }
 
     ~HttpProxySession();
@@ -50,7 +50,7 @@ public:
     void OnResponseReceived(const boost::system::error_code& e); // the callback
 
 private:
-    HttpProxySession();
+    HttpProxySession(boost::asio::io_service& service);
 
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
