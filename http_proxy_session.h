@@ -74,8 +74,8 @@ private:
 
     boost::asio::streambuf local_buffer_;
 
-    std::auto_ptr<HttpRequest> request_;
-    std::auto_ptr<HttpResponse> response_;
+    std::unique_ptr<HttpRequest> request_;
+    std::unique_ptr<HttpResponse> response_;
 };
 
 #endif // HTTP_PROXY_SESSION_H

@@ -65,7 +65,7 @@ private:
         proxy_request_.reset();
     }
 
-    std::auto_ptr<HttpRequest> proxy_request_;
+    std::unique_ptr<HttpRequest> proxy_request_;
 };
 
 #endif // REQUEST_HANDLER_H

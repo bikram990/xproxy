@@ -26,14 +26,13 @@ public:
 private:
     ResourceManager();
 
-    std::auto_ptr<ServerConfig> server_config_;
-    std::auto_ptr<RuleConfig> rule_config_;
-    std::auto_ptr<CertManager> cert_manager_;
+    std::unique_ptr<ServerConfig> server_config_;
+    std::unique_ptr<RuleConfig> rule_config_;
+    std::unique_ptr<CertManager> cert_manager_;
 };
 
 class ResourceManager::ServerConfig : private boost::noncopyable {
     friend class ResourceManager;
-    friend class std::auto_ptr<ServerConfig>;
 public:
     const static std::string kConfPortKey;
     const static std::string kConfMainThreadCountKey;
@@ -62,10 +61,11 @@ public:
         return true;
     }
 
+    ~ServerConfig() {}
+
 private:
     ServerConfig(const std::string& conf_file = "xproxy.conf")
         : conf_file_(conf_file) {}
-    ~ServerConfig() {}
 
     std::string conf_file_;
     boost::property_tree::ptree conf_tree_;
@@ -73,22 +73,21 @@ private:
 
 class ResourceManager::RuleConfig : private boost::noncopyable {
     friend class ResourceManager;
-    friend class std::auto_ptr<RuleConfig>;
 public:
     RuleConfig& operator<<(const std::string& domain);
 
     bool RequestProxy(const std::string& host);
 
+    ~RuleConfig() {}
+
 private:
     RuleConfig() {}
-    ~RuleConfig() {}
 
     std::vector<std::string> domains_;
 };
 
 class ResourceManager::CertManager : private boost::noncopyable {
     friend class ResourceManager;
-    friend class std::auto_ptr<CertManager>;
 public:
     struct CA : private boost::noncopyable {// to prevent multi memory free
         EVP_PKEY *key;
@@ -113,9 +112,10 @@ public:
     DHParametersPtr GetDHParameters();
     void SetCertificateDirectory(const std::string& directory);
 
+    ~CertManager() {}
+
 private:
     CertManager() : cert_dir_("cert/") {}
-    ~CertManager() {}
 
     bool LoadRootCA(const std::string& filename = "cert/xProxyRootCA.crt");
     bool SaveRootCA(const std::string& filename = "cert/xProxyRootCA.crt");
