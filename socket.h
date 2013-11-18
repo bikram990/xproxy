@@ -80,12 +80,12 @@ public:
     }
 
     template<typename Iterator, typename ConnectHandler>
-    void async_connect(Iterator begin, ConnectHandler& handler) {
+    void async_connect(Iterator begin, ConnectHandler&& handler) {
         boost::asio::async_connect(lowest_layer(), begin, handler);
     }
 
     template<typename MutableBufferSequence, typename ReadHandler>
-    void async_read_some(const MutableBufferSequence& buffers, ReadHandler& handler) {
+    void async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler) {
         if(use_ssl_) {
             boost::system::error_code ec;
             ssl_ready_ = PrepareSSLSocket(ec);
@@ -102,7 +102,7 @@ public:
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
-    void async_write(ConstBufferSequence& buffers, WriteHandler& handler) {
+    void async_write(ConstBufferSequence&& buffers, WriteHandler&& handler) {
         if(use_ssl_) {
             boost::system::error_code ec;
             ssl_ready_ = PrepareSSLSocket(ec);
@@ -119,7 +119,7 @@ public:
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
-    void async_write_some(const ConstBufferSequence& buffers, WriteHandler& handler) {
+    void async_write_some(const ConstBufferSequence&& buffers, WriteHandler&& handler) {
         if(use_ssl_) {
             boost::system::error_code ec;
             ssl_ready_ = PrepareSSLSocket(ec);
