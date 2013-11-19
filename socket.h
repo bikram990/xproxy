@@ -79,6 +79,11 @@ public:
         }
     }
 
+    template<typename SettableSocketOption>
+    void set_option(const SettableSocketOption& option) {
+        socket_->set_option(option);
+    }
+
     template<typename Iterator, typename ConnectHandler>
     void async_connect(Iterator begin, ConnectHandler&& handler) {
         boost::asio::async_connect(lowest_layer(), begin, handler);
