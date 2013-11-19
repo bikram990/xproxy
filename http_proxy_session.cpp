@@ -76,6 +76,7 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
 
     std::string connection;
     if(request_->FindHeader("Proxy-Connection", connection)) {
+        std::transform(connection.begin(), connection.end(), connection.begin(), std::ptr_fun<int, int>(std::tolower));
         if(connection == "keep-alive")
             persistent_ = true;
         // TODO remove the Proxy-Connection header here

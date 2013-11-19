@@ -211,6 +211,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
             body_len = boost::lexical_cast<std::size_t>(value);
         }
 
+        std::transform(value.begin(), value.end(), value.begin(), std::ptr_fun<int, int>(std::tolower));
         if(name == "Connection" && value == "keep-alive") {
             persistent_ = true;
             XDEBUG_WITH_ID << "This is a persistent connection.";
