@@ -60,7 +60,7 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
         if(mode == HttpProxySession::HTTPS) {
             is_ssl_ = true;
             socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
-                    ResourceManager::CertManager::DHParametersPtr> (kHttps);
+                    ResourceManager::CertManager::DHParametersPtr>(kHttps);
         }
         ResolveRemote();
     } else {
@@ -70,18 +70,24 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
             InvokeCallback(boost::asio::error::operation_not_supported);
             return;
         }
-        if(!socket_->is_open()) {
-            XERROR_WITH_ID << "Socket is already closed.";
-            InvokeCallback(boost::asio::error::not_connected);
-            return;
-        }
+        /*
+         * No need to judge by is_open() method, this is a NC method!!!
+         * it will crash when socket is newly created, it will return true when
+         * socket is already closed, is there any useful place of this method??
+         * No, I definitely think NO.
+         */
+        // if(!socket_->is_open()) {
+        //     XERROR_WITH_ID << "Socket is already closed.";
+        //     InvokeCallback(boost::asio::error::not_connected);
+        //     return;
+        // }
 
         XDEBUG_WITH_ID << "Dump request before sending(size: " << request_->OutboundBuffer().size() << "):\n"
                        << "--------------------------------------------\n"
                        << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
                        << "\n--------------------------------------------";
 
-        boost::asio::async_write(*socket_, request_->OutboundBuffer(),
+        boost::asio::async_write(*socket_, boost::asio::buffer(request_->OutboundBuffer().data(), request_->OutboundBuffer().size()),
                                  strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
                                                           this,
                                                           boost::asio::placeholders::error)));
@@ -141,6 +147,17 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
 
 void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) {
     if(e) {
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
+            XWARN_WITH_ID << "Remote server has already closed the persistent connection, reconnect...";
+            persistent_ = false;
+            socket_.reset(Socket::Create(service_));
+            if(is_ssl_) {
+                socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
+                        ResourceManager::CertManager::DHParametersPtr>(kHttps);
+            }
+            ResolveRemote();
+            return;
+        }
         XERROR_WITH_ID << "Failed to read status line from remote server, message: " << e.message();
         InvokeCallback(e);
         return;
