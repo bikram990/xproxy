@@ -59,7 +59,7 @@ void InitLogging() {
 void SetLogLevel(const std::string& level) {
     static const std::map<std::string, SeverityLevel> map = {
         {"trace", kTrace}, {"debug", kDebug}, {"info", kInfo},
-        {"warn", kWarning}, {"error", kError}, {"fatal", kFatal}
+        {"warning", kWarning}, {"error", kError}, {"fatal", kFatal}
     };
     std::map<std::string, SeverityLevel>::const_iterator it = map.find(level);
     if(it != map.end())
