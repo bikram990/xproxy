@@ -239,33 +239,39 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     }
 
     if(chunked_encoding) {
-        boost::asio::async_read(*socket_, remote_buffer_,
-                                boost::asio::transfer_at_least(1),
-                                strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
-                                                         this,
-                                                         boost::asio::placeholders::error)));
+        if(remote_buffer_.size() > 0)
+            OnRemoteChunksReceived(boost::system::error_code());
+        else
+            boost::asio::async_read(*socket_, remote_buffer_,
+                                    boost::asio::transfer_at_least(1),
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         return;
     }
 
-    if(body_len <= 0) {
-        XDEBUG_WITH_ID << "This response seems have no body.";
-        // TODO do something here
-        if(!persistent_)
-            socket_->close();
-        else {
-            timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
-            timeout_.async_wait(boost::bind(&HttpClient::OnTimeout, this, boost::asio::placeholders::error));
-        }
-        InvokeCallback(e);
+    if(body_len > 0) {
+        response_->body_lenth(body_len);
+        if(remote_buffer_.size() > 0)
+            OnRemoteBodyReceived(boost::system::error_code());
+        else
+            boost::asio::async_read(*socket_, remote_buffer_,
+                                    boost::asio::transfer_at_least(1),
+                                    strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
+                                                             this,
+                                                             boost::asio::placeholders::error)));
         return;
     }
 
-    response_->body_lenth(body_len);
-    boost::asio::async_read(*socket_, remote_buffer_,
-                            boost::asio::transfer_at_least(1),
-                            strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
-                                                     this,
-                                                     boost::asio::placeholders::error)));
+    XDEBUG_WITH_ID << "This response seems have no body.";
+    // TODO do something here
+    if(!persistent_)
+        socket_->close();
+    else {
+        timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
+        timeout_.async_wait(boost::bind(&HttpClient::OnTimeout, this, boost::asio::placeholders::error));
+    }
+    InvokeCallback(e);
 }
 
 void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
