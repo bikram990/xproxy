@@ -69,6 +69,8 @@ operator<<(std::basic_ostream<CharT, TraitsT>& stream, SeverityLevel level) {
 
 void InitLogging();
 
+void SetLogLevel(const std::string& level);
+
 }
 }
 

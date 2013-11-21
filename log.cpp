@@ -11,6 +11,8 @@
 namespace xproxy {
 namespace log {
 
+BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", SeverityLevel)
+
 AttrsPtr g_attrs;
 LoggerPtr g_logger;
 
@@ -25,7 +27,7 @@ void InitLogging() {
 
     logging::formatter formatter =
         expr::stream << "[" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S") << "] ["
-                     << expr::attr<SeverityLevel>("Severity") << "] ["
+                     << severity << "] ["
                      << expr::attr<attrs::current_process_id::value_type>("ProcessID")
                      << ":"
                      << expr::attr<attrs::current_thread_id::value_type>("ThreadID")
@@ -52,6 +54,18 @@ void InitLogging() {
     core->add_global_attribute("Line", *g_attrs->line_attr);
 
     logging::add_common_attributes();
+}
+
+void SetLogLevel(const std::string& level) {
+    static const std::map<std::string, SeverityLevel> map = {
+        {"trace", kTrace}, {"debug", kDebug}, {"info", kInfo},
+        {"warn", kWarning}, {"error", kError}, {"fatal", kFatal}
+    };
+    std::map<std::string, SeverityLevel>::const_iterator it = map.find(level);
+    if(it != map.end())
+        boost::log::core::get()->set_filter(severity >= it->second);
+    else
+        boost::log::core::get()->set_filter(severity >= kInfo);
 }
 }
 }

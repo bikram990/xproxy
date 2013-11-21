@@ -10,6 +10,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    xproxy::log::SetLogLevel(ResourceManager::GetServerConfig().GetLogLevel());
+
 //    ResourceManager::instance().GetRuleConfig() << "youtube.com"
 //                                                << "facebook.com"
 //                                                << "google-analytics.com"
