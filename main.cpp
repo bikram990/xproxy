@@ -5,6 +5,11 @@ int main(int argc, char* argv[]) {
     xproxy::log::InitLogging();
     XINFO << "xProxy is starting...";
 
+    if(!ResourceManager::Init()) {
+        XFATAL << "Failed to init resource, exit.";
+        return -1;
+    }
+
 //    ResourceManager::instance().GetRuleConfig() << "youtube.com"
 //                                                << "facebook.com"
 //                                                << "google-analytics.com"

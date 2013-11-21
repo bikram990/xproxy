@@ -5,26 +5,39 @@
 #include <boost/property_tree/ptree.hpp>
 #include <openssl/x509.h>
 #include "log.h"
-
-class ProxyServer;
+#include "singleton.h"
 
 class ResourceManager : private boost::noncopyable {
-    friend class ProxyServer;
+    friend class Singleton<ResourceManager>;
 public:
     class ServerConfig;
     class RuleConfig;
     class CertManager;
 
-    ServerConfig& GetServerConfig();
-    RuleConfig& GetRuleConfig();
-    CertManager& GetCertManager();
+    static ServerConfig& GetServerConfig() {
+        return *instance().server_config_;
+    }
 
-    bool init();
+    static RuleConfig& GetRuleConfig() {
+        return *instance().rule_config_;
+    }
+
+    static CertManager& GetCertManager() {
+        return *instance().cert_manager_;
+    }
+
+    static bool Init() {
+        return instance().init();
+    }
 
     ~ResourceManager();
 
 private:
     ResourceManager();
+
+    static ResourceManager& instance();
+
+    bool init();
 
     std::unique_ptr<ServerConfig> server_config_;
     std::unique_ptr<RuleConfig> rule_config_;
@@ -37,6 +50,7 @@ public:
     const static std::string kConfPortKey;
     const static std::string kConfMainThreadCountKey;
     const static std::string kConfFetchThreadCountKey;
+    const static std::string kConfLogLevel;
     const static std::string kConfGAEAppIdKey;
     const static std::string kConfGAEDomainKey;
 
@@ -46,6 +60,7 @@ public:
     short GetProxyPort(short default_value = 7077);
     int GetMainThreadCount(int default_value = 2);
     int GetFetchThreadCount(int default_value = 10);
+    std::string GetLogLevel(std::string default_value = "info");
     const std::string GetGAEAppId();
     const std::string GetGAEServerDomain(const std::string& default_value = "google.com.hk");
 
@@ -137,18 +152,6 @@ private:
     std::map<std::string, CAPtr> ca_map_;
 };
 
-inline ResourceManager::ServerConfig& ResourceManager::GetServerConfig() {
-    return *server_config_;
-}
-
-inline ResourceManager::RuleConfig& ResourceManager::GetRuleConfig() {
-    return *rule_config_;
-}
-
-inline ResourceManager::CertManager& ResourceManager::GetCertManager() {
-    return *cert_manager_;
-}
-
 inline bool ResourceManager::init() {
     bool s = server_config_->LoadConfig();
 
@@ -201,6 +204,11 @@ inline int ResourceManager::ServerConfig::GetMainThreadCount(int default_value) 
 inline int ResourceManager::ServerConfig::GetFetchThreadCount(int default_value) {
     int result;
     return GetConfig(kConfFetchThreadCountKey, result) ? result : default_value;
+}
+
+inline std::string ResourceManager::ServerConfig::GetLogLevel(std::string default_value) {
+    std::string result;
+    return GetConfig(kConfLogLevel, result) ? result : default_value;
 }
 
 inline const std::string ResourceManager::ServerConfig::GetGAEAppId() {

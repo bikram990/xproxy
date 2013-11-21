@@ -160,8 +160,8 @@ inline void HttpProxySession::ContinueReceiving() {
 }
 
 inline void HttpProxySession::InitSSLContext() {
-    ResourceManager::CertManager::CAPtr ca = ProxyServer::ResourceManager().GetCertManager().GetCertificate(request_->host());
-    ResourceManager::CertManager::DHParametersPtr dh = ProxyServer::ResourceManager().GetCertManager().GetDHParameters();
+    ResourceManager::CertManager::CAPtr ca = ResourceManager::GetCertManager().GetCertificate(request_->host());
+    ResourceManager::CertManager::DHParametersPtr dh = ResourceManager::GetCertManager().GetDHParameters();
     local_socket_->SwitchProtocol(kHttps, kServer, ca, dh);
 }
 

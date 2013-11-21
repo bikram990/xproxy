@@ -4,7 +4,6 @@
 #include "http_client_manager.h"
 #include "http_proxy_session_manager.h"
 #include "request_handler_manager.h"
-#include "resource_manager.h"
 #include "singleton.h"
 
 class ProxyServer : private boost::noncopyable {
@@ -12,10 +11,6 @@ class ProxyServer : private boost::noncopyable {
 public:
     static void Start() {
         instance().start();
-    }
-
-    static class ResourceManager& ResourceManager() {
-        return *instance().resource_manager_;
     }
 
     static HttpProxySessionManager& SessionManager() {
@@ -52,11 +47,6 @@ private:
     void start();
 
     bool init();
-
-    bool InitResourceManager() {
-        resource_manager_.reset(new class ResourceManager());
-        return resource_manager_->init();
-    }
 
     bool InitSessionManager() {
         session_manager_.reset(new HttpProxySessionManager());
@@ -95,7 +85,6 @@ private:
 
     HttpProxySession::Ptr current_session_;
 
-    std::unique_ptr<class ResourceManager> resource_manager_;
     std::unique_ptr<HttpProxySessionManager> session_manager_;
     std::unique_ptr<RequestHandlerManager> handler_manager_;
     std::unique_ptr<HttpClientManager> client_manager_;

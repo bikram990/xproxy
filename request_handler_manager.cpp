@@ -11,7 +11,7 @@ void RequestHandlerManager::AsyncHandleRequest(HttpProxySession::Ptr session) {
         return;
     }
 
-    bool proxy = ProxyServer::ResourceManager().GetRuleConfig().RequestProxy(request->host());
+    bool proxy = ResourceManager::GetRuleConfig().RequestProxy(request->host());
     if(proxy) {
         boost::lock_guard<boost::mutex> lock(proxy_mutex_);
         std::vector<RequestHandler::Ptr>::iterator it = std::find_if(proxy_handlers_.begin(),

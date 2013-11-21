@@ -59,8 +59,7 @@ void ProxyServer::start() {
 }
 
 bool ProxyServer::init() {
-    if(!InitResourceManager() || !InitSessionManager() ||
-       !InitHandlerManager() || !InitClientManager())
+    if(!InitSessionManager() || !InitHandlerManager() || !InitClientManager())
         return false;
 
     signals_.add(SIGINT);
