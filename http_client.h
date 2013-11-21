@@ -36,6 +36,10 @@ public:
                           callback_type callback);
 
 private:
+    enum {
+        kDefaultTimeout = 15
+    };
+
     HttpClient(boost::asio::io_service& service);
 
     void InvokeCallback(const boost::system::error_code& e) {
@@ -58,6 +62,7 @@ private:
     void OnRemoteHeadersReceived(const boost::system::error_code& e);
     void OnRemoteChunksReceived(const boost::system::error_code& e);
     void OnRemoteBodyReceived(const boost::system::error_code& e);
+    void OnTimeout(const boost::system::error_code& e);
 
     static boost::atomic<std::size_t> counter_;
 
@@ -68,6 +73,7 @@ private:
     boost::asio::io_service& service_;
     boost::asio::io_service::strand strand_;
     boost::asio::ip::tcp::resolver resolver_;
+    boost::asio::deadline_timer timeout_; // persistent connection timeout checker
 
     bool is_ssl_;
     bool persistent_;

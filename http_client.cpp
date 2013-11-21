@@ -12,6 +12,7 @@ boost::atomic<std::size_t> HttpClient::counter_(0);
 HttpClient::HttpClient(boost::asio::io_service& service)
     : id_(counter_), state_(kAvailable),
       service_(service), strand_(service), resolver_(service),
+      timeout_(service),
       is_ssl_(false), persistent_(false),
       request_(NULL), response_(NULL), host_(), port_(0) {
     TRACE_THIS_PTR_WITH_ID;
@@ -86,6 +87,8 @@ void HttpClient::AsyncSendRequest(HttpProxySession::Mode mode,
                        << "--------------------------------------------\n"
                        << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
                        << "\n--------------------------------------------";
+
+        timeout_.cancel(); // cancel the timer which is not triggered yet
 
         boost::asio::async_write(*socket_, boost::asio::buffer(request_->OutboundBuffer().data(), request_->OutboundBuffer().size()),
                                  strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
@@ -249,6 +252,10 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         // TODO do something here
         if(!persistent_)
             socket_->close();
+        else {
+            timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
+            timeout_.async_wait(boost::bind(&HttpClient::OnTimeout, this, boost::asio::placeholders::error));
+        }
         InvokeCallback(e);
         return;
     }
@@ -306,6 +313,10 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
         // TODO do something here
         if(!persistent_)
             socket_->close();
+        else {
+            timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
+            timeout_.async_wait(boost::bind(&HttpClient::OnTimeout, this, boost::asio::placeholders::error));
+        }
         InvokeCallback(e);
     }
 }
@@ -350,6 +361,22 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         // TODO do something here
         if(!persistent_)
             socket_->close();
+        else {
+            timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
+            timeout_.async_wait(boost::bind(&HttpClient::OnTimeout, this, boost::asio::placeholders::error));
+        }
         InvokeCallback(e);
+    }
+}
+
+void HttpClient::OnTimeout(const boost::system::error_code& e) {
+    if(e == boost::asio::error::operation_aborted)
+        XDEBUG_WITH_ID << "The timeout timer is cancelled.";
+    else if(e)
+        XERROR_WITH_ID << "Error occurred with the timer, message: " << e.message();
+    else if(timeout_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
+        XDEBUG_WITH_ID << "Socket timeout, close it.";
+        persistent_ = false;
+        socket_->close();
     }
 }
