@@ -10,7 +10,7 @@ boost::atomic<std::size_t> HttpProxySession::counter_(0);
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& service)
     : id_(counter_), state_(kWaiting), mode_(HTTP), persistent_(false),
-      strand_(service), local_socket_(Socket::Create(service)) {
+      strand_(service), local_socket_(Socket::Create(service)), timeout_(service) {
     TRACE_THIS_PTR_WITH_ID;
 }
 
@@ -41,6 +41,9 @@ void HttpProxySession::Start() {
 
 void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
                                          std::size_t size) {
+    if(persistent_)
+        timeout_.cancel(); // if this is a persistent connection, cancel the waiting timer
+
     if(e) {
         if(e == boost::asio::error::eof || SSL_SHORT_READ(e))
             XDEBUG_WITH_ID << "Browser closed the socket: " << local_socket_->to_string() << ".";
@@ -149,6 +152,17 @@ void HttpProxySession::OnResponseSent(const boost::system::error_code& e) {
     }
 }
 
+void HttpProxySession::OnTimeout(const boost::system::error_code& e) {
+    if(e == boost::asio::error::operation_aborted)
+        XDEBUG_WITH_ID << "The timeout timer is cancelled.";
+    else if(e)
+        XERROR_WITH_ID << "Error occurred with the timer, message: " << e.message();
+    else if(timeout_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
+        XDEBUG_WITH_ID << "Session timeout, close it.";
+        Terminate();
+    }
+}
+
 inline void HttpProxySession::ContinueReceiving() {
     XTRACE_WITH_ID << "This request is incomplete, continue to read from socket...";
     local_socket_->async_read_some(local_buffer_.prepare(2048), // TODO hard code
@@ -180,5 +194,7 @@ inline void HttpProxySession::reset() {
         persistent_ = false;
         request_.reset();
         response_.reset();
+        timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
+        timeout_.async_wait(boost::bind(&this_type::OnTimeout, this, boost::asio::placeholders::error));
     }
 }

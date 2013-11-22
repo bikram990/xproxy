@@ -50,11 +50,16 @@ public:
     void OnResponseReceived(const boost::system::error_code& e); // the callback
 
 private:
+    enum {
+        kDefaultTimeout = 60 // seconds
+    };
+
     HttpProxySession(boost::asio::io_service& service);
 
     void OnRequestReceived(const boost::system::error_code& e, std::size_t size);
     void OnSSLReplySent(const boost::system::error_code& e);
     void OnResponseSent(const boost::system::error_code& e);
+    void OnTimeout(const boost::system::error_code& e);
 
     void ContinueReceiving();
     void InitSSLContext();
@@ -71,6 +76,7 @@ private:
 
     boost::asio::io_service::strand strand_;
     std::unique_ptr<Socket> local_socket_;
+    boost::asio::deadline_timer timeout_;
 
     boost::asio::streambuf local_buffer_;
 
