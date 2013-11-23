@@ -129,7 +129,7 @@ void HttpClient::OnRemoteConnected(const boost::system::error_code& e) {
                    << boost::asio::buffer_cast<const char *>(request_->OutboundBuffer().data())
                    << "\n--------------------------------------------";
 
-    boost::asio::async_write(*socket_, request_->OutboundBuffer(),
+    boost::asio::async_write(*socket_, boost::asio::buffer(request_->OutboundBuffer().data(), request_->OutboundBuffer().size()),
                              strand_.wrap(boost::bind(&HttpClient::OnRemoteDataSent,
                                                       this,
                                                       boost::asio::placeholders::error)));
