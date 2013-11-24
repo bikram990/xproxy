@@ -62,8 +62,8 @@ void ProxyHandler::ProcessResponse() {
         return;
     }
     std::istream in(&response_->body());
-    std::getline(in, response_->status_line());
-    response_->status_line().erase(response_->status_line().size() - 1); // remove the last \r
+    std::getline(in, response_->InitialLine());
+    response_->InitialLine().erase(response_->InitialLine().size() - 1); // remove the last \r
     response_->ResetHeaders();
     std::string header;
     while(std::getline(in, header)) {
@@ -89,7 +89,7 @@ void ProxyHandler::ProcessResponse() {
             response_->AddHeader(name, value);
         }
     }
-    response_->body_lenth(response_->body().size());
+    response_->SetBodyLength(response_->body().size());
 }
 
 inline void ProxyHandler::BuildProxyRequest() {

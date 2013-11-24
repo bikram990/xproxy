@@ -168,12 +168,12 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
 
     // As async_read_until may return more data beyond the delimiter, so we only process the status line
     std::istream response(&remote_buffer_);
-    std::getline(response, response_->status_line());
-    response_->status_line().erase(response_->status_line().size() - 1); // remove the last \r
+    std::getline(response, response_->InitialLine());
+    response_->InitialLine().erase(response_->InitialLine().size() - 1); // remove the last \r
 
     XTRACE_WITH_ID << "Status line from remote server:\n"
                    << "--------------------------------------------\n"
-                   << response_->status_line()
+                   << response_->InitialLine()
                    << "\n--------------------------------------------";
 
     boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n\r\n",
@@ -251,7 +251,7 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
     }
 
     if(body_len > 0) {
-        response_->body_lenth(body_len);
+        response_->SetBodyLength(body_len);
         if(remote_buffer_.size() > 0)
             OnRemoteBodyReceived(boost::system::error_code());
         else
@@ -305,7 +305,7 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
        && body[size - 2] == '\r'
        && body[size - 1] == '\n') {
         XTRACE_WITH_ID << "The end of all chunks has been reached.";
-        response_->body_lenth(size);
+        response_->SetBodyLength(size);
         finished = true;
     }
 
@@ -346,7 +346,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
     XTRACE_WITH_ID << "Body from remote server, size: " << read
                    << ", body copied from raw stream to response, copied: " << copied
                    << ", current body size: " << response_->body().size() + copied
-                   << ", desired body size: " << response_->body_length();
+                   << ", desired body size: " << response_->BodyLength();
 
     if(copied < read) {
         // copied should always equal to read, so here just output an error log
@@ -357,7 +357,7 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
     response_->body().commit(copied);
     remote_buffer_.consume(copied);
 
-    if(response_->body().size() < response_->body_length()) { // there is more content
+    if(response_->body().size() < response_->BodyLength()) { // there is more content
         boost::asio::async_read(*socket_, remote_buffer_,
                                 boost::asio::transfer_at_least(1),
                                 strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,

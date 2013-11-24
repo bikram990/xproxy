@@ -78,8 +78,6 @@ private:
     std::unique_ptr<Socket> local_socket_;
     boost::asio::deadline_timer timeout_;
 
-    boost::asio::streambuf local_buffer_;
-
     std::unique_ptr<HttpRequest> request_;
     std::unique_ptr<HttpResponse> response_;
 };

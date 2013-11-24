@@ -10,7 +10,8 @@ boost::atomic<std::size_t> HttpProxySession::counter_(0);
 
 HttpProxySession::HttpProxySession(boost::asio::io_service& service)
     : id_(counter_), state_(kWaiting), mode_(HTTP), persistent_(false),
-      strand_(service), local_socket_(Socket::Create(service)), timeout_(service) {
+      strand_(service), local_socket_(Socket::Create(service)),
+      timeout_(service), request_(new HttpRequest) {
     TRACE_THIS_PTR_WITH_ID;
 }
 
@@ -30,8 +31,7 @@ void HttpProxySession::Terminate() {
 }
 
 void HttpProxySession::Start() {
-    boost::asio::streambuf::mutable_buffers_type buf = local_buffer_.prepare(4096); // TODO hard code
-    local_socket_->async_read_some(buf,
+    local_socket_->async_read_some(request_->InboundBuffer().prepare(4096), // TODO hard code
                                    strand_.wrap(boost::bind(&this_type::OnRequestReceived,
                                                             shared_from_this(),
                                                             boost::asio::placeholders::error,
@@ -53,19 +53,18 @@ void HttpProxySession::OnRequestReceived(const boost::system::error_code &e,
         return;
     }
 
-    local_buffer_.commit(size);
+    boost::asio::streambuf& buffer = request_->InboundBuffer();
+    buffer.commit(size);
 
     XDEBUG_WITH_ID << "Dump data from socket(size:" << size << ", session: " << this << "):\n"
                    << "--------------------------------------------\n"
-                   << std::string(boost::asio::buffer_cast<const char *>(local_buffer_.data()), local_buffer_.size())
+                   << std::string(boost::asio::buffer_cast<const char *>(buffer.data()), buffer.size())
                    << "\n--------------------------------------------";
 
-    if(state_ == kWaiting)
-        request_.reset(new HttpRequest());
-    else if(state_ == kSSLWaiting)
+    if(state_ == kSSLWaiting)
         request_->reset();
 
-    HttpRequest::State result = *request_ << local_buffer_;
+    HttpRequest::State result = request_->consume();
 
     if(result == HttpRequest::kIncomplete) {
         ContinueReceiving();
@@ -115,7 +114,7 @@ void HttpProxySession::OnSSLReplySent(const boost::system::error_code& e) {
     }
 
     InitSSLContext();
-    local_socket_->async_read_some(local_buffer_.prepare(4096), // TODO hard code
+    local_socket_->async_read_some(request_->InboundBuffer().prepare(4096), // TODO hard code
                                    strand_.wrap(boost::bind(&this_type::OnRequestReceived,
                                                             shared_from_this(), boost::asio::placeholders::error,
                                                             boost::asio::placeholders::bytes_transferred)));
@@ -165,7 +164,7 @@ void HttpProxySession::OnTimeout(const boost::system::error_code& e) {
 
 inline void HttpProxySession::ContinueReceiving() {
     XTRACE_WITH_ID << "This request is incomplete, continue to read from socket...";
-    local_socket_->async_read_some(local_buffer_.prepare(2048), // TODO hard code
+    local_socket_->async_read_some(request_->InboundBuffer().prepare(2048), // TODO hard code
                                    strand_.wrap(boost::bind(&this_type::OnRequestReceived,
                                                             shared_from_this(),
                                                             boost::asio::placeholders::error,
@@ -180,7 +179,7 @@ inline void HttpProxySession::InitSSLContext() {
 }
 
 inline void HttpProxySession::SendResponse(HttpResponse& response) {
-    XTRACE_WITH_ID << "Response is back, status line: " << response.status_line();
+    XTRACE_WITH_ID << "Response is back, status line: " << response.InitialLine();
     local_socket_->async_write(response.OutboundBuffer(),
                                strand_.wrap(boost::bind(&this_type::OnResponseSent,
                                                         shared_from_this(),
@@ -192,7 +191,7 @@ inline void HttpProxySession::reset() {
     if(persistent_) {
         state_ = kWaiting;
         persistent_ = false;
-        request_.reset();
+        request_.reset(new HttpRequest);
         response_.reset();
         timeout_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
         timeout_.async_wait(boost::bind(&this_type::OnTimeout, this, boost::asio::placeholders::error));

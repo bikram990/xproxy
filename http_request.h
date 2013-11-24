@@ -2,11 +2,11 @@
 #define HTTP_REQUEST_H
 
 #include <boost/asio.hpp>
-#include "http_header.h"
+#include "http_message.h"
 #include "log.h"
 
 
-class HttpRequest {
+class HttpRequest : public HttpMessage {
 public:
     enum State {
         kComplete = 0, // request is complete
@@ -14,16 +14,23 @@ public:
         kBadRequest
     };
 
-    HttpRequest() : buffer_built_(false), state_(kIncomplete),
-                    build_state_(kRequestStart), port_(80),
-                    major_version_(1), minor_version_(1), body_length_(0) {
+    HttpRequest() : state_(kIncomplete), build_state_(kRequestStart), port_(80),
+                    major_version_(1), minor_version_(1) {
         TRACE_THIS_PTR;
     }
-    ~HttpRequest() { TRACE_THIS_PTR; }
 
-    State operator<<(boost::asio::streambuf& stream);
-    void reset();
-    boost::asio::streambuf& OutboundBuffer();
+    virtual ~HttpRequest() { TRACE_THIS_PTR; }
+
+    State consume();
+
+    virtual void reset();
+
+    virtual void UpdateInitialLine() {
+        std::stringstream ss;
+        ss << method_ << ' ' << uri_ << ' '
+           << "HTTP/" << major_version_ << '.' << minor_version_;
+        initial_line_ = ss.str();
+    }
 
     const std::string& host() const { return host_; }
     short port() const { return port_; }
@@ -57,13 +64,6 @@ public:
         headers_.push_back(HttpHeader(name, value));
         return *this;
     }
-    HttpRequest& body(const boost::asio::streambuf& buf) {
-        std::size_t copied = boost::asio::buffer_copy(body_.prepare(buf.size()), buf.data());
-        body_.commit(copied);
-        return *this;
-    }
-
-    bool FindHeader(const std::string& name, std::string& value);
 
 private:
     enum BuildState {
@@ -74,22 +74,11 @@ private:
         kHeadersDone
     };
 
-    struct HeaderFinder {
-        std::string name;
-        HeaderFinder(const std::string& name) : name(name) {}
-        bool operator()(const HttpHeader& header) {
-            return header.name == name;
-        }
-    };
-
     void CanonicalizeUri();
 
     State consume(char current_byte);
     bool ischar(int c);
     bool istspecial(int c);
-
-    bool buffer_built_; // to indicate whether the raw buffer is built
-    boost::asio::streambuf raw_buffer_;
 
     State state_;
     BuildState build_state_;
@@ -100,19 +89,6 @@ private:
     std::string uri_;
     int major_version_;
     int minor_version_;
-    std::vector<HttpHeader> headers_;
-    boost::asio::streambuf body_;
-    std::size_t body_length_;
 };
-
-inline bool HttpRequest::FindHeader(const std::string& name, std::string& value) {
-    std::vector<HttpHeader>::iterator it = std::find_if(headers_.begin(),
-                                                        headers_.end(),
-                                                        HeaderFinder(name));
-    if(it == headers_.end())
-        return false;
-    value = it->value;
-    return true;
-}
 
 #endif // HTTP_REQUEST_H

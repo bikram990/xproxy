@@ -1,35 +1,39 @@
 #include <boost/lexical_cast.hpp>
 #include "http_request.h"
 
-HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
+HttpRequest::State HttpRequest::consume() {
     if(state_ != kIncomplete) {
         XERROR << "The request cannot accept more data, it is either completed or bad request.";
         return state_;
     }
-    if(stream.size() <= 0) {
+
+    if(raw_buffer_.size() <= 0) {
         XERROR << "The stream is empty.";
         state_ = kBadRequest;
         return state_;
     }
+
     if(build_state_ == kHeadersDone) { // headers are parsed but it is still incomplete, so it should be body
         if(body_length_ <= 0) {
             XERROR << "The body length is 0, but the state is still incomplete.";
             state_ = kBadRequest;
             return state_;
         }
-        if(body_length_ > stream.size()) {
+
+        if(body_length_ > raw_buffer_.size()) {
             state_ = kIncomplete;
             return state_;
         }
-        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_length_), stream.data());
+
+        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_length_), raw_buffer_.data());
         body_.commit(copied);
-        stream.consume(copied);
+        raw_buffer_.consume(copied);
         XDEBUG << "The request body length is: " << body_.size();
         state_ = kComplete;
         return state_;
     }
 
-    std::istream s(&stream);
+    std::istream s(&raw_buffer_);
     s >> std::noskipws;
 
     char c = 0;
@@ -46,14 +50,16 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
     if(FindHeader("Content-Length", content_length)) {
         body_length_ = boost::lexical_cast<std::size_t>(content_length);
         XDEBUG << "The Content-Length header: " << body_length_
-               << ", current stream size: " << stream.size();
-        if(body_length_ > stream.size()) {
+               << ", current stream size: " << raw_buffer_.size();
+
+        if(body_length_ > raw_buffer_.size()) {
             state_ = kIncomplete;
             return state_;
         }
-        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_length_), stream.data());
+
+        std::size_t copied = boost::asio::buffer_copy(body_.prepare(body_length_), raw_buffer_.data());
         body_.commit(copied);
-        stream.consume(copied);
+        raw_buffer_.consume(copied);
         XDEBUG << "The request body length is: " << body_.size();
     }
 
@@ -100,10 +106,7 @@ HttpRequest::State HttpRequest::operator<<(boost::asio::streambuf& stream) {
 void HttpRequest::reset() {
     XDEBUG << "Resetting request...";
 
-    if(buffer_built_) {
-        raw_buffer_.consume(raw_buffer_.size());
-        buffer_built_ = false;
-    }
+    this->HttpMessage::reset();
 
     state_ = kIncomplete;
     build_state_ = kRequestStart;
@@ -114,33 +117,6 @@ void HttpRequest::reset() {
     uri_ = "";
     major_version_ = 0;
     minor_version_ = 0;
-    headers_.clear();
-    if(body_.size() > 0)
-        body_.consume(body_.size());
-}
-
-boost::asio::streambuf& HttpRequest::OutboundBuffer() {
-    if(buffer_built_)
-        return raw_buffer_;
-
-    std::ostream buf(&raw_buffer_);
-
-    buf << method_ << ' ' << uri_ << ' '
-        << "HTTP/" << major_version_ << '.' << minor_version_ << "\r\n";
-
-    for(std::vector<HttpHeader>::iterator it = headers_.begin();
-        it != headers_.end(); ++it)
-        buf << it->name << ": " << it->value << "\r\n";
-
-    buf << "\r\n";
-
-    if(body_.size() > 0) {
-        std::size_t copied = boost::asio::buffer_copy(raw_buffer_.prepare(body_.size()), body_.data());
-        raw_buffer_.commit(copied);
-    }
-
-    buffer_built_ = true;
-    return raw_buffer_;
 }
 
 inline void HttpRequest::CanonicalizeUri() {
