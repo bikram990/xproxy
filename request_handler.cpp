@@ -61,35 +61,44 @@ void ProxyHandler::ProcessResponse() {
         XERROR << "No response from remote proxy server.";
         return;
     }
-    std::istream in(&response_->body());
-    std::getline(in, response_->InitialLine());
-    response_->InitialLine().erase(response_->InitialLine().size() - 1); // remove the last \r
-    response_->ResetHeaders();
-    std::string header;
-    while(std::getline(in, header)) {
-        if(header == "\r")
+
+    // consume the initial line and headers
+    std::istream s(&response_->OutboundBuffer());
+    std::string ignore;
+    while(std::getline(s, ignore)) {
+        if(ignore == "\r") // the end of headers
             break;
-
-        std::string::size_type sep_idx = header.find(':');
-        if(sep_idx == std::string::npos) {
-            XWARN << "Invalid header: " << header;
-            continue;
-        }
-
-        std::string name = header.substr(0, sep_idx);
-        std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
-        boost::algorithm::trim(name);
-        boost::algorithm::trim(value);
-        if(name == "Set-Cookie") {
-            boost::regex expr(", ([^ =]+(?:=|$))");
-            std::string replace("\r\nSet-Cookie: \\1");
-            value = boost::regex_replace(value, expr, replace);
-            response_->AddHeader(name, value);
-        } else {
-            response_->AddHeader(name, value);
-        }
     }
-    response_->SetBodyLength(response_->body().size());
+
+//    std::istream in(&response_->body());
+//    std::getline(in, response_->InitialLine());
+//    response_->InitialLine().erase(response_->InitialLine().size() - 1); // remove the last \r
+//    response_->ResetHeaders();
+//    std::string header;
+//    while(std::getline(in, header)) {
+//        if(header == "\r")
+//            break;
+
+//        std::string::size_type sep_idx = header.find(':');
+//        if(sep_idx == std::string::npos) {
+//            XWARN << "Invalid header: " << header;
+//            continue;
+//        }
+
+//        std::string name = header.substr(0, sep_idx);
+//        std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
+//        boost::algorithm::trim(name);
+//        boost::algorithm::trim(value);
+//        if(name == "Set-Cookie") {
+//            boost::regex expr(", ([^ =]+(?:=|$))");
+//            std::string replace("\r\nSet-Cookie: \\1");
+//            value = boost::regex_replace(value, expr, replace);
+//            response_->AddHeader(name, value);
+//        } else {
+//            response_->AddHeader(name, value);
+//        }
+//    }
+//    response_->SetBodyLength(response_->body().size());
 }
 
 inline void ProxyHandler::BuildProxyRequest() {

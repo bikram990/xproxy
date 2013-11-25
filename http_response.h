@@ -17,7 +17,19 @@ public:
     static void StockResponse(StatusCode status, const std::string& message,
                               const std::string& body, HttpResponse& response);
 
-    virtual void UpdateInitialLine() {}
+    void ConsumeInitialLine();
+    void ConsumeHeaders();
+    void ConsumeBody(bool update_body_length = true);
+
+    int StatusCode() const { return status_code_; }
+    const std::string& StatusMessage() const { return status_message_; }
+
+    virtual void UpdateInitialLine() {
+        std::stringstream ss;
+        ss << "HTTP/" << major_version_ << '.' << minor_version_
+           << ' ' << status_code_ << ' ' << status_message_;
+        initial_line_ = ss.str();
+    }
 
 private:
     struct ResponseTemplate {
@@ -28,7 +40,12 @@ private:
             : message(message), body(body) {}
     };
 
-    static std::map<StatusCode, ResponseTemplate> status_messages_;
+    static std::map<enum StatusCode, ResponseTemplate> status_messages_;
+
+    int major_version_;
+    int minor_version_;
+    int status_code_;
+    std::string status_message_;
 };
 
 #endif // HTTP_RESPONSE_H

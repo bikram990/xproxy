@@ -79,8 +79,6 @@ private:
     bool persistent_;
     std::unique_ptr<Socket> socket_;
 
-    boost::asio::streambuf remote_buffer_;
-
     HttpRequest *request_;
     HttpResponse *response_;
 

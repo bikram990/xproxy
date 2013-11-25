@@ -179,7 +179,8 @@ inline void HttpProxySession::InitSSLContext() {
 }
 
 inline void HttpProxySession::SendResponse(HttpResponse& response) {
-    XTRACE_WITH_ID << "Response is back, status line: " << response.InitialLine();
+    XTRACE_WITH_ID << "Response is back, status code and message : "
+                   << response.StatusCode() << ", " << response.StatusMessage();
     local_socket_->async_write(response.OutboundBuffer(),
                                strand_.wrap(boost::bind(&this_type::OnResponseSent,
                                                         shared_from_this(),

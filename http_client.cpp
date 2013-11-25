@@ -142,7 +142,7 @@ void HttpClient::OnRemoteDataSent(const boost::system::error_code& e) {
         return;
     }
 
-    boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n",
+    boost::asio::async_read_until(*socket_, response_->InboundBuffer(), "\r\n",
                                   strand_.wrap(boost::bind(&HttpClient::OnRemoteStatusLineReceived,
                                                            this,
                                                            boost::asio::placeholders::error)));
@@ -167,16 +167,14 @@ void HttpClient::OnRemoteStatusLineReceived(const boost::system::error_code& e) 
     }
 
     // As async_read_until may return more data beyond the delimiter, so we only process the status line
-    std::istream response(&remote_buffer_);
-    std::getline(response, response_->InitialLine());
-    response_->InitialLine().erase(response_->InitialLine().size() - 1); // remove the last \r
+    response_->ConsumeInitialLine();
 
-    XTRACE_WITH_ID << "Status line from remote server:\n"
+    XTRACE_WITH_ID << "Status code and message from remote server:\n"
                    << "--------------------------------------------\n"
-                   << response_->InitialLine()
+                   << response_->StatusCode() << ", " << response_->StatusMessage()
                    << "\n--------------------------------------------";
 
-    boost::asio::async_read_until(*socket_, remote_buffer_, "\r\n\r\n",
+    boost::asio::async_read_until(*socket_, response_->InboundBuffer(), "\r\n\r\n",
                                   strand_.wrap(boost::bind(&HttpClient::OnRemoteHeadersReceived,
                                                            this,
                                                            boost::asio::placeholders::error)));
@@ -191,58 +189,41 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
 
     XTRACE_WITH_ID << "Headers from remote server:\n"
                    << "--------------------------------------------\n"
-                   << boost::asio::buffer_cast<const char *>(remote_buffer_.data())
+                   << boost::asio::buffer_cast<const char *>(response_->InboundBuffer().data())
                    << "\n--------------------------------------------";
 
-    std::istream response(&remote_buffer_);
-    std::string header;
-    std::size_t body_len = 0;
-    bool chunked_encoding = false;
-    while(std::getline(response, header)) {
-        if(header == "\r") { // there is no more headers
-            //            XDEBUG_WITH_ID << "no more headers";
-            break;
-        }
+    response_->ConsumeHeaders();
 
-        std::string::size_type sep_idx = header.find(':');
-        if(sep_idx == std::string::npos) {
-            XWARN_WITH_ID << "Invalid header: " << header;
-            continue;
-        }
+    bool chunked = false;
+    std::string transfer_encoding;
+    if(response_->FindHeader("Transfer-Encoding", transfer_encoding)) {
+        XDEBUG_WITH_ID << "Transfer-Encoding header is found, value: " << transfer_encoding;
+        if(transfer_encoding == "chunked")
+            chunked = true;
+    }
 
-        std::string name = header.substr(0, sep_idx);
-        std::string value = header.substr(sep_idx + 1, header.length() - 1 - name.length() - 1); // remove the last \r
-        boost::algorithm::trim(name);
-        boost::algorithm::trim(value);
-        response_->AddHeader(name, value);
+    std::size_t body = 0;
+    std::string content_length;
+    if(response_->FindHeader("Content-Length", content_length)) {
+        if(chunked)
+            XWARN_WITH_ID << "Both Transfer-Encoding and Content-Length headers are found, but this would never happen.";
+        body = boost::lexical_cast<std::size_t>(content_length);
+    }
 
-        //        XTRACE_WITH_ID << "header name: " << name << ", value: " << value;
-
-        if(name == "Transfer-Encoding") {
-            XDEBUG_WITH_ID << "Transfer-Encoding header is found, value: " << value;
-            if(value == "chunked")
-                chunked_encoding = true;
-        }
-
-        if(name == "Content-Length") {
-            if(chunked_encoding)
-                XWARN_WITH_ID << "Both Transfer-Encoding and Content-Length headers are found";
-            boost::algorithm::trim(value);
-            body_len = boost::lexical_cast<std::size_t>(value);
-        }
-
-        std::transform(value.begin(), value.end(), value.begin(), std::ptr_fun<int, int>(std::tolower));
-        if(name == "Connection" && value == "keep-alive") {
+    std::string connection;
+    if(response_->FindHeader("Connection", connection)) {
+        std::transform(connection.begin(), connection.end(), connection.begin(), std::ptr_fun<int, int>(std::tolower));
+        if(connection == "keep-alive") {
             persistent_ = true;
             XDEBUG_WITH_ID << "This is a persistent connection.";
         }
     }
 
-    if(chunked_encoding) {
-        if(remote_buffer_.size() > 0)
+    if(chunked) {
+        if(response_->InboundBuffer().size() > 0)
             OnRemoteChunksReceived(boost::system::error_code());
         else
-            boost::asio::async_read(*socket_, remote_buffer_,
+            boost::asio::async_read(*socket_, response_->InboundBuffer(),
                                     boost::asio::transfer_at_least(1),
                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
                                                              this,
@@ -250,12 +231,12 @@ void HttpClient::OnRemoteHeadersReceived(const boost::system::error_code& e) {
         return;
     }
 
-    if(body_len > 0) {
-        response_->SetBodyLength(body_len);
-        if(remote_buffer_.size() > 0)
+    if(body > 0) {
+        response_->SetBodyLength(body); // we have to record the body length here
+        if(response_->InboundBuffer().size() > 0)
             OnRemoteBodyReceived(boost::system::error_code());
         else
-            boost::asio::async_read(*socket_, remote_buffer_,
+            boost::asio::async_read(*socket_, response_->InboundBuffer(),
                                     boost::asio::transfer_at_least(1),
                                     strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
                                                              this,
@@ -281,21 +262,7 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
         return;
     }
 
-    std::size_t read = remote_buffer_.size();
-    boost::asio::streambuf::mutable_buffers_type buf = response_->body().prepare(read);
-    std::size_t copied = boost::asio::buffer_copy(buf, remote_buffer_.data());
-
-    XTRACE_WITH_ID << "Chunk from remote server, size: " << read
-                   << ", body copied from raw stream to response, copied: " << copied;
-
-    if(copied < read) {
-        // copied should always equal to read, so here just output an error log
-        XERROR_WITH_ID << "The copied size(" << copied << ") is less than read size(" << read
-                       << "), but this should never happen.";
-    }
-
-    response_->body().commit(copied);
-    remote_buffer_.consume(copied);
+    response_->ConsumeBody();
 
     bool finished = false;
     const char *body = boost::asio::buffer_cast<const char *>(response_->body().data());
@@ -310,7 +277,7 @@ void HttpClient::OnRemoteChunksReceived(const boost::system::error_code& e) {
     }
 
     if(!finished) {
-        boost::asio::async_read(*socket_, remote_buffer_,
+        boost::asio::async_read(*socket_, response_->InboundBuffer(),
                                 boost::asio::transfer_at_least(1),
                                 strand_.wrap(boost::bind(&HttpClient::OnRemoteChunksReceived,
                                                          this,
@@ -339,26 +306,10 @@ void HttpClient::OnRemoteBodyReceived(const boost::system::error_code& e) {
         }
     }
 
-    std::size_t read = remote_buffer_.size();
-    boost::asio::streambuf::mutable_buffers_type buf = response_->body().prepare(read);
-    std::size_t copied = boost::asio::buffer_copy(buf, remote_buffer_.data());
-
-    XTRACE_WITH_ID << "Body from remote server, size: " << read
-                   << ", body copied from raw stream to response, copied: " << copied
-                   << ", current body size: " << response_->body().size() + copied
-                   << ", desired body size: " << response_->BodyLength();
-
-    if(copied < read) {
-        // copied should always equal to read, so here just output an error log
-        XERROR_WITH_ID << "The copied size(" << copied << ") is less than read size(" << read
-                       << "), but this should never happen.";
-    }
-
-    response_->body().commit(copied);
-    remote_buffer_.consume(copied);
+    response_->ConsumeBody(false);
 
     if(response_->body().size() < response_->BodyLength()) { // there is more content
-        boost::asio::async_read(*socket_, remote_buffer_,
+        boost::asio::async_read(*socket_, response_->InboundBuffer(),
                                 boost::asio::transfer_at_least(1),
                                 strand_.wrap(boost::bind(&HttpClient::OnRemoteBodyReceived,
                                                          this,

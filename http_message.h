@@ -20,9 +20,9 @@ public:
 
     virtual ~HttpMessage() {}
 
-    std::string& InitialLine() { return initial_line_; }
+    const std::string& InitialLine() const { return initial_line_; }
 
-    bool FindHeader(const std::string& name, std::string& value) {
+    bool FindHeader(const std::string& name, std::string& value) const {
         auto it = std::find_if(headers_.begin(), headers_.end(), HeaderFinder(name));
         if(it == headers_.end())
             return false;
@@ -30,9 +30,7 @@ public:
         return true;
     }
 
-    std::size_t BodyLength() {
-        return body_length_;
-    }
+    std::size_t BodyLength() { return body_length_; }
 
     boost::asio::streambuf& body() { return body_; }
 
@@ -84,7 +82,7 @@ public:
         return *this;
     }
 
-    void ResetHeaders() { headers_.clear(); }
+    // void ResetHeaders() { headers_.clear(); }
 
     virtual void reset() {
         initial_line_.clear();
