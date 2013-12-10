@@ -5,7 +5,7 @@
 #include "common.h"
 #include "log.h"
 
-class Socket {
+class Socket : private boost::noncopyable {
 public:
     typedef Socket this_type;
 
