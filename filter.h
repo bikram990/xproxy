@@ -19,6 +19,8 @@ public:
     virtual ~Filter() {}
 
     virtual FilterResult process(const HttpObject& object) = 0;
+
+    virtual int priority() = 0;
 };
 
 #endif // FILTER_H
