@@ -4,6 +4,8 @@
 #include <list>
 #include "filter.h"
 
+class HttpObject;
+
 class FilterChain {
 public:
     void RegisterFilter(const Filter& filter) {
