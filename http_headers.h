@@ -40,6 +40,7 @@ public:
         return true;
     }
 
+private:
     virtual void UpdateByteBuffer() {
         content_->reset();
         for(auto it = headers_.begin(); it != headers_.end(); ++it)
@@ -48,7 +49,6 @@ public:
         content_ << "\r\n";
     }
 
-private:
     bool match(const std::string& desired, const HttpHeader& actual) {
         return desired == actual.name;
     }
