@@ -7,6 +7,8 @@ class HttpChunk : public HttpObject {
 public:
     HttpChunk() : HttpObject(), last_(false) {}
 
+    HttpChunk(SharedBuffer buffer) : HttpObject(buffer), last(false) {}
+
     virtual ~HttpChunk() {}
 
     void SetLast(bool value) { last_ = value; }

@@ -7,6 +7,8 @@ class HttpObject : public virtual ByteConvertible {
 public:
     HttpObject() : modified_(true) {} // TODO true or false?
 
+    HttpObject(SharedBuffer buffer) : modified_(true), content_(buffer) {} // TODO true or false?
+
     virtual ~HttpObject() {}
 
     virtual SharedBuffer ByteContent() {
