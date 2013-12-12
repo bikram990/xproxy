@@ -5,7 +5,7 @@
 
 class HttpRequestInitial : public HttpInitial {
 public:
-    HttpRequestInitial() : HttpInitial() {}
+    virtual ~HttpRequestInitial() {}
 
 private:
     virtual void UpdateLineString() {
