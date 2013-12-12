@@ -8,9 +8,11 @@ class HttpObject;
 
 class FilterChain {
 public:
-    void RegisterFilter(const Filter& filter) {
+    virtual ~FilterChain() {}
+
+    void RegisterFilter(Filter *filter) {
         for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-            if(it->priority() >= filter.priority()) { // TODO check if there is bug here
+            if((*it)->priority() >= filter->priority()) { // TODO check if there is bug here
                 filters_.insert(it, filter);
                 break;
             }
@@ -19,7 +21,7 @@ public:
 
     void filter(const HttpObject& object) {
         for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-            Filter::FilterResult result = it->process(object);
+            Filter::FilterResult result = (*it)->process(object);
             switch(result) {
             case Filter::kSkip:
                 // TODO add logic here
@@ -35,7 +37,7 @@ public:
     }
 
 private:
-    std::list filters_;
+    std::list<Filter*> filters_;
 };
 
 #endif // FILTER_CHAIN_H
