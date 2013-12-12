@@ -9,7 +9,7 @@ public:
 
     virtual ~HttpObject() {}
 
-    virtual SharedBuffer BinaryContent() {
+    virtual SharedBuffer ByteContent() {
         if(!modified_)
             return content_;
 

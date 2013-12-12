@@ -6,13 +6,13 @@
 /**
  * @brief The ByteConvertible class
  *
- * Classes inherit this interface should can be converted into binary content
+ * Classes inherit from this interface should can be converted into byte content
  */
 class ByteConvertible {
 public:
     virtual ~ByteConvertible() {}
 
-    virtual SharedBuffer BinaryContent() = 0;
+    virtual SharedBuffer ByteContent() = 0;
 };
 
 #endif // BYTE_CONVERTIBLE_H
