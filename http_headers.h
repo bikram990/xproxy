@@ -15,7 +15,7 @@ struct HttpHeader {
 
 class HttpHeaders : public HttpObject {
 public:
-    HttpHeaders() : modified_(true) {} // TODO true or false?
+    virtual ~HttpHeaders() {}
 
     void PushBack(HttpHeader&& header) {
         headers_.push_back(header);
@@ -40,17 +40,12 @@ public:
         return true;
     }
 
-    virtual SharedBuffer BinaryContent() {
-        if(!modified_)
-            return content_;
-
+    virtual void UpdateByteBuffer() {
         content_->reset();
         for(auto it = headers_.begin(); it != headers_.end(); ++it)
             content_ << it->name << ": " << it->value << "\r\n";
 
-        modified_ = false;
-
-        return content_;
+        content_ << "\r\n";
     }
 
 private:
@@ -58,7 +53,6 @@ private:
         return desired == actual.name;
     }
 
-    bool modified_;
     std::vector<HttpHeader> headers_;
 };
 
