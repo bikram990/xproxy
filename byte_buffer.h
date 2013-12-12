@@ -66,8 +66,10 @@ public:
     }
 
     ByteBuffer& operator<<(boost::asio::streambuf& stream) {
-        return operator<<(std::make_pair(boost::asio::buffer_cast<const char*>(stream.data()),
-                                         stream.size()));
+        operator<<(std::make_pair(boost::asio::buffer_cast<const char*>(stream.data()),
+                                  stream.size()));
+        stream.consume(stream.size());
+        return *this;
     }
 
     pointer_type data() { return data_; }
@@ -97,5 +99,22 @@ private:
 };
 
 typedef boost::shared_ptr<ByteBuffer> SharedBuffer;
+
+/**
+ * @brief The SharedBufferSequence class
+ *
+ * A helper class
+ */
+class SharedBufferSequence {
+public:
+    void reset() {
+        for(auto it = buffers_->begin(); it != buffers_->end(); ++it) {
+            it->reset();
+        }
+    }
+
+private:
+    boost::shared_ptr<std::list<SharedBuffer>> buffers_;
+};
 
 #endif // BYTE_BUFFER_H
