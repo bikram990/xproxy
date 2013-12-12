@@ -1,7 +1,7 @@
 #ifndef BYTE_CONVERTIBLE_H
 #define BYTE_CONVERTIBLE_H
 
-class SharedBuffer;
+#include "byte_buffer.h"
 
 /**
  * @brief The ByteConvertible class
