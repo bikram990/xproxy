@@ -12,9 +12,6 @@ class HttpChunk;
  * class, so it does not inherit from HttpObject.
  */
 class HttpBody {
-public:
-    virtual ~HttpBody() {}
-
 private:
     std::vector<HttpChunk> chunks_;
 };

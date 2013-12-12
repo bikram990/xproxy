@@ -1,22 +1,22 @@
 #ifndef DECODER_H
 #define DECODER_H
 
-class SharedBuffer;
+namespace boost { namespace asio { class streambuf; } }
 
 /**
  * @brief The Decoder class
  *
- * Classes inherit this interface are used to decode binary content into object
+ * Classes inherit from this interface are used to decode byte content into object
  */
 class Decoder {
 public:
-    enum DecodeState {
+    enum DecodeResult {
         kFailure, kContinue, kFinished
     };
 
     virtual ~Decoder() {}
 
-    virtual DecodeState decode(const SharedBuffer& buffer) = 0;
+    virtual DecodeResult decode(boost::asio::streambuf& buffer) = 0;
 };
 
 #endif // DECODER_H
