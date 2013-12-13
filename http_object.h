@@ -5,9 +5,14 @@
 
 class HttpObject : public virtual ByteConvertible {
 public:
-    HttpObject() : modified_(true) {} // TODO true or false?
+    enum Type {
+        kHttpObject = 0, kHttpInitial, kHttpHeaders, kHttpChunk,
+        kHttpRequestInitial, kHttpResponseInitial
+    };
 
-    HttpObject(SharedBuffer buffer) : modified_(true), content_(buffer) {} // TODO true or false?
+    HttpObject(Type type = kHttpObject) : type_(type), modified_(true) {} // TODO true or false?
+
+    HttpObject(SharedBuffer buffer, Type type = kHttpObject) : HttpObject(type), content_(buffer) {}
 
     virtual ~HttpObject() {}
 
@@ -21,11 +26,16 @@ public:
         return content_;
     }
 
+    virtual Type type() const { return type_; }
+
 protected:
     virtual void UpdateByteBuffer() = 0;
 
+    Type type_;
     bool modified_;
     SharedBuffer content_;
 };
+
+typedef boost::shared_ptr<HttpObject> HttpObjectPtr;
 
 #endif // HTTP_OBJECT_H
