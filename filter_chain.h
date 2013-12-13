@@ -2,42 +2,36 @@
 #define FILTER_CHAIN_H
 
 #include <list>
-#include "filter.h"
+#include "connection.h"
+#include "http_container.h"
 
+class Filter;
 class HttpObject;
 
 class FilterChain {
 public:
-    virtual ~FilterChain() {}
+    virtual ~FilterChain() {} // TODO delete all filters?
 
-    void RegisterFilter(Filter *filter) {
-        for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-            if((*it)->priority() >= filter->priority()) { // TODO check if there is bug here
-                filters_.insert(it, filter);
-                break;
-            }
-        }
-    }
+    void RegisterFilter(Filter *filter);
 
-    void filter(const HttpObject& object) {
-        for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-            Filter::FilterResult result = (*it)->process(object);
-            switch(result) {
-            case Filter::kSkip:
-                // TODO add logic here
-                break;
-            case Filter::kStop:
-                // TODO add logic here
-                break;
-            case Filter::kContinue:
-            default:
-                // do nothing here
-            }
-        }
-    }
+    void filter();
+
+    Connection *ClientConnection() { return client_connection_.get(); }
+
+    Connection *ServerConnection() { return server_connection_.get(); }
+
+    HttpContainer *RequestContainer() { return request_.get(); }
+
+    HttpContainer *ResponseContainer() { return response_.get(); }
 
 private:
     std::list<Filter*> filters_;
+
+    ConnectionPtr client_connection_;
+    ConnectionPtr server_connection_;
+
+    HttpContainerPtr request_;
+    HttpContainerPtr response_;
 };
 
 #endif // FILTER_CHAIN_H
