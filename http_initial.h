@@ -5,7 +5,23 @@
 
 class HttpInitial : public HttpObject {
 public:
+    HttpInitial() : major_version_(1), minor_version_(1) {}
+
     virtual ~HttpInitial() {}
+
+    int GetMajorVersion() const { return major_version_; }
+
+    void SetMajorVersion(int version) {
+        modified_ = true;
+        major_version_ = version;
+    }
+
+    int GetMinorVersion() const { return minor_version_; }
+
+    void SetMinorVersion(int version) {
+        modified_ = true;
+        minor_version_ = version;
+    }
 
 private:
     virtual void UpdateByteBuffer() {
@@ -18,6 +34,8 @@ private:
 protected:
     virtual void UpdateLineString() = 0;
 
+    int major_version_;
+    int minor_version_;
     std::string line_;
 };
 

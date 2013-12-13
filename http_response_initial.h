@@ -5,7 +5,26 @@
 
 class HttpResponseInitial : public HttpInitial {
 public:
+    HttpResponseInitial()
+        : HttpInitial(), status_code_(200), status_message_("OK") {}
+
     virtual ~HttpResponseInitial() {}
+
+    int GetStatusCode() const { return status_code_; }
+
+    void SetStatusCode(int code) {
+        modified_ = true;
+        status_code_ = code;
+    }
+
+    std::string& StatusMessage() {
+        modified_ = true;
+        return status_message_;
+    }
+
+    const std::string& StatusMessage() const {
+        return status_message_;
+    }
 
 private:
     virtual void UpdateLineString() {
@@ -15,8 +34,6 @@ private:
         line_ = ss.str();
     }
 
-    int major_version_;
-    int minor_version_;
     int status_code_;
     std::string status_message_;
 };

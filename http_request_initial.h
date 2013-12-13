@@ -5,7 +5,28 @@
 
 class HttpRequestInitial : public HttpInitial {
 public:
+    HttpResponseInitial()
+        : HttpInitial(), method_("GET") {}
+
     virtual ~HttpRequestInitial() {}
+
+    std::string& method() {
+        modified_ = true;
+        return method_;
+    }
+
+    const std::string& method() const {
+        return method_;
+    }
+
+    std::string& uri() {
+        modified_ = true;
+        return uri_;
+    }
+
+    const std::string& uri() const {
+        return uri_;
+    }
 
 private:
     virtual void UpdateLineString() {
@@ -17,8 +38,6 @@ private:
 
     std::string method_;
     std::string uri_;
-    int major_version_;
-    int minor_version_;
 };
 
 #endif // HTTP_REQUEST_INITIAL_H
