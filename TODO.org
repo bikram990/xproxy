@@ -1,0 +1,8 @@
+#+TITLE:       Thing To Be Done
+#+AUTHOR:      Kelvin Hu
+#+EMAIL:       ini.kelvin@gmail.com
+#+DATE:        2013-12-13 Fri
+
+
+1. a =FilterContext= class is needed, to pass contents that filters needed
+2. in =HttpRequestDecoder= and =HttpResponseDecoder=, use =std::unique_ptr= instead naked =new= operation
