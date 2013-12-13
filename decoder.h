@@ -11,12 +11,15 @@ namespace boost { namespace asio { class streambuf; } }
 class Decoder {
 public:
     enum DecodeResult {
-        kFailure, kContinue, kFinished
+        kFailure,    // decoding failed, invalid data
+        kIncomplete, // need more data to decode an object
+        kComplete,   // an object is completed, but more objects are expected
+        kFinished    // all objects are decoded without any error
     };
 
     virtual ~Decoder() {}
 
-    virtual DecodeResult decode(boost::asio::streambuf& buffer) = 0;
+    virtual DecodeResult decode(boost::asio::streambuf& buffer, HttpObject **object) = 0;
 };
 
 #endif // DECODER_H
