@@ -1,0 +1,84 @@
+#ifndef CONNECTION_H
+#define CONNECTION_H
+
+#include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
+#include "decoder.h"
+#include "log.h"
+#include "socket.h"
+
+class FilterChain;
+
+class Connection : public boost::enable_shared_from_this<Connection>,
+                   private boost::noncopyable {
+public:
+    typedef boost::shared_ptr<Connection> Ptr;
+    typedef Connection this_type;
+
+    enum {
+        kDefaultBufferSize =2048
+    };
+
+    enum ConnectionState {
+        kAwaiting,   // waiting for connecting
+        kReading,    // reading data from socket
+        kConnecting, // connecting to remote peer
+        kWriting,    // writing data to socket
+    };
+
+    static Ptr *Create(boost::asio::io_service& service);
+
+    virtual ~Connection() {
+        if(decoder_) delete decoder_;
+        if(socket_) delete socket_;
+    }
+
+    void AsyncRead() {
+        socket_->async_read_some(in_,
+                                 boost::bind(&this_type::Callback,
+                                             shared_from_this(),
+                                             boost::asio::placeholders::error,
+                                             boost::asio::placeholders::bytes_transferred));
+        become(kReading);
+    }
+
+    template<typename BufferSequence>
+    void AsyncWrite(boost::shared_ptr<BufferSequence> buffers) {
+        if(!connected_) {
+            AsyncConnect();
+            become(kConnecting);
+            return;
+        }
+        socket_->async_write_some(buffers, boost::bind(&this_type::Callback, shared_from_this(), boost::asio::placeholders::error));
+        become(kWriting);
+    }
+
+    virtual void StoreRemoteAddress(const std::string& host, short port) = 0;
+
+    virtual void AsyncConnect() = 0;
+
+protected:
+    explicit Connection(boost::asio::io_service& service)
+        : decoder_(nullptr), in_(kDefaultBufferSize),
+          socket_(Socket::Create(service)), state_(kAwaiting) {}
+
+    void become(ConnectionState state) {
+        state_ = state;
+    }
+
+    virtual void Callback(const boost::system::error_code& e, std::size_t size = 0) = 0;
+
+protected:
+    Decoder *decoder_;
+    boost::asio::streambuf in_;
+    FilterChain *chain_;
+
+    bool connected_;
+
+private:
+    Socket *socket_;
+    ConnectionState state_;
+};
+
+typedef boost::shared_ptr<Connection> ConnectionPtr;
+#endif // CONNECTION_H
