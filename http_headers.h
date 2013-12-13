@@ -17,6 +17,8 @@ class HttpHeaders : public HttpObject {
 public:
     virtual ~HttpHeaders() {}
 
+    bool empty() const { return headers_.empty(); }
+
     void PushBack(HttpHeader&& header) {
         headers_.push_back(header);
         modified_ = true;
@@ -44,9 +46,9 @@ private:
     virtual void UpdateByteBuffer() {
         content_->reset();
         for(auto it = headers_.begin(); it != headers_.end(); ++it)
-            content_ << it->name << ": " << it->value << "\r\n";
+            *content_ << it->name << ": " << it->value << "\r\n";
 
-        content_ << "\r\n";
+        *content_ << "\r\n";
     }
 
     bool match(const std::string& desired, const HttpHeader& actual) {
