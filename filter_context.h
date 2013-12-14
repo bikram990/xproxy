@@ -10,7 +10,15 @@ class FilterContext : public Resettable {
 public:
     virtual ~FilterContext() {}
 
+    void SetClientConnection(ConnectionPtr connection) {
+        client_connection_ = connection;
+    }
+
     Connection *ClientConnection() const { return client_connection_.get(); }
+
+    void SetServerConnection(ConnectionPtr connection) {
+        server_connection_ = connection;
+    }
 
     Connection *ServerConnection() const { return server_connection_.get(); }
 
