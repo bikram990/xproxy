@@ -4,5 +4,8 @@
 #+DATE:        2013-12-13 Fri
 
 
-1. a =FilterContext= class is needed, to pass contents that filters needed
+1. +a =FilterContext= class is needed, to pass contents that filters needed+
+
 2. in =HttpRequestDecoder= and =HttpResponseDecoder=, use =std::unique_ptr= instead naked =new= operation
+
+3. make methods =start()=, =stop()= in =Connection= virtual, the implementation of =ServerConnection= and =ClientConnection= should be different
