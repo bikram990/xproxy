@@ -1,7 +1,9 @@
 #ifndef DECODER_H
 #define DECODER_H
 
-namespace boost { namespace asio { class streambuf; } }
+#include <boost/asio.hpp>
+
+class HttpObject;
 
 /**
  * @brief The Decoder class

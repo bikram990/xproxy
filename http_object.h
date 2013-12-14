@@ -12,7 +12,8 @@ public:
 
     HttpObject(Type type = kHttpObject) : type_(type), modified_(true) {} // TODO true or false?
 
-    HttpObject(SharedBuffer buffer, Type type = kHttpObject) : HttpObject(type), content_(buffer) {}
+    HttpObject(SharedBuffer buffer, Type type = kHttpObject)
+        : type_(type), modified_(true), content_(buffer) {}
 
     virtual ~HttpObject() {}
 

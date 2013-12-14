@@ -1,6 +1,17 @@
 #include "filter.h"
 #include "filter_chain.h"
+#include "filter_context.h"
 #include "log.h"
+
+FilterChain::FilterChain() : context_(new FilterContext) {}
+
+virtual FilterChain::~FilterChain() { // TODO delete all filters?
+    if(context_) delete context_;
+}
+
+virtual void FilterChain::reset() {
+    context_->reset();
+}
 
 void FilterChain::RegisterFilter(Filter *filter) {
     filter->SetFilterChain(this);

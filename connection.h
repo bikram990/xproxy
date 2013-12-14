@@ -102,4 +102,5 @@ private:
 };
 
 typedef boost::shared_ptr<Connection> ConnectionPtr;
+
 #endif // CONNECTION_H

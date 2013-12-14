@@ -2,34 +2,27 @@
 #define FILTER_CHAIN_H
 
 #include <list>
-#include "connection.h"
-#include "filter.h"
-#include "filter_context.h"
-#include "http_container.h"
 #include "resettable.h"
 
-class HttpObject;
+class Filter;
+class FilterContext;
 
 class FilterChain : public Resettable {
 public:
     typedef std::list<Filter*> container_type;
 
-    FilterChain() : context_(new FilterContext) {}
+    FilterChain();
 
-    virtual ~FilterChain() { // TODO delete all filters?
-        if(context_) delete context_;
-    }
+    virtual ~FilterChain();
 
     void RegisterFilter(Filter *filter);
 
     void FilterRequest();
     void FilterResponse();
 
-    FilterContext *FilterContext() const { return context_; }
+    class FilterContext *FilterContext() const { return context_; }
 
-    virtual void reset() {
-        context_->reset();
-    }
+    virtual void reset();
 
 private:
     void AddFilter(container_type& container, Filter *filter);
@@ -38,7 +31,7 @@ private:
     container_type request_filters_;
     container_type response_filters_;
 
-    FilterContext *context_;
+    class FilterContext *context_;
 };
 
 #endif // FILTER_CHAIN_H

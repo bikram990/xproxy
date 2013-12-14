@@ -1,22 +1,23 @@
 #ifndef FILTER_CONTEXT_H
 #define FILTER_CONTEXT_H
 
-#include <boost/shared_ptr.hpp>
-#include "connection.h"
-#include "http_container.h"
+#include "boost/shared_ptr.hpp"
 #include "resettable.h"
+
+class Connection;
+class HttpContainer;
 
 class FilterContext : public Resettable {
 public:
     virtual ~FilterContext() {}
 
-    void SetClientConnection(ConnectionPtr connection) {
+    void SetClientConnection(boost::shared_ptr<Connection> connection) {
         client_connection_ = connection;
     }
 
     Connection *ClientConnection() const { return client_connection_.get(); }
 
-    void SetServerConnection(ConnectionPtr connection) {
+    void SetServerConnection(boost::shared_ptr<Connection> connection) {
         server_connection_ = connection;
     }
 
@@ -34,13 +35,11 @@ public:
     }
 
 protected:
-    ConnectionPtr client_connection_;
-    ConnectionPtr server_connection_;
+    boost::shared_ptr<Connection> client_connection_;
+    boost::shared_ptr<Connection> server_connection_;
 
-    HttpContainerPtr request_;
-    HttpContainerPtr response_;
+    boost::shared_ptr<HttpContainer> request_;
+    boost::shared_ptr<HttpContainer> response_;
 };
-
-typedef boost::shared_ptr<FilterContext> FilterContextPtr;
 
 #endif // FILTER_CONTEXT_H
