@@ -54,7 +54,7 @@ public:
             case Decoder::kComplete:
             case Decoder::kFinished:
                 // TODO add logic here
-                chain_->RequestContainer()->AppendObject(object);
+                chain_->FilterContext()->ResponseContainer()->AppendObject(object);
                 chain_->filter();
                 break;
             default:

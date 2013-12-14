@@ -2,6 +2,7 @@
 #define PROXY_SERVER_H
 
 #include "connection_manager.h"
+#include "filter_chain_manager.h"
 #include "http_client_manager.h"
 #include "request_handler_manager.h"
 #include "singleton.h"
@@ -15,6 +16,10 @@ public:
 
     static ConnectionManager& ConnectionManager() {
         return *instance().connection_manager_;
+    }
+
+    static FilterChainManager& FilterChainManager() {
+        return *instance().chain_manager_;
     }
 
     static RequestHandlerManager& HandlerManager() {
@@ -48,8 +53,13 @@ private:
 
     bool init();
 
-    bool InitSessionManager() {
-        connection_manager_.reset(new HttpProxySessionManager());
+    bool InitChainManager() {
+        chain_manager_.reset(new FilterChainManager());
+        return true;
+    }
+
+    bool InitConnectionManager() {
+        connection_manager_.reset(new ConnectionManager());
         return true;
     }
 
@@ -87,6 +97,7 @@ private:
     ConnectionPtr current_connection_;
 
     std::unique_ptr<ConnectionManager> connection_manager_;
+    std::unique_ptr<FilterChainManager> chain_manager_;
     std::unique_ptr<RequestHandlerManager> handler_manager_;
     std::unique_ptr<HttpClientManager> client_manager_;
 };

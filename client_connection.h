@@ -32,7 +32,7 @@ protected:
             case Decoder::kComplete:
             case Decoder::kFinished:
                 // TODO add logic here
-                chain_->RequestContainer()->AppendObject(object);
+                chain_->FilterContext()->RequestContainer()->AppendObject(object);
                 chain_->filter();
                 break;
             default:

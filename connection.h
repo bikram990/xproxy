@@ -5,6 +5,7 @@
 #include <boost/noncopyable.hpp>
 #include "decoder.h"
 #include "log.h"
+#include "proxy_server.h"
 #include "socket.h"
 
 class FilterChain;
@@ -31,6 +32,9 @@ public:
     virtual ~Connection() {
         if(decoder_) delete decoder_;
         if(socket_) delete socket_;
+
+        if(chain_)
+            ProxyServer::FilterChainManager().ReleaseFilterChain(chain_);
     }
 
     boost::asio::ip::tcp::socket& socket() const {
@@ -38,10 +42,13 @@ public:
     }
 
     void start() {
+        chain_ = ProxyServer::FilterChainManager().RequireFilterChain();
         AsyncRead();
     }
 
     void stop() {
+        ProxyServer::FilterChainManager().ReleaseFilterChain(chain_);
+        chain_ = nullptr;
         socket_->close();
         ProxyServer::ConnectionManager().stop(shared_from_this());
     }
