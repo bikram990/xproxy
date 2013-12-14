@@ -3,18 +3,21 @@
 
 #include <list>
 #include "connection.h"
+#include "filter.h"
 #include "http_container.h"
 
-class Filter;
 class HttpObject;
 
 class FilterChain {
 public:
+    typedef std::list<Filter*> container_type;
+
     virtual ~FilterChain() {} // TODO delete all filters?
 
     void RegisterFilter(Filter *filter);
 
-    void filter();
+    void FilterRequest();
+    void FilterResponse();
 
     Connection *ClientConnection() { return client_connection_.get(); }
 
@@ -25,7 +28,11 @@ public:
     HttpContainer *ResponseContainer() { return response_.get(); }
 
 private:
-    std::list<Filter*> filters_;
+    void AddFilter(container_type& container, Filter *filter);
+    void filter(container_type& container);
+
+    container_type request_filters_;
+    container_type response_filters_;
 
     ConnectionPtr client_connection_;
     ConnectionPtr server_connection_;
