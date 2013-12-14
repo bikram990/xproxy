@@ -4,7 +4,7 @@
 
 void ConnectionManager::start(ConnectionPtr connection) {
     connections_.insert(session);
-    connection->AsyncRead();
+    connection->start();
 }
 
 void ConnectionManager::stop(ConnectionPtr connection) {
