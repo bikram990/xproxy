@@ -4,8 +4,9 @@
 #include <boost/shared_ptr.hpp>
 #include "connection.h"
 #include "http_container.h"
+#include "resettable.h"
 
-class FilterContext {
+class FilterContext : public Resettable {
 public:
     virtual ~FilterContext() {}
 
@@ -16,6 +17,13 @@ public:
     HttpContainer *RequestContainer() const { return request_.get(); }
 
     HttpContainer *ResponseContainer() const { return response_.get(); }
+
+    virtual void reset() {
+        client_connection_.reset();
+        server_connection_.reset();
+        request_.reset();
+        response_.reset();
+    }
 
 protected:
     ConnectionPtr client_connection_;
