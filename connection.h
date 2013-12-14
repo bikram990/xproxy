@@ -51,7 +51,7 @@ public:
         ProxyServer::FilterChainManager().ReleaseFilterChain(chain_);
         chain_ = nullptr;
         socket_->close();
-        ProxyServer::ConnectionManager().stop(shared_from_this());
+        ProxyServer::ClientConnectionManager().stop(shared_from_this());
     }
 
     void AsyncRead() {

@@ -60,8 +60,8 @@ void ProxyServer::start() {
 }
 
 bool ProxyServer::init() {
-    if(!InitServerConnectionManager() || !InitConnectionManager()
-            || !InitHandlerManager() || !InitChainManager())
+    if(!InitServerConnectionManager() || !InitClientConnectionManager()
+       || !InitChainManager() || !InitHandlerManager())
         return false;
 
     signals_.add(SIGINT);
@@ -94,14 +94,14 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
         return;
     }
     if(!e)
-        connection_manager_->start(current_connection_);
+        client_connection_manager_->start(current_connection_);
 
     StartAccept();
 }
 
 void ProxyServer::OnStopSignalReceived() {
     acceptor_.close();
-    connection_manager_->StopAll();
+    client_connection_manager_->StopAll();
     main_keeper_.reset();
     fetch_keeper_.reset();
 

@@ -1,7 +1,7 @@
 #ifndef PROXY_SERVER_H
 #define PROXY_SERVER_H
 
-#include "connection_manager.h"
+#include "client_connection_manager.h"
 #include "filter_chain_manager.h"
 #include "request_handler_manager.h"
 #include "server_connection_manager.h"
@@ -18,8 +18,8 @@ public:
         return *instance().server_connection_manager_;
     }
 
-    static ConnectionManager& ConnectionManager() {
-        return *instance().connection_manager_;
+    static ClientConnectionManager& ClientConnectionManager() {
+        return *instance().client_connection_manager_;
     }
 
     static FilterChainManager& FilterChainManager() {
@@ -58,13 +58,13 @@ private:
         return true;
     }
 
-    bool InitChainManager() {
-        chain_manager_.reset(new FilterChainManager());
+    bool InitClientConnectionManager() {
+        client_connection_manager_.reset(new ClientConnectionManager());
         return true;
     }
 
-    bool InitConnectionManager() {
-        connection_manager_.reset(new ConnectionManager());
+    bool InitChainManager() {
+        chain_manager_.reset(new FilterChainManager());
         return true;
     }
 
@@ -97,7 +97,7 @@ private:
     ConnectionPtr current_connection_;
 
     std::unique_ptr<ServerConnectionManager> server_connection_manager_;
-    std::unique_ptr<ConnectionManager> connection_manager_;
+    std::unique_ptr<ClientConnectionManager> client_connection_manager_;
     std::unique_ptr<FilterChainManager> chain_manager_;
     std::unique_ptr<RequestHandlerManager> handler_manager_;
 };
