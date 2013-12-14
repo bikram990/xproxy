@@ -356,7 +356,7 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
     }
 }
 
-inline void HttpRequestDecoder::DecodeBody(boost::asio::stream &buffer, HttpChunk *chunk) {
+inline void HttpRequestDecoder::DecodeBody(boost::asio::streambuf& buffer, HttpChunk *chunk) {
     /***********************************************************************
      * Here why dont we make a HttpChunk and push it into the body?
      * => As http request always has small body, so we wait until all the

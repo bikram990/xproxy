@@ -3,20 +3,16 @@
 
 #include "decoder.h"
 
+class HttpResponseInitial;
 class HttpChunk;
 class HttpHeaders;
 class HttpObject;
 
 class HttpResponseDecoder : public Decoder {
 public:
-    HttpResponseDecoder()
-        : result_(kIncomplete), state_(kResponseStart),
-          temp_object_(nullptr), body_length_(0), chunked_(false) {}
+    HttpResponseDecoder();
 
-    virtual ~HttpResponseDecoder() {
-        if(temp_object_)
-            delete temp_object_;
-    }
+    virtual ~HttpResponseDecoder();
 
     virtual DecodeResult decode(boost::asio::streambuf& buffer, HttpObject **object);
 
@@ -30,7 +26,7 @@ private:
         kHeadersDone
     };
 
-    void DecodeInitialLine(boost::asio::streambuf& buffer, HttpRequestInitial *initial);
+    void DecodeInitialLine(boost::asio::streambuf& buffer, HttpResponseInitial *initial);
     void DecodeHeaders(boost::asio::streambuf& buffer, HttpHeaders *headers);
     void DecodeBody(boost::asio::streambuf& buffer, HttpChunk *chunk);
 

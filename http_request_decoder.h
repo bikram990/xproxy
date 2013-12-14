@@ -29,9 +29,9 @@ private:
         kHeadersDone
     };
 
-    void DecodeInitialLine(boost::asio::stream& buffer, HttpRequestInitial *initial);
-    void DecodeHeaders(boost::asio::stream& buffer, HttpHeaders *headers);
-    void DecodeBody(boost::asio::stream& buffer, HttpChunk *chunk);
+    void DecodeInitialLine(boost::asio::streambuf& buffer, HttpRequestInitial *initial);
+    void DecodeHeaders(boost::asio::streambuf& buffer, HttpHeaders *headers);
+    void DecodeBody(boost::asio::streambuf& buffer, HttpChunk *chunk);
 
     DecodeResult consume(char c);
     bool HttpRequestDecoder::ischar(int c);

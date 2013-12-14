@@ -12,7 +12,13 @@
 #define END  Decoder::kFinished   // the end of decoding (END)
 
 HttpResponseDecoder::HttpResponseDecoder()
-    : result_(kIncomplete), state_(kResponseStart) {}
+    : result_(kIncomplete), state_(kResponseStart),
+      temp_object_(nullptr), body_length_(0), chunked_(false) {}
+
+HttpResponseDecoder::~HttpResponseDecoder() {
+    if(temp_object_)
+        delete temp_object_;
+}
 
 Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer, HttpObject **object) {
     if(!object) {

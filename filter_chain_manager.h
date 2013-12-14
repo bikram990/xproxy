@@ -3,7 +3,7 @@
 
 #include <list>
 #include <boost/noncopyable.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread.hpp>
 
 class FilterChain;
 class ProxyServer;

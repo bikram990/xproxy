@@ -3,13 +3,13 @@
 #include "filter_context.h"
 #include "log.h"
 
-FilterChain::FilterChain() : context_(new FilterContext) {}
+FilterChain::FilterChain() : context_(new class FilterContext) {}
 
-virtual FilterChain::~FilterChain() { // TODO delete all filters?
+FilterChain::~FilterChain() { // TODO delete all filters?
     if(context_) delete context_;
 }
 
-virtual void FilterChain::reset() {
+void FilterChain::reset() {
     context_->reset();
 }
 
@@ -43,17 +43,17 @@ void FilterChain::FilterResponse() {
 void FilterChain::AddFilter(container_type& container, Filter *filter) {
     for(auto it = container.begin(); it != container.end(); ++it) {
         if((*it)->priority() < filter->priority()) { // TODO check if there is bug here
-            filters_.insert(it, filter);
+            container.insert(it, filter);
             return;
         }
     }
 
-    filters_.push_back(filter);
+    container.push_back(filter);
 }
 
 void FilterChain::filter(container_type &container) {
     // TODO enhance the logic here
-    for(auto it = container.begin(); it != con.end(); ++it) {
+    for(auto it = container.begin(); it != container.end(); ++it) {
         Filter::FilterResult result = (*it)->process();
         switch(result) {
         // for skip and stop, we just return directly
@@ -64,6 +64,7 @@ void FilterChain::filter(container_type &container) {
         case Filter::kContinue:
         default:
             // do nothing here
+            ; // add the comma to pass the compilation
         }
     }
 }

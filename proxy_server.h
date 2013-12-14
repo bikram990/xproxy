@@ -3,7 +3,6 @@
 
 #include "client_connection_manager.h"
 #include "filter_chain_manager.h"
-#include "request_handler_manager.h"
 #include "server_connection_manager.h"
 #include "singleton.h"
 
@@ -14,20 +13,16 @@ public:
         instance().start();
     }
 
-    static ServerConnectionManager& ServerConnectionManager() {
+    static class ServerConnectionManager& ServerConnectionManager() {
         return *instance().server_connection_manager_;
     }
 
-    static ClientConnectionManager& ClientConnectionManager() {
+    static class ClientConnectionManager& ClientConnectionManager() {
         return *instance().client_connection_manager_;
     }
 
-    static FilterChainManager& FilterChainManager() {
+    static class FilterChainManager& FilterChainManager() {
         return *instance().chain_manager_;
-    }
-
-    static RequestHandlerManager& HandlerManager() {
-        return *instance().handler_manager_;
     }
 
     static boost::asio::io_service& MainService() {
@@ -54,22 +49,17 @@ private:
     bool init();
 
     bool InitServerConnectionManager() {
-        server_connection_manager_.reset(new ServerConnectionManager(fetch_service_));
+        server_connection_manager_.reset(new class ServerConnectionManager(fetch_service_));
         return true;
     }
 
     bool InitClientConnectionManager() {
-        client_connection_manager_.reset(new ClientConnectionManager());
+        client_connection_manager_.reset(new class ClientConnectionManager());
         return true;
     }
 
     bool InitChainManager() {
-        chain_manager_.reset(new FilterChainManager());
-        return true;
-    }
-
-    bool InitHandlerManager() {
-        handler_manager_.reset(new RequestHandlerManager());
+        chain_manager_.reset(new class FilterChainManager());
         return true;
     }
 
@@ -94,12 +84,11 @@ private:
     boost::asio::ip::tcp::acceptor acceptor_;
 
     // HttpProxySession::Ptr current_session_;
-    ConnectionPtr current_connection_;
+    boost::shared_ptr<Connection> current_connection_;
 
-    std::unique_ptr<ServerConnectionManager> server_connection_manager_;
-    std::unique_ptr<ClientConnectionManager> client_connection_manager_;
-    std::unique_ptr<FilterChainManager> chain_manager_;
-    std::unique_ptr<RequestHandlerManager> handler_manager_;
+    std::unique_ptr<class ServerConnectionManager> server_connection_manager_;
+    std::unique_ptr<class ClientConnectionManager> client_connection_manager_;
+    std::unique_ptr<class FilterChainManager> chain_manager_;
 };
 
 #endif // PROXY_SERVER_H

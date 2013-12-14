@@ -2,6 +2,7 @@
 #define HTTP_HEADERS_H
 
 #include <vector>
+#include <boost/bind.hpp>
 #include "http_object.h"
 
 struct HttpHeader {
@@ -35,7 +36,7 @@ public:
 
     bool find(const std::string& name, std::string& value) const {
         auto it = std::find_if(headers_.begin(), headers_.end(),
-                               boost::bind(&HttpHeaders::match, name, _1));
+                               boost::bind(&HttpHeaders::match, this, name, _1));
         if(it == headers_.end())
             return false;
         value = it->value;

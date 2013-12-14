@@ -5,6 +5,7 @@
 #include <boost/noncopyable.hpp>
 #include "decoder.h"
 #include "filter_chain.h"
+#include "filter_context.h"
 #include "log.h"
 #include "proxy_server.h"
 #include "socket.h"
@@ -55,7 +56,7 @@ public:
     }
 
     void AsyncRead() {
-        socket_->async_read_some(in_,
+        socket_->async_read_some(in_.prepare(kDefaultBufferSize),
                                  boost::bind(&this_type::Callback,
                                              shared_from_this(),
                                              boost::asio::placeholders::error,

@@ -1,6 +1,7 @@
+#include "server_connection.h"
 #include "server_connection_manager.h"
 
-ConnectionPtr *ServerConnectionManager::RequireConnection(const std::string &host, short port) {
+ConnectionPtr ServerConnectionManager::RequireConnection(const std::string &host, short port) {
     boost::lock_guard<boost::mutex> lock(lock_);
 
     if(connections_.size() > 0) {

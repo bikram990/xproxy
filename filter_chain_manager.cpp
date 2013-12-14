@@ -10,7 +10,7 @@ FilterChain *FilterChainManager::RequireFilterChain() {
         return chain;
     }
 
-    std::unique_ptr<FilterChain> chain = std::make_unique();
+    std::unique_ptr<FilterChain> chain(new FilterChain);
     // TODO register filters here
     return chain.release();
 }

@@ -60,8 +60,7 @@ void ProxyServer::start() {
 }
 
 bool ProxyServer::init() {
-    if(!InitServerConnectionManager() || !InitClientConnectionManager()
-       || !InitChainManager() || !InitHandlerManager())
+    if(!InitServerConnectionManager() || !InitClientConnectionManager() || !InitChainManager())
         return false;
 
     signals_.add(SIGINT);
