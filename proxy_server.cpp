@@ -1,5 +1,6 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
+#include "client_connection.h"
 #include "common.h"
 #include "http_client_manager.h"
 #include "http_proxy_session_manager.h"
@@ -80,8 +81,8 @@ void ProxyServer::StartAccept() {
     if(state_ == kStopped)
         return;
 
-    current_session_.reset(HttpProxySession::Create(main_service_));
-    acceptor_.async_accept(current_session_->LocalSocket(),
+    current_connection_.reset(new ClientConnection(main_service_));
+    acceptor_.async_accept(current_connection_->socket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));
 }
@@ -92,14 +93,14 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
         return;
     }
     if(!e)
-        session_manager_->Start(current_session_);
+        connection_manager_->start(current_connection_);
 
     StartAccept();
 }
 
 void ProxyServer::OnStopSignalReceived() {
     acceptor_.close();
-    session_manager_->StopAll();
+    connection_manager_->StopAll();
     main_keeper_.reset();
     fetch_keeper_.reset();
 

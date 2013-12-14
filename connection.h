@@ -33,6 +33,19 @@ public:
         if(socket_) delete socket_;
     }
 
+    boost::asio::ip::tcp::socket& socket() const {
+        return socket_->socket();
+    }
+
+    void start() {
+        AsyncRead();
+    }
+
+    void stop() {
+        socket_->close();
+        ProxyServer::ConnectionManager().stop(shared_from_this());
+    }
+
     void AsyncRead() {
         socket_->async_read_some(in_,
                                  boost::bind(&this_type::Callback,

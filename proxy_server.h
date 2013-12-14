@@ -1,8 +1,8 @@
 #ifndef PROXY_SERVER_H
 #define PROXY_SERVER_H
 
+#include "connection_manager.h"
 #include "http_client_manager.h"
-#include "http_proxy_session_manager.h"
 #include "request_handler_manager.h"
 #include "singleton.h"
 
@@ -13,8 +13,8 @@ public:
         instance().start();
     }
 
-    static HttpProxySessionManager& SessionManager() {
-        return *instance().session_manager_;
+    static ConnectionManager& ConnectionManager() {
+        return *instance().connection_manager_;
     }
 
     static RequestHandlerManager& HandlerManager() {
@@ -49,7 +49,7 @@ private:
     bool init();
 
     bool InitSessionManager() {
-        session_manager_.reset(new HttpProxySessionManager());
+        connection_manager_.reset(new HttpProxySessionManager());
         return true;
     }
 
@@ -83,9 +83,10 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    HttpProxySession::Ptr current_session_;
+    // HttpProxySession::Ptr current_session_;
+    ConnectionPtr current_connection_;
 
-    std::unique_ptr<HttpProxySessionManager> session_manager_;
+    std::unique_ptr<ConnectionManager> connection_manager_;
     std::unique_ptr<RequestHandlerManager> handler_manager_;
     std::unique_ptr<HttpClientManager> client_manager_;
 };
