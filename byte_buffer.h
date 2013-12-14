@@ -59,6 +59,14 @@ public:
         return *this;
     }
 
+    ByteBuffer& operator<<(const std::string& str) {
+        EnsureSize(str.size());
+        for(auto it = str.begin(); it != str.end(); ++it) {
+            data_[size_++] = *it;
+        }
+        return *this;
+    }
+
     ByteBuffer& operator<<(std::pair<const char*, size_type> block) {
         EnsureSize(block.second);
         std::memcpy(data_ + size_, block.first, block.second);
