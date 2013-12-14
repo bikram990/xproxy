@@ -4,11 +4,11 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 #include "decoder.h"
+#include "filter_chain.h"
 #include "log.h"
 #include "proxy_server.h"
 #include "socket.h"
 
-class FilterChain;
 
 class Connection : public boost::enable_shared_from_this<Connection>,
                    private boost::noncopyable {
@@ -43,6 +43,7 @@ public:
 
     void start() {
         chain_ = ProxyServer::FilterChainManager().RequireFilterChain();
+        chain_->FilterContext()->SetClientConnection(shared_from_this());
         AsyncRead();
     }
 
