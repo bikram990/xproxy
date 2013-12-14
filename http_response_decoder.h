@@ -3,9 +3,9 @@
 
 #include "decoder.h"
 
-class HttpResponseInitial;
 class HttpChunk;
 class HttpHeaders;
+class HttpResponseInitial;
 class HttpObject;
 
 class HttpResponseDecoder : public Decoder {
@@ -29,6 +29,9 @@ private:
     void DecodeInitialLine(boost::asio::streambuf& buffer, HttpResponseInitial *initial);
     void DecodeHeaders(boost::asio::streambuf& buffer, HttpHeaders *headers);
     void DecodeBody(boost::asio::streambuf& buffer, HttpChunk *chunk);
+
+    bool ischar(int c);
+    bool istspecial(int c);
 
     DecodeResult result_;
     DecodeState state_;

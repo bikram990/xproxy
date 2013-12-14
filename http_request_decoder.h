@@ -5,18 +5,14 @@
 
 class HttpChunk;
 class HttpHeaders;
+class HttpRequestInitial;
 class HttpObject;
 
 class HttpRequestDecoder : public Decoder {
 public:
-    HttpRequestDecoder()
-        : result_(kIncomplete), state_(kRequestStart),
-          temp_object_(nullptr), body_length_(0) {}
+    HttpRequestDecoder();
 
-    virtual ~HttpRequestDecoder() {
-        if(temp_object_)
-            delete temp_object_;
-    }
+    virtual ~HttpRequestDecoder();
 
     virtual DecodeResult decode(boost::asio::streambuf& buffer, HttpObject **object);
 
@@ -33,9 +29,8 @@ private:
     void DecodeHeaders(boost::asio::streambuf& buffer, HttpHeaders *headers);
     void DecodeBody(boost::asio::streambuf& buffer, HttpChunk *chunk);
 
-    DecodeResult consume(char c);
-    bool HttpRequestDecoder::ischar(int c);
-    bool HttpRequestDecoder::istspecial(int c);
+    bool ischar(int c);
+    bool istspecial(int c);
 
     DecodeResult result_;
     DecodeState state_;

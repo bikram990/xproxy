@@ -71,7 +71,7 @@ public:
             become(kConnecting);
             return;
         }
-        socket_->async_write_some(buffers, boost::bind(&this_type::Callback, shared_from_this(), boost::asio::placeholders::error));
+        socket_->async_write_some(buffers, boost::bind(&this_type::Callback, shared_from_this(), boost::asio::placeholders::error, 0));
         become(kWriting);
     }
 
@@ -96,10 +96,8 @@ protected:
     FilterChain *chain_;
 
     bool connected_;
-
-private:
-    Socket *socket_;
     ConnectionState state_;
+    Socket *socket_;
 };
 
 typedef boost::shared_ptr<Connection> ConnectionPtr;

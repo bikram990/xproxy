@@ -1,4 +1,5 @@
 #include <boost/asio.hpp>
+#include <boost/lexical_cast.hpp>
 #include "byte_buffer.h"
 #include "http_chunk.h"
 #include "http_headers.h"
@@ -43,13 +44,13 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
         }
         switch(temp_object_->type()) {
         case HttpObject::kHttpResponseInitial:
-            DecodeInitialLine(buffer, reinterpret_cast<HttpResponeInitial*>(temp_object_));
+            DecodeInitialLine(buffer, reinterpret_cast<HttpResponseInitial*>(temp_object_));
             if(result_ == kComplete) {
                 *object = temp_object_;
                 temp_object_ = nullptr;
             }
             return result_;
-        case HttpObject::kHttpHeaders:
+        case HttpObject::kHttpHeaders: {
             HttpHeaders *headers = reinterpret_cast<HttpHeaders*>(temp_object_);
             DecodeHeaders(buffer, headers);
             if(result_ == kComplete) {
@@ -62,7 +63,7 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
                     if(transfer_encoding == "chunked")
                         chunked_ = true;
                 } else if(headers->find("Content-Length", content_length)) { // TODO hard code
-                    if(chunked)
+                    if(chunked_)
                         XWARN << "Both Transfer-Encoding and Content-Length headers are found, this should never happen.";
                     body_length_ = boost::lexical_cast<std::size_t>(content_length);
                 } else {
@@ -70,6 +71,7 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
                 }
             }
             return result_;
+        }
         case HttpObject::kHttpChunk:
             DecodeBody(buffer, reinterpret_cast<HttpChunk*>(temp_object_));
             if(result_ == kFinished) {
@@ -84,7 +86,7 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
     }
 
     switch(state_) {
-    case kResponseStart:
+    case kResponseStart: {
         HttpResponseInitial *initial = new HttpResponseInitial();
         DecodeInitialLine(buffer, initial);
         if(result_ == kIncomplete) {
@@ -93,7 +95,8 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
             *object = initial;
         }
         return result_;
-    case kHeaderStart:
+    }
+    case kHeaderStart: {
         HttpHeaders *headers = new HttpHeaders();
         DecodeHeaders(buffer, headers);
         if(result_ == kIncomplete) {
@@ -105,7 +108,7 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
                 if(transfer_encoding == "chunked")
                     chunked_ = true;
             } else if(headers->find("Content-Length", content_length)) { // TODO hard code
-                if(chunked)
+                if(chunked_)
                     XWARN << "Both Transfer-Encoding and Content-Length headers are found, this should never happen.";
                 body_length_ = boost::lexical_cast<std::size_t>(content_length);
             } else {
@@ -114,7 +117,8 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
             *object = headers;
         }
         return result_;
-    case kHeadersDone:
+    }
+    case kHeadersDone: {
         HttpChunk *chunk = new HttpChunk();
         DecodeBody(buffer, chunk);
         if(result_ == kIncomplete) {
@@ -123,6 +127,7 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
             *object = chunk;
         }
         return result_;
+    }
     default:
         XERROR << "Invalid state.";
         return kFailure;
@@ -163,7 +168,7 @@ inline void HttpResponseDecoder::DecodeInitialLine(boost::asio::streambuf& buffe
             break;
         case kProtocolP:
             if(current_byte != 'P') {
-                resutl_ = ERR;
+                result_ = ERR;
                 break;
             }
             state_ = kSlash;
@@ -171,7 +176,7 @@ inline void HttpResponseDecoder::DecodeInitialLine(boost::asio::streambuf& buffe
             break;
         case kSlash:
             if(current_byte != '/') {
-                resutl_ = ERR;
+                result_ = ERR;
                 break;
             }
             initial->SetMajorVersion(0);
@@ -299,7 +304,7 @@ inline void HttpResponseDecoder::DecodeHeaders(boost::asio::streambuf& buffer, H
                 result_ = CTN;
                 break;
             }
-            if(!headers.empty() && (current_byte == ' ' || current_byte == '\t')) {
+            if(!headers->empty() && (current_byte == ' ' || current_byte == '\t')) {
                 state_ = kHeaderLWS;
                 result_ = CTN;
                 break;
@@ -308,8 +313,8 @@ inline void HttpResponseDecoder::DecodeHeaders(boost::asio::streambuf& buffer, H
                 result_ = ERR;
                 break;
             }
-            headers.PushBack(HttpHeader());
-            headers.back().name.push_back(current_byte);
+            headers->PushBack(HttpHeader());
+            headers->back().name.push_back(current_byte);
             state_ = kHeaderName;
             result_ = CTN;
             break;
@@ -328,7 +333,7 @@ inline void HttpResponseDecoder::DecodeHeaders(boost::asio::streambuf& buffer, H
                 break;
             }
             state_ = kHeaderValue;
-            headers.back().value.push_back(current_byte);
+            headers->back().value.push_back(current_byte);
             result_ = CTN;
             break;
         case kHeaderName:
@@ -341,7 +346,7 @@ inline void HttpResponseDecoder::DecodeHeaders(boost::asio::streambuf& buffer, H
                 result_ = ERR;
                 break;
             }
-            headers.back().name.push_back(current_byte);
+            headers->back().name.push_back(current_byte);
             result_ = CTN;
             break;
         case kHeaderValueSpaceBefore:
@@ -362,7 +367,7 @@ inline void HttpResponseDecoder::DecodeHeaders(boost::asio::streambuf& buffer, H
                 result_ = ERR;
                 break;
             }
-            headers.back().value.push_back(current_byte);
+            headers->back().value.push_back(current_byte);
             result_ = CTN;
             break;
         case kNewLineHeaderContinue:
@@ -417,6 +422,22 @@ inline void HttpResponseDecoder::DecodeBody(boost::asio::streambuf &buffer, Http
             chunk->SetLast(false);
             result_ = kComplete;
         }
+    }
+}
+
+inline bool HttpResponseDecoder::ischar(int c) {
+    return c >= 0 && c <= 127;
+}
+
+inline bool HttpResponseDecoder::istspecial(int c) {
+    switch(c) {
+    case '(': case ')': case '<': case '>': case '@':
+    case ',': case ';': case ':': case '\\': case '"':
+    case '/': case '[': case ']': case '?': case '=':
+    case '{': case '}': case ' ': case '\t':
+        return true;
+    default:
+        return false;
     }
 }
 

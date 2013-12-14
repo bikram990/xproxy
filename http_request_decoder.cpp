@@ -1,4 +1,5 @@
 #include <boost/asio.hpp>
+#include <boost/lexical_cast.hpp>
 #include "byte_buffer.h"
 #include "http_chunk.h"
 #include "http_headers.h"
@@ -12,7 +13,13 @@
 #define END  Decoder::kFinished   // the end of decoding (END)
 
 HttpRequestDecoder::HttpRequestDecoder()
-    : result_(kIncomplete), state_(kRequestStart), request_(new HttpFullEntity) {}
+    : result_(kIncomplete), state_(kRequestStart),
+      temp_object_(nullptr), body_length_(0) {}
+
+HttpRequestDecoder::~HttpRequestDecoder() {
+    if(temp_object_)
+        delete temp_object_;
+}
 
 Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer, HttpObject **object) {
     if(!object) {
@@ -43,7 +50,7 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
                 temp_object_ = nullptr;
             }
             return result_;
-        case HttpObject::kHttpHeaders:
+        case HttpObject::kHttpHeaders: {
             HttpHeaders *headers = reinterpret_cast<HttpHeaders*>(temp_object_);
             DecodeHeaders(buffer, headers);
             if(result_ == kComplete) {
@@ -58,6 +65,7 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
                 }
             }
             return result_;
+        }
         case HttpObject::kHttpChunk:
             DecodeBody(buffer, reinterpret_cast<HttpChunk*>(temp_object_));
             if(result_ == kFinished) {
@@ -72,14 +80,15 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
     }
 
     switch(state_) {
-    case kRequestStart:
+    case kRequestStart: {
         HttpRequestInitial *initial = new HttpRequestInitial();
         DecodeInitialLine(buffer, initial);
         if(result_ == kIncomplete) {
             temp_object_ = initial;
         }
         return result_;
-    case kHeaderStart:
+    }
+    case kHeaderStart: {
         HttpHeaders *headers = new HttpHeaders();
         DecodeHeaders(buffer, headers);
         if(result_ == kIncomplete) {
@@ -93,13 +102,15 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
             }
         }
         return result_;
-    case kHeadersDone:
+    }
+    case kHeadersDone: {
         HttpChunk *chunk = new HttpChunk();
         DecodeBody(buffer, chunk);
         if(result_ == kIncomplete) {
             temp_object_ = chunk;
         }
         return result_;
+    }
     default:
         XERROR << "Invalid state.";
         return kFailure;
@@ -149,23 +160,28 @@ inline void HttpRequestDecoder::DecodeInitialLine(boost::asio::streambuf& buffer
     std::istream s(&buffer);
     s >> std::noskipws;
 
-    char c = 0;
-    while(s >> c) {
+    char current_byte = 0;
+    while(s >> current_byte) {
         switch(state_) {
         case kRequestStart:
-            if(!std::isalpha(current_byte))
+            if(!std::isalpha(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             state_ = kMethod;
-            initial->method_.push_back(current_byte);
+            initial->method().push_back(current_byte);
             result_ = CTN;
             break;
         case kMethod:
             if(current_byte == ' ') {
                 state_ = kUri;
                 result_ = CTN;
+                break;
             }
-            if(!std::isalpha(current_byte))
+            if(!std::isalpha(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             initial->method().push_back(current_byte);
             result_ = CTN;
             break;
@@ -173,48 +189,63 @@ inline void HttpRequestDecoder::DecodeInitialLine(boost::asio::streambuf& buffer
             if(current_byte == ' ') {
                 state_ = kProtocolH;
                 result_ = CTN;
+                break;
             }
-            if(std::iscntrl(current_byte))
+            if(std::iscntrl(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             initial->uri().push_back(current_byte);
             result_ = CTN;
             break;
         case kProtocolH:
-            if(current_byte != 'H')
+            if(current_byte != 'H') {
                 result_ = ERR;
+                break;
+            }
             state_ = kProtocolT1;
             result_ = CTN;
             break;
         case kProtocolT1:
-            if(current_byte != 'T')
+            if(current_byte != 'T') {
                 result_ = ERR;
+                break;
+            }
             state_ = kProtocolT2;
             result_ = CTN;
             break;
         case kProtocolT2:
-            if(current_byte != 'T')
+            if(current_byte != 'T') {
                 result_ = ERR;
+                break;
+            }
             state_ = kProtocolP;
             result_ = CTN;
             break;
         case kProtocolP:
-            if(current_byte != 'P')
+            if(current_byte != 'P') {
                 result_ = ERR;
+                break;
+            }
             state_ = kSlash;
             result_ = CTN;
             break;
         case kSlash:
-            if(current_byte != '/')
+            if(current_byte != '/') {
                 result_ = ERR;
-            initial->major_version_ = 0;
-            initial->minor_version_ = 0;
+                break;
+            }
+            initial->SetMajorVersion(0);
+            initial->SetMinorVersion(0);
             state_ = kMajorVersionStart;
             result_ = CTN;
             break;
         case kMajorVersionStart:
-            if(!std::isdigit(current_byte))
+            if(!std::isdigit(current_byte)) {
                 result_ = ERR;
-            initial->major_version_ = initial->major_version_ * 10 + current_byte - '0';
+                break;
+            }
+            initial->SetMajorVersion(initial->GetMajorVersion() * 10 + current_byte - '0');
             state_ = kMajorVersion;
             result_ = CTN;
             break;
@@ -222,16 +253,21 @@ inline void HttpRequestDecoder::DecodeInitialLine(boost::asio::streambuf& buffer
             if(current_byte == '.') {
                 state_ = kMinorVersionStart;
                 result_ = CTN;
+                break;
             }
-            if(!std::isdigit(current_byte))
+            if(!std::isdigit(current_byte)) {
                 result_ = ERR;
-            initial->major_version_ = initial->major_version_ * 10 + current_byte - '0';
+                break;
+            }
+            initial->SetMajorVersion(initial->GetMajorVersion() * 10 + current_byte - '0');
             result_ = CTN;
             break;
         case kMinorVersionStart:
-            if(!std::isdigit(current_byte))
+            if(!std::isdigit(current_byte)) {
                 result_ = ERR;
-            initial->minor_version_ = initial->minor_version_ * 10 + current_byte - '0';
+                break;
+            }
+            initial->SetMinorVersion(initial->GetMinorVersion() * 10 + current_byte - '0');
             state_ = kMinorVersion;
             result_ = CTN;
             break;
@@ -239,15 +275,20 @@ inline void HttpRequestDecoder::DecodeInitialLine(boost::asio::streambuf& buffer
             if(current_byte == '\r') {
                 state_ = kNewLineHeader;
                 result_ = CTN;
+                break;
             }
-            if(!std::isdigit(current_byte))
+            if(!std::isdigit(current_byte)) {
                 result_ = ERR;
-            initial->minor_version_ = initial->minor_version_ * 10 + current_byte - '0';
+                break;
+            }
+            initial->SetMinorVersion(initial->GetMinorVersion() * 10 + current_byte - '0');
             result_ = CTN;
             break;
         case kNewLineHeader:
-            if(current_byte != '\n')
+            if(current_byte != '\n') {
                 result_ = ERR;
+                break;
+            }
             state_ = kHeaderStart;
             result_ = DONE;
             break;
@@ -264,15 +305,15 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
     std::istream s(&buffer);
     s >> std::noskipws;
 
-    char c = 0;
-    while(s >> c) {
+    char current_byte = 0;
+    while(s >> current_byte) {
         switch(state_) {
         case kHeaderStart:
             if(current_byte == '\r') {
                 state_ = kNewLineBody;
                 result_ = CTN;
             }
-            if(!headers.empty() && (current_byte == ' ' || current_byte == '\t')) {
+            if(!headers->empty() && (current_byte == ' ' || current_byte == '\t')) {
                 state_ = kHeaderLWS;
                 result_ = CTN;
             }
@@ -291,8 +332,8 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             //                }
             //            }
             //        }
-            headers.PushBack(HttpHeader());
-            headers.back().name.push_back(current_byte);
+            headers->PushBack(HttpHeader());
+            headers->back().name.push_back(current_byte);
             state_ = kHeaderName;
             result_ = CTN;
             break;
@@ -306,7 +347,7 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             if(std::iscntrl(current_byte))
                 result_ = ERR;
             state_ = kHeaderValue;
-            headers.back().value.push_back(current_byte);
+            headers->back().value.push_back(current_byte);
             result_ = CTN;
             break;
         case kHeaderName:
@@ -316,7 +357,7 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             }
             if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte))
                 result_ = ERR;
-            headers.back().name.push_back(current_byte);
+            headers->back().name.push_back(current_byte);
             result_ = CTN;
             break;
         case kHeaderValueSpaceBefore:
@@ -332,7 +373,7 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             }
             if(std::iscntrl(current_byte))
                 result_ = ERR;
-            headers.back().value.push_back(current_byte);
+            headers->back().value.push_back(current_byte);
             result_ = CTN;
             break;
         case kNewLineHeaderContinue:
@@ -372,175 +413,6 @@ inline void HttpRequestDecoder::DecodeBody(boost::asio::streambuf& buffer, HttpC
     chunk->SetLast(true); // it will always be the last chunk
 
     result_ = kFinished;
-}
-
-inline Decoder::DecodeResult HttpRequestDecoder::consume(char current_byte) {
-    HttpRequestInitial *initial = reinterpret_cast<HttpRequestInitial*>(request_->GetInitial());
-    HttpHeaders& headers = request_->GetHeaders();
-
-    switch(state_) {
-    case kRequestStart:
-        if(!std::isalpha(current_byte))
-            return ERR;
-        state_ = kMethod;
-        initial->method_.push_back(current_byte);
-        return CTN;
-    case kMethod:
-        if(current_byte == ' ') {
-            state_ = kUri;
-            return CTN;
-        }
-        if(!std::isalpha(current_byte))
-            return ERR;
-        initial->method_.push_back(current_byte);
-        return CTN;
-    case kUri:
-        if(current_byte == ' ') {
-            state_ = kProtocolH;
-            return CTN;
-        }
-        if(std::iscntrl(current_byte))
-            return ERR;
-        initial->uri_.push_back(current_byte);
-        return CTN;
-    case kProtocolH:
-        if(current_byte != 'H')
-            return ERR;
-        state_ = kProtocolT1;
-        return CTN;
-    case kProtocolT1:
-        if(current_byte != 'T')
-            return ERR;
-        state_ = kProtocolT2;
-        return CTN;
-    case kProtocolT2:
-        if(current_byte != 'T')
-            return ERR;
-        state_ = kProtocolP;
-        return CTN;
-    case kProtocolP:
-        if(current_byte != 'P')
-            return ERR;
-        state_ = kSlash;
-        return CTN;
-    case kSlash:
-        if(current_byte != '/')
-            return ERR;
-        initial->major_version_ = 0;
-        initial->minor_version_ = 0;
-        state_ = kMajorVersionStart;
-        return CTN;
-    case kMajorVersionStart:
-        if(!std::isdigit(current_byte))
-            return ERR;
-        initial->major_version_ = initial->major_version_ * 10 + current_byte - '0';
-        state_ = kMajorVersion;
-        return CTN;
-    case kMajorVersion:
-        if(current_byte == '.') {
-            state_ = kMinorVersionStart;
-            return CTN;
-        }
-        if(!std::isdigit(current_byte))
-            return ERR;
-        initial->major_version_ = initial->major_version_ * 10 + current_byte - '0';
-        return CTN;
-    case kMinorVersionStart:
-        if(!std::isdigit(current_byte))
-            return ERR;
-        initial->minor_version_ = initial->minor_version_ * 10 + current_byte - '0';
-        state_ = kMinorVersion;
-        return CTN;
-    case kMinorVersion:
-        if(current_byte == '\r') {
-            state_ = kNewLineHeader;
-            return CTN;
-        }
-        if(!std::isdigit(current_byte))
-            return ERR;
-        initial->minor_version_ = initial->minor_version_ * 10 + current_byte - '0';
-        return CTN;
-    case kNewLineHeader:
-        if(current_byte != '\n')
-            return ERR;
-        state_ = kHeaderStart;
-        return CTN;
-    case kHeaderStart:
-        if(current_byte == '\r') {
-            state_ = kNewLineBody;
-            return CTN;
-        }
-        if(!headers.empty() && (current_byte == ' ' || current_byte == '\t')) {
-            state_ = kHeaderLWS;
-            return CTN;
-        }
-        if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte))
-            return ERR;
-        //        if(!headers.empty()) {
-        //            if(headers.back().name == "Host") {
-        //                std::string& target = headers_.back().value;
-        //                std::string::size_type seperator = target.find(':');
-        //                if(seperator != std::string::npos) {
-        //                    host_ = target.substr(0, seperator);
-        //                    port_ = boost::lexical_cast<short>(target.substr(seperator + 1));
-        //                } else {
-        //                    host_ = target;
-        //                    port_ = 80;
-        //                }
-        //            }
-        //        }
-        headers.PushBack(HttpHeader());
-        headers.back().name.push_back(current_byte);
-        state_ = kHeaderName;
-        return CTN;
-    case kHeaderLWS:
-        if(current_byte == '\r') {
-            state_ = kNewLineHeaderContinue;
-            return CTN;
-        }
-        if(current_byte == ' ' || current_byte == '\t')
-            return CTN;
-        if(std::iscntrl(current_byte))
-            return ERR;
-        state_ = kHeaderValue;
-        headers.back().value.push_back(current_byte);
-        return CTN;
-    case kHeaderName:
-        if(current_byte == ':') {
-            state_ = kHeaderValueSpaceBefore;
-            return CTN;
-        }
-        if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte))
-            return ERR;
-        headers.back().name.push_back(current_byte);
-        return CTN;
-    case kHeaderValueSpaceBefore:
-        if(current_byte != ' ')
-            return ERR;
-        state_ = kHeaderValue;
-        return CTN;
-    case kHeaderValue:
-        if(current_byte == '\r') {
-            state_ = kNewLineHeaderContinue;
-            return CTN;
-        }
-        if(std::iscntrl(current_byte))
-            return ERR;
-        headers.back().value.push_back(current_byte);
-        return CTN;
-    case kNewLineHeaderContinue:
-        if(current_byte != '\n')
-            return ERR;
-        state_ = kHeaderStart;
-        return CTN;
-    case kNewLineBody:
-        if(current_byte != '\n')
-            return ERR;
-        state_ = kHeadersDone;
-        return DONE;
-    default:
-        return ERR;
-    }
 }
 
 inline bool HttpRequestDecoder::ischar(int c) {

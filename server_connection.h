@@ -1,9 +1,11 @@
 #ifndef SERVER_CONNECTION_H
 #define SERVER_CONNECTION_H
 
+#include <boost/lexical_cast.hpp>
 #include "connection.h"
 #include "decoder.h"
 #include "filter_chain.h"
+#include "http_container.h"
 #include "http_response_decoder.h"
 
 class ServerConnection : public Connection {
@@ -11,7 +13,7 @@ public:
     typedef ServerConnection this_type;
 
     explicit ServerConnection(boost::asio::io_service& service)
-        : Connection(service) {
+        : Connection(service), resolver_(service) {
         decoder_ = new HttpResponseDecoder();
     }
 
@@ -28,8 +30,9 @@ public:
             XDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
             socket_->async_connect(endpoint_iterator, boost::bind(&this_type::Callback,
-                                                                               this,
-                                                                               boost::asio::placeholders::error));
+                                                                  this,
+                                                                  boost::asio::placeholders::error,
+                                                                  0));
             become(kConnecting);
         } catch(const boost::system::system_error& e) {
             XERROR << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
@@ -39,7 +42,7 @@ public:
 
     virtual void Callback(const boost::system::error_code& e, std::size_t size = 0) {
         switch(state_) {
-        case kReading:
+        case kReading: {
             in_.commit(size);
 
             HttpObject *object = nullptr;
@@ -55,12 +58,13 @@ public:
             case Decoder::kFinished:
                 // TODO add logic here
                 chain_->FilterContext()->ResponseContainer()->AppendObject(object);
-                chain_->filter();
+                chain_->FilterResponse();
                 break;
             default:
                 break;
             }
             break;
+        }
         case kWriting:
             if(e) {
                 XERROR << "Error writing.";
@@ -75,16 +79,20 @@ public:
                 return;
             }
             connected_ = true;
-            AsyncWrite(); // TODO correct invocation here
+            // TODO IMPORTANT!!! correct invocation here
+            // AsyncWrite();
             break;
         // TODO add later
         default:
+            ; // add a colon to pass the compilation
         }
     }
 
 private:
     std::string host_;
     short port_;
+
+    boost::asio::ip::tcp::resolver resolver_;
 };
 
 #endif // SERVER_CONNECTION_H

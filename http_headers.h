@@ -34,7 +34,7 @@ public:
         return headers_.back();
     }
 
-    bool find(const std::string& name, std::string& value) const {
+    bool find(const std::string& name, std::string& value) {
         auto it = std::find_if(headers_.begin(), headers_.end(),
                                boost::bind(&HttpHeaders::match, this, name, _1));
         if(it == headers_.end())

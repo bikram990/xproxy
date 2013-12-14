@@ -2,8 +2,6 @@
 #include <boost/thread/thread.hpp>
 #include "client_connection.h"
 #include "common.h"
-#include "http_client_manager.h"
-#include "http_proxy_session_manager.h"
 #include "log.h"
 #include "proxy_server.h"
 
