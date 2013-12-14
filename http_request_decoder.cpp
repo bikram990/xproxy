@@ -37,7 +37,7 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
         return kFailure;
     }
 
-    if(result_ == kIncomplete) {
+    if(result_ == kIncomplete && state_ != kRequestStart) {
         if(!temp_object_) {
             XERROR << "Invalid object pointer.";
             return kFailure;
