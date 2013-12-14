@@ -1,17 +1,17 @@
 #include <boost/bind.hpp>
-#include "connection_manager.h"
+#include "client_connection_manager.h"
 #include "log.h"
 
-void ConnectionManager::start(ConnectionPtr connection) {
+void ClientConnectionManager::start(ConnectionPtr connection) {
     connections_.insert(session);
     connection->start();
 }
 
-void ConnectionManager::stop(ConnectionPtr connection) {
+void ClientConnectionManager::stop(ConnectionPtr connection) {
     connections_.erase(session);
 }
 
-void ConnectionManager::StopAll() {
+void ClientConnectionManager::StopAll() {
     std::for_each(sessions_.begin(), sessions_.end(),
                   boost::bind(&Connection::stop, _1));
 }

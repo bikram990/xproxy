@@ -1,12 +1,12 @@
-#ifndef CONNECTION_MANAGER_H
-#define CONNECTION_MANAGER_H
+#ifndef CLIENT_CONNECTION_MANAGER_H
+#define CLIENT_CONNECTION_MANAGER_H
 
 #include <set>
 #include "connection.h"
 
 class ProxyServer;
 
-class ConnectionManager : private boost::noncopyable {
+class ClientConnectionManager : private boost::noncopyable {
     friend class ProxyServer;
 public:
     void start(ConnectionPtr connection);
@@ -14,9 +14,9 @@ public:
     void StopAll();
 
 private:
-    ConnectionManager() {}
+    ClientConnectionManager() {}
 
     std::set<ConnectionPtr> connections_;
 };
 
-#endif // CONNECTION_MANAGER_H
+#endif // CLIENT_CONNECTION_MANAGER_H
