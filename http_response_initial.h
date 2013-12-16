@@ -5,8 +5,7 @@
 
 class HttpResponseInitial : public HttpInitial {
 public:
-    HttpResponseInitial()
-        : HttpInitial(), status_code_(200), status_message_("OK") {}
+    HttpResponseInitial() : HttpInitial() {}
 
     virtual ~HttpResponseInitial() {}
 
