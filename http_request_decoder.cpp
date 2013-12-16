@@ -299,6 +299,7 @@ inline void HttpRequestDecoder::DecodeInitialLine(boost::asio::streambuf& buffer
             break;
         default:
             result_ = ERR;
+            break;
         }
 
         if(result_ == kFailure || result_ == kComplete)
@@ -317,13 +318,17 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             if(current_byte == '\r') {
                 state_ = kNewLineBody;
                 result_ = CTN;
+                break;
             }
             if(!headers->empty() && (current_byte == ' ' || current_byte == '\t')) {
                 state_ = kHeaderLWS;
                 result_ = CTN;
+                break;
             }
-            if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte))
+            if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             //        if(!headers.empty()) {
             //            if(headers.back().name == "Host") {
             //                std::string& target = headers_.back().value;
@@ -346,11 +351,16 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             if(current_byte == '\r') {
                 state_ = kNewLineHeaderContinue;
                 result_ = CTN;
+                break;
             }
-            if(current_byte == ' ' || current_byte == '\t')
+            if(current_byte == ' ' || current_byte == '\t') {
                 result_ = CTN;
-            if(std::iscntrl(current_byte))
+                break;
+            }
+            if(std::iscntrl(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             state_ = kHeaderValue;
             headers->back().value.push_back(current_byte);
             result_ = CTN;
@@ -359,15 +369,20 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             if(current_byte == ':') {
                 state_ = kHeaderValueSpaceBefore;
                 result_ = CTN;
+                break;
             }
-            if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte))
+            if(!ischar(current_byte) || std::iscntrl(current_byte) || istspecial(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             headers->back().name.push_back(current_byte);
             result_ = CTN;
             break;
         case kHeaderValueSpaceBefore:
-            if(current_byte != ' ')
+            if(current_byte != ' ') {
                 result_ = ERR;
+                break;
+            }
             state_ = kHeaderValue;
             result_ = CTN;
             break;
@@ -375,26 +390,34 @@ inline void HttpRequestDecoder::DecodeHeaders(boost::asio::streambuf& buffer, Ht
             if(current_byte == '\r') {
                 state_ = kNewLineHeaderContinue;
                 result_ = CTN;
+                break;
             }
-            if(std::iscntrl(current_byte))
+            if(std::iscntrl(current_byte)) {
                 result_ = ERR;
+                break;
+            }
             headers->back().value.push_back(current_byte);
             result_ = CTN;
             break;
         case kNewLineHeaderContinue:
-            if(current_byte != '\n')
+            if(current_byte != '\n') {
                 result_ = ERR;
+                break;
+            }
             state_ = kHeaderStart;
             result_ = CTN;
             break;
         case kNewLineBody:
-            if(current_byte != '\n')
+            if(current_byte != '\n') {
                 result_ = ERR;
+                break;
+            }
             state_ = kHeadersDone;
             result_ = DONE;
             break;
         default:
             result_ = ERR;
+            break;
         }
 
         if(result_ == kFailure || result_ == kComplete)
