@@ -5,6 +5,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
 
+class Filter;
 class FilterChain;
 class ProxyServer;
 
@@ -14,14 +15,12 @@ public:
     FilterChain *RequireFilterChain();
     void ReleaseFilterChain(FilterChain *chain);
 
-    ~FilterChainManager() {
-        for(auto it = chains_.begin(); it!= chains_.end(); ++it)
-            if(*it) delete *it;
-    }
+    ~FilterChainManager();
 
 private:
-    FilterChainManager() {}
+    FilterChainManager();
 
+    std::vector<Filter*> predefined_filters_;
     std::list<FilterChain*> chains_;
     boost::mutex lock_;
 };
