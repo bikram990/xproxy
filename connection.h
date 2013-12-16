@@ -26,6 +26,7 @@ public:
         kReading,    // reading data from socket
         kConnecting, // connecting to remote peer
         kWriting,    // writing data to socket
+        kFiltering   // filter decoded object
     };
 
     static Ptr *Create(boost::asio::io_service& service);
@@ -56,8 +57,11 @@ public:
     }
 
     void AsyncRead() {
+        if(in_.size() > 0)
+            callback(boost::system::error_code(), 0);
+
         socket_->async_read_some(in_.prepare(kDefaultBufferSize),
-                                 boost::bind(&this_type::Callback,
+                                 boost::bind(&this_type::callback,
                                              shared_from_this(),
                                              boost::asio::placeholders::error,
                                              boost::asio::placeholders::bytes_transferred));
@@ -71,7 +75,7 @@ public:
             become(kConnecting);
             return;
         }
-        socket_->async_write_some(buffers, boost::bind(&this_type::Callback, shared_from_this(), boost::asio::placeholders::error, 0));
+        socket_->async_write_some(*buffers, boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error, 0));
         become(kWriting);
     }
 
@@ -81,14 +85,69 @@ public:
 
 protected:
     explicit Connection(boost::asio::io_service& service)
-        : decoder_(nullptr), in_(kDefaultBufferSize),
-          socket_(Socket::Create(service)), state_(kAwaiting) {}
+        : decoder_(nullptr), socket_(Socket::Create(service)), state_(kAwaiting) {}
 
     void become(ConnectionState state) {
         state_ = state;
     }
 
-    virtual void Callback(const boost::system::error_code& e, std::size_t size = 0) = 0;
+    virtual void callback(const boost::system::error_code& e, std::size_t size = 0) {
+        switch(state_) {
+        case kReading: {
+            XDEBUG << "size: " << size << ", size of in buffer: " << in_.size();
+            if(size <= 0) {
+                if(in_.size() <= 0) {
+                    XERROR << "No data, disconnecting the socket.";
+                    // TODO disconnect here
+                    return;
+                }
+            } else {
+                in_.commit(size);
+            }
+            XDEBUG << "size: " << size << ", size of in buffer: " << in_.size();
+
+            HttpObject *object = nullptr;
+            Decoder::DecodeResult result = decoder_->decode(in_, &object);
+            switch(result) {
+            case Decoder::kIncomplete:
+                XDEBUG << "Incomplete buffer, continue reading.";
+                AsyncRead();
+                break;
+            case Decoder::kFailure:
+                XERROR << "Failed to decode object, return.";
+                return;
+                // TODO add logic here
+            case Decoder::kComplete:
+            case Decoder::kFinished:
+                if(!object)
+                    XERROR << "invalid pointer.";
+                FilterHttpObject(object);
+                break;
+            default:
+                break;
+            }
+            break;
+        }
+        case kConnecting:
+            if(e) {
+                XERROR << "Failed to connect to remote peer, message: " << e.message();
+                // TODO add logic here
+                return;
+            }
+            connected_ = true;
+            break;
+        case kWriting:
+            if(e) {
+                XERROR << "Error occurred during writing to remote peer, message: " << e.message();
+                // TODO add logic here
+                return;
+            }
+        default:
+            break;
+        }
+    }
+
+    virtual void FilterHttpObject(HttpObject *object) = 0;
 
 protected:
     Decoder *decoder_;

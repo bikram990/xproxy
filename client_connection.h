@@ -19,36 +19,53 @@ protected:
 
     virtual void AsyncConnect() {}
 
-    void Callback(const boost::system::error_code& e, std::size_t size = 0) {
-        switch(state_) {
-        case kReading: {
-            in_.commit(size);
-
-            HttpObject *object = nullptr;
-            Decoder::DecodeResult result = decoder_->decode(in_, &object);
-
-            switch(result) {
-            case Decoder::kIncomplete:
-                AsyncRead();
-                break;
-            case Decoder::kFailure:
-                // TODO add logic here
-            case Decoder::kComplete:
-            case Decoder::kFinished:
-                // TODO add logic here
-                chain_->FilterContext()->RequestContainer()->AppendObject(object);
-                chain_->FilterRequest();
-                break;
-            default:
-                break;
-            }
-            break;
+    virtual void FilterHttpObject(HttpObject *object) {
+        if(!chain_) {
+            XERROR << "The filter chain is not set.";
+            return;
         }
-        // TODO add later
-        default:
-            ; // add colon to pass the compilation
+        if(!object) {
+            XERROR << "Invalid HttpObject pointer.";
+            return;
         }
+
+        chain_->FilterContext()->RequestContainer()->AppendObject(object);
+        chain_->FilterRequest();
+
+        become(kFiltering);
     }
+
+    // void Callback(const boost::system::error_code& e, std::size_t size = 0) {
+    //     switch(state_) {
+    //     case kReading: {
+    //         XDEBUG << "Read data from socket, size: " << size;
+    //         in_.commit(size);
+
+    //         HttpObject *object = nullptr;
+    //         Decoder::DecodeResult result = decoder_->decode(in_, &object);
+
+    //         switch(result) {
+    //         case Decoder::kIncomplete:
+    //             AsyncRead();
+    //             break;
+    //         case Decoder::kFailure:
+    //             // TODO add logic here
+    //         case Decoder::kComplete:
+    //         case Decoder::kFinished:
+    //             // TODO add logic here
+    //             chain_->FilterContext()->RequestContainer()->AppendObject(object);
+    //             chain_->FilterRequest();
+    //             break;
+    //         default:
+    //             break;
+    //         }
+    //         break;
+    //     }
+    //     // TODO add later
+    //     default:
+    //         ; // add colon to pass the compilation
+    //     }
+    // }
 };
 
 #endif // CLIENT_CONNECTION_H
