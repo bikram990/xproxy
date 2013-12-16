@@ -10,7 +10,7 @@ public:
         kHttpRequestInitial, kHttpResponseInitial
     };
 
-    HttpObject(Type type = kHttpObject) : type_(type), modified_(true) {} // TODO true or false?
+    HttpObject(Type type = kHttpObject) : type_(type), modified_(true), content_(new ByteBuffer) {}
 
     HttpObject(SharedBuffer buffer, Type type = kHttpObject)
         : type_(type), modified_(true), content_(buffer) {}
