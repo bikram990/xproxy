@@ -17,6 +17,8 @@ public:
         decoder_ = new HttpResponseDecoder();
     }
 
+    virtual void start() {}
+
     virtual void StoreRemoteAddress(const std::string& host, short port) {
         host_ = host;
         port_ = port;

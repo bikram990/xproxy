@@ -14,6 +14,12 @@ public:
         decoder_ = new HttpRequestDecoder();
     }
 
+    virtual void start() {
+        chain_ = ProxyServer::FilterChainManager().RequireFilterChain();
+        chain_->FilterContext()->SetClientConnection(shared_from_this());
+        AsyncRead();
+    }
+
 protected:
     virtual void StoreRemoteAddress(const std::string& host, short port) {}
 

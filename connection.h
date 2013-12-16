@@ -43,11 +43,7 @@ public:
         return socket_->socket();
     }
 
-    void start() {
-        chain_ = ProxyServer::FilterChainManager().RequireFilterChain();
-        chain_->FilterContext()->SetClientConnection(shared_from_this());
-        AsyncRead();
-    }
+    virtual void start() = 0;
 
     void stop() {
         ProxyServer::FilterChainManager().ReleaseFilterChain(chain_);
@@ -68,15 +64,16 @@ public:
         become(kReading);
     }
 
-    template<typename BufferSequence>
-    void AsyncWrite(boost::shared_ptr<BufferSequence> buffers) {
+    void AsyncWrite(boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers) {
+        out_ = buffers;
+
         if(!connected_) {
             AsyncConnect();
             become(kConnecting);
             return;
         }
-        socket_->async_write_some(*buffers, boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error, 0));
-        become(kWriting);
+
+        AsyncWrite();
     }
 
     virtual void StoreRemoteAddress(const std::string& host, short port) = 0;
@@ -89,6 +86,11 @@ protected:
 
     void become(ConnectionState state) {
         state_ = state;
+    }
+
+    void AsyncWrite() {
+        socket_->async_write_some(*out_, boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error, 0));
+        become(kWriting);
     }
 
     virtual void callback(const boost::system::error_code& e, std::size_t size = 0) {
@@ -135,6 +137,7 @@ protected:
                 return;
             }
             connected_ = true;
+            AsyncWrite();
             break;
         case kWriting:
             if(e) {
@@ -152,6 +155,7 @@ protected:
 protected:
     Decoder *decoder_;
     boost::asio::streambuf in_;
+    boost::shared_ptr<std::vector<boost::asio::const_buffer>> out_;
     FilterChain *chain_;
 
     bool connected_;
