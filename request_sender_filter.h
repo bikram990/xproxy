@@ -1,23 +1,24 @@
 #ifndef REQUEST_SENDER_FILTER_H
 #define REQUEST_SENDER_FILTER_H
 
+#include "connection.h"
 #include "filter.h"
-#include "filter_chain.h"
-#include "http_headers.h"
+#include "filter_context.h"
 #include "http_object.h"
 
 class RequestSenderFilter : public Filter {
 public:
     RequestSenderFilter() : Filter(kRequest) {}
 
-    virtual FilterResult process() {
-        std::vector<boost::asio::buffer> buffers;
-        HttpContainer *container = chain_->RequestContainer();
+    virtual FilterResult process(FilterContext *context) {
+        boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers(new std::vector<boost::asio::const_buffer>);
+        HttpContainer *container = context->RequestContainer();
         for(std::size_t i = 0; i < container->size(); ++i) {
             HttpObject *object = container->RetrieveObject(i);
             buffers->push_back(boost::asio::buffer(object->ByteContent()->data(), object->ByteContent()->size()));
         }
-        chain_->ServerConnection()->AsyncWrite(buffers);
+        context->ServerConnection()->AsyncWrite(buffers);
+        return Filter::kContinue;
     }
 
     virtual int priority() {

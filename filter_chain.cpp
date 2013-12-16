@@ -14,8 +14,6 @@ void FilterChain::reset() {
 }
 
 void FilterChain::RegisterFilter(Filter *filter) {
-    filter->SetFilterChain(this);
-
     switch(filter->type()) {
     case Filter::kRequest:
         AddFilter(request_filters_, filter);
@@ -54,7 +52,7 @@ void FilterChain::AddFilter(container_type& container, Filter *filter) {
 void FilterChain::filter(container_type &container) {
     // TODO enhance the logic here
     for(auto it = container.begin(); it != container.end(); ++it) {
-        Filter::FilterResult result = (*it)->process();
+        Filter::FilterResult result = (*it)->process(context_);
         switch(result) {
         // for skip and stop, we just return directly
         case Filter::kSkip:

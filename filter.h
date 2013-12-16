@@ -4,6 +4,7 @@
 #include <string>
 
 class FilterChain;
+class FilterContext;
 
 /**
  * @brief The Filter class
@@ -28,16 +29,11 @@ public:
         kHighest = 999, kMiddle = 500, kLowest = 1
     };
 
-    Filter(FilterType type = kBoth, FilterChain *chain = nullptr)
-        : type_(type), chain_(chain) {}
+    Filter(FilterType type = kBoth) : type_(type) {}
 
     virtual ~Filter() {}
 
-    void SetFilterChain(FilterChain *chain) {
-        chain_ = chain;
-    }
-
-    virtual FilterResult process() = 0;
+    virtual FilterResult process(FilterContext *context) = 0;
 
     virtual int priority() = 0;
 
@@ -49,7 +45,6 @@ public:
 
 protected:
     FilterType type_;
-    FilterChain *chain_;
 };
 
 #endif // FILTER_H
