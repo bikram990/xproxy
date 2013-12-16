@@ -10,20 +10,32 @@
 class ClientConnection : public Connection {
 public:
     explicit ClientConnection(boost::asio::io_service& service)
-        : Connection(service) {
-        decoder_ = new HttpRequestDecoder();
-    }
+        : Connection(service) {}
 
     virtual void start() {
-        chain_ = ProxyServer::FilterChainManager().RequireFilterChain();
-        chain_->FilterContext()->SetClientConnection(shared_from_this());
         AsyncRead();
     }
 
-protected:
+    virtual void stop() {
+        socket_->close();
+        ProxyServer::ClientConnectionManager().stop(shared_from_this());
+    }
+
     virtual void StoreRemoteAddress(const std::string& host, short port) {}
 
     virtual void AsyncConnect() {}
+
+protected:
+    virtual void InitDecoder() {
+        decoder_ = new HttpRequestDecoder;
+    }
+
+    virtual void InitFilterChain() {
+        // TODO add logic here
+        chain_ = new FilterChain;
+        chain_->FilterContext()->SetConnection(shared_from_this());
+        // chain_->RegisterFilter();
+    }
 
     virtual void FilterHttpObject(HttpObject *object) {
         if(!chain_) {
@@ -35,7 +47,7 @@ protected:
             return;
         }
 
-        chain_->FilterContext()->RequestContainer()->AppendObject(object);
+        chain_->FilterContext()->container()->AppendObject(object);
         chain_->FilterRequest();
 
         become(kFiltering);

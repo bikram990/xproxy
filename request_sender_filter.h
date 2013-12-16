@@ -12,12 +12,13 @@ public:
 
     virtual FilterResult process(FilterContext *context) {
         boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers(new std::vector<boost::asio::const_buffer>);
-        HttpContainer *container = context->RequestContainer();
+        HttpContainer *container = context->container();
         for(std::size_t i = 0; i < container->size(); ++i) {
             HttpObject *object = container->RetrieveObject(i);
             buffers->push_back(boost::asio::buffer(object->ByteContent()->data(), object->ByteContent()->size()));
         }
-        context->ServerConnection()->AsyncWrite(buffers);
+        // TODO
+        // context->ServerConnection()->AsyncWrite(buffers);
         return Filter::kContinue;
     }
 

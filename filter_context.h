@@ -9,39 +9,26 @@ class Connection;
 
 class FilterContext : public Resettable {
 public:
-    FilterContext() : request_(new HttpContainer), response_(new HttpContainer) {}
+    FilterContext() : container_(new HttpContainer) {}
 
     virtual ~FilterContext() {}
 
-    void SetClientConnection(boost::shared_ptr<Connection> connection) {
-        client_connection_ = connection;
+    void SetConnection(boost::shared_ptr<Connection> connection) {
+        connection_ = connection;
     }
 
-    Connection *ClientConnection() const { return client_connection_.get(); }
+    boost::shared_ptr<Connection> connection() const { return connection_; }
 
-    void SetServerConnection(boost::shared_ptr<Connection> connection) {
-        server_connection_ = connection;
-    }
-
-    Connection *ServerConnection() const { return server_connection_.get(); }
-
-    HttpContainer *RequestContainer() const { return request_.get(); }
-
-    HttpContainer *ResponseContainer() const { return response_.get(); }
+    HttpContainer *container() const { return container_.get(); }
 
     virtual void reset() {
-        client_connection_.reset();
-        server_connection_.reset();
-        request_.reset();
-        response_.reset();
+        connection_.reset();
+        container_.reset();
     }
 
 protected:
-    boost::shared_ptr<Connection> client_connection_;
-    boost::shared_ptr<Connection> server_connection_;
-
-    std::unique_ptr<HttpContainer> request_;
-    std::unique_ptr<HttpContainer> response_;
+    boost::shared_ptr<Connection> connection_;
+    std::unique_ptr<HttpContainer> container_;
 };
 
 #endif // FILTER_CONTEXT_H

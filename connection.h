@@ -34,9 +34,7 @@ public:
     virtual ~Connection() {
         if(decoder_) delete decoder_;
         if(socket_) delete socket_;
-
-        if(chain_)
-            ProxyServer::FilterChainManager().ReleaseFilterChain(chain_);
+        if(chain_) delete chain_;
     }
 
     boost::asio::ip::tcp::socket& socket() const {
@@ -45,12 +43,7 @@ public:
 
     virtual void start() = 0;
 
-    void stop() {
-        ProxyServer::FilterChainManager().ReleaseFilterChain(chain_);
-        chain_ = nullptr;
-        socket_->close();
-        ProxyServer::ClientConnectionManager().stop(shared_from_this());
-    }
+    virtual void stop() = 0;
 
     void AsyncRead() {
         if(in_.size() > 0)
@@ -82,7 +75,15 @@ public:
 
 protected:
     explicit Connection(boost::asio::io_service& service)
-        : decoder_(nullptr), socket_(Socket::Create(service)), state_(kAwaiting) {}
+        : socket_(Socket::Create(service)), decoder_(nullptr), chain_(nullptr),
+          connected_(false), state_(kAwaiting) {
+        InitDecoder();
+        InitFilterChain();
+    }
+
+    virtual void InitDecoder() = 0;
+
+    virtual void InitFilterChain() = 0;
 
     void become(ConnectionState state) {
         state_ = state;
@@ -153,14 +154,13 @@ protected:
     virtual void FilterHttpObject(HttpObject *object) = 0;
 
 protected:
+    Socket *socket_;
     Decoder *decoder_;
-    boost::asio::streambuf in_;
-    boost::shared_ptr<std::vector<boost::asio::const_buffer>> out_;
     FilterChain *chain_;
-
     bool connected_;
     ConnectionState state_;
-    Socket *socket_;
+    boost::asio::streambuf in_;
+    boost::shared_ptr<std::vector<boost::asio::const_buffer>> out_;
 };
 
 typedef boost::shared_ptr<Connection> ConnectionPtr;

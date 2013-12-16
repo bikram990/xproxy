@@ -13,11 +13,11 @@ public:
     typedef ServerConnection this_type;
 
     explicit ServerConnection(boost::asio::io_service& service)
-        : Connection(service), resolver_(service) {
-        decoder_ = new HttpResponseDecoder();
-    }
+        : Connection(service), resolver_(service) {}
 
     virtual void start() {}
+
+    virtual void stop() {}
 
     virtual void StoreRemoteAddress(const std::string& host, short port) {
         host_ = host;
@@ -42,6 +42,18 @@ public:
         }
     }
 
+protected:
+    virtual void InitDecoder() {
+        decoder_ = new HttpResponseDecoder;
+    }
+
+    virtual void InitFilterChain() {
+        // TODO add logic here
+        chain_ = new FilterChain;
+        chain_->FilterContext()->SetConnection(shared_from_this());
+        // chain_->RegisterFilter();
+    }
+
     virtual void FilterHttpObject(HttpObject *object) {
         if(!chain_) {
             XERROR << "The filter chain is not set.";
@@ -52,7 +64,7 @@ public:
             return;
         }
 
-        chain_->FilterContext()->ResponseContainer()->AppendObject(object);
+        chain_->FilterContext()->container()->AppendObject(object);
         chain_->FilterResponse();
 
         become(kFiltering);

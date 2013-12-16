@@ -12,7 +12,7 @@ public:
     EntityCollectorFilter() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
-        HttpContainer *container = context->RequestContainer();
+        HttpContainer *container = context->container();
 
         for(int i = 0; i < container->size(); ++i) {
             XDEBUG << std::string(container->RetrieveObject(i)->ByteContent()->data(),
@@ -20,14 +20,14 @@ public:
         }
 
         if(container->size() < 2) {
-            context->ClientConnection()->AsyncRead();
+            context->connection()->AsyncRead();
             return kStop;
         }
 
         HttpHeaders *headers = reinterpret_cast<HttpHeaders*>(container->RetrieveObject(1));
         std::string content_length;
         if(headers->find("Content-Length", content_length) && container->size() <= 2) {
-            context->ClientConnection()->AsyncRead();
+            context->connection()->AsyncRead();
             return kStop;
         }
 
