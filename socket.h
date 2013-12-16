@@ -107,7 +107,7 @@ public:
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
-    void async_write(ConstBufferSequence&& buffers, WriteHandler&& handler) {
+    void async_write(ConstBufferSequence& buffers, WriteHandler&& handler) {
         if(use_ssl_) {
             boost::system::error_code ec;
             ssl_ready_ = PrepareSSLSocket(ec);
