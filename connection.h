@@ -76,10 +76,7 @@ public:
 protected:
     explicit Connection(boost::asio::io_service& service)
         : socket_(Socket::Create(service)), decoder_(nullptr), chain_(nullptr),
-          connected_(false), state_(kAwaiting) {
-        InitDecoder();
-        InitFilterChain();
-    }
+          connected_(false), state_(kAwaiting) {}
 
     virtual void InitDecoder() = 0;
 

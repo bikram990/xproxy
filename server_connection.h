@@ -13,7 +13,10 @@ public:
     typedef ServerConnection this_type;
 
     explicit ServerConnection(boost::asio::io_service& service)
-        : Connection(service), resolver_(service) {}
+        : Connection(service), resolver_(service) {
+        InitDecoder();
+        InitFilterChain();
+    }
 
     virtual void start() {}
 

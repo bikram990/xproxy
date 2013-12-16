@@ -10,7 +10,10 @@
 class ClientConnection : public Connection {
 public:
     explicit ClientConnection(boost::asio::io_service& service)
-        : Connection(service) {}
+        : Connection(service) {
+        InitDecoder();
+        InitFilterChain();
+    }
 
     virtual void start() {
         AsyncRead();
