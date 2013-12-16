@@ -85,6 +85,8 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
         DecodeInitialLine(buffer, initial);
         if(result_ == kIncomplete) {
             temp_object_ = initial;
+        } else if(result_ == kComplete) {
+            *object = initial;
         }
         return result_;
     }
@@ -100,6 +102,7 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
             } else {
                 result_ = kFinished;
             }
+            *object = headers;
         }
         return result_;
     }
@@ -108,6 +111,8 @@ Decoder::DecodeResult HttpRequestDecoder::decode(boost::asio::streambuf& buffer,
         DecodeBody(buffer, chunk);
         if(result_ == kIncomplete) {
             temp_object_ = chunk;
+        } else if(result_ == kComplete || result_ == kFinished) {
+            *object = chunk;
         }
         return result_;
     }
