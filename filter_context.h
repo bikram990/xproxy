@@ -17,7 +17,13 @@ public:
         connection_ = connection;
     }
 
+    void SetBridgedConnection(boost::shared_ptr<Connection> connection) {
+        bridged_connection_ = connection;
+    }
+
     boost::shared_ptr<Connection> connection() const { return connection_; }
+
+    boost::shared_ptr<Connection> BridgedConnection() const { return bridged_connection_; }
 
     HttpContainer *container() const { return container_.get(); }
 
@@ -28,6 +34,7 @@ public:
 
 protected:
     boost::shared_ptr<Connection> connection_;
+    boost::shared_ptr<Connection> bridged_connection_;
     std::unique_ptr<HttpContainer> container_;
 };
 
