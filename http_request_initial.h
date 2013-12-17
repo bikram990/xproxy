@@ -5,7 +5,7 @@
 
 class HttpRequestInitial : public HttpInitial {
 public:
-    HttpRequestInitial() : HttpInitial() {}
+    HttpRequestInitial() : HttpInitial(kHttpRequestInitial) {}
 
     virtual ~HttpRequestInitial() {}
 

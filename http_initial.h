@@ -5,7 +5,8 @@
 
 class HttpInitial : public HttpObject {
 public:
-    HttpInitial() : major_version_(1), minor_version_(1) {}
+    HttpInitial(HttpObject::Type type = kHttpInitial)
+        : HttpObject(kHttpInitial), major_version_(0), minor_version_(0) {}
 
     virtual ~HttpInitial() {}
 

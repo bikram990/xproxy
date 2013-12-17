@@ -5,7 +5,7 @@
 
 class HttpResponseInitial : public HttpInitial {
 public:
-    HttpResponseInitial() : HttpInitial() {}
+    HttpResponseInitial() : HttpInitial(kHttpResponseInitial) {}
 
     virtual ~HttpResponseInitial() {}
 

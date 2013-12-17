@@ -16,6 +16,8 @@ struct HttpHeader {
 
 class HttpHeaders : public HttpObject {
 public:
+    HttpHeaders() : HttpObject(kHttpHeaders) {}
+
     virtual ~HttpHeaders() {}
 
     bool empty() const { return headers_.empty(); }
