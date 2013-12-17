@@ -78,6 +78,7 @@ public:
         ConnectionPtr connection = ProxyServer::ServerConnectionManager().RequireConnection(host, port);
         connection->FilterContext()->SetBridgedConnection(context->connection());
         context->SetBridgedConnection(connection);
+        connection->start();
         return kContinue;
     }
 
