@@ -91,7 +91,7 @@ Decoder::DecodeResult HttpResponseDecoder::decode(boost::asio::streambuf& buffer
         DecodeInitialLine(buffer, initial);
         if(result_ == kIncomplete) {
             temp_object_ = initial;
-        } else if(result_ = kComplete) {
+        } else if(result_ == kComplete) {
             *object = initial;
         }
         return result_;
