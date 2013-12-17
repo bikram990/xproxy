@@ -12,15 +12,16 @@ class ProxyServer;
 class FilterChainManager : private boost::noncopyable {
     friend class ProxyServer;
 public:
-    FilterChain *RequireFilterChain();
-    void ReleaseFilterChain(FilterChain *chain);
+    const std::vector<Filter*>& BuiltinFilters() const {
+        return builtin_filters_;
+    }
 
     ~FilterChainManager();
 
 private:
     FilterChainManager();
 
-    std::vector<Filter*> predefined_filters_;
+    std::vector<Filter*> builtin_filters_;
     std::list<FilterChain*> chains_;
     boost::mutex lock_;
 };
