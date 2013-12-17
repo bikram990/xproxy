@@ -147,6 +147,7 @@ protected:
                 // TODO add logic here
                 return;
             }
+            XDEBUG << "Remote address connected: " << host_ << ", " << port_;
             connected_ = true;
             AsyncWrite();
             break;
@@ -156,6 +157,7 @@ protected:
                 // TODO add logic here
                 return;
             }
+            AsyncRead();
         default:
             break;
         }
