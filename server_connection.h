@@ -22,11 +22,6 @@ public:
 
     virtual void stop() {}
 
-    virtual void StoreRemoteAddress(const std::string& host, short port) {
-        host_ = host;
-        port_ = port;
-    }
-
     virtual void AsyncConnect() {
         try {
             boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
@@ -122,9 +117,6 @@ protected:
     // }
 
 private:
-    std::string host_;
-    short port_;
-
     boost::asio::ip::tcp::resolver resolver_;
 };
 

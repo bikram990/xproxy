@@ -41,6 +41,10 @@ public:
         return socket_->socket();
     }
 
+    const std::string& host() const { return host_; }
+
+    short port() const { return port_; }
+
     virtual void start() = 0;
 
     virtual void stop() = 0;
@@ -69,7 +73,10 @@ public:
         AsyncWrite();
     }
 
-    virtual void StoreRemoteAddress(const std::string& host, short port) = 0;
+    void SetRemoteAddress(const std::string& host, short port) {
+        host_ = host;
+        port_ = port;
+    }
 
     virtual void AsyncConnect() = 0;
 
@@ -156,6 +163,8 @@ protected:
     FilterChain *chain_;
     bool connected_;
     ConnectionState state_;
+    std::string host_;
+    short port_;
     boost::asio::streambuf in_;
     boost::shared_ptr<std::vector<boost::asio::const_buffer>> out_;
 };

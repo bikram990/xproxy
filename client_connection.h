@@ -24,8 +24,6 @@ public:
         ProxyServer::ClientConnectionManager().stop(shared_from_this());
     }
 
-    virtual void StoreRemoteAddress(const std::string& host, short port) {}
-
     virtual void AsyncConnect() {}
 
 protected:
