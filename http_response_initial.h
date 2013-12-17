@@ -29,7 +29,7 @@ private:
     virtual void UpdateLineString() {
         std::stringstream ss;
         ss << "HTTP/" << major_version_ << '.' << minor_version_
-           << ' ' << status_code_ << ' ' << status_message_;
+           << ' ' << status_code_ << ' ' << status_message_ << "\r\n";
         line_ = ss.str();
     }
 

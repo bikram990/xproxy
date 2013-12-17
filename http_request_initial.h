@@ -31,7 +31,7 @@ private:
     virtual void UpdateLineString() {
         std::stringstream ss;
         ss << method_ << ' ' << uri_ << ' '
-           << "HTTP/" << major_version_ << '.' << minor_version_;
+           << "HTTP/" << major_version_ << '.' << minor_version_ << "\r\n";
         line_ = ss.str();
     }
 
