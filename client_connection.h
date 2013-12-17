@@ -33,7 +33,7 @@ protected:
 
     virtual void InitFilterChain() {
         // TODO add logic here
-        chain_ = new FilterChain;
+        chain_ = new FilterChain(Filter::kRequest);
         chain_->FilterContext()->SetConnection(shared_from_this());
         // chain_->RegisterFilter();
     }
@@ -49,7 +49,7 @@ protected:
         }
 
         chain_->FilterContext()->container()->AppendObject(object);
-        chain_->FilterRequest();
+        chain_->filter();
 
         become(kFiltering);
     }

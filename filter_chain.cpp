@@ -3,55 +3,23 @@
 #include "filter_context.h"
 #include "log.h"
 
-FilterChain::FilterChain() : context_(new class FilterContext) {}
-
-FilterChain::~FilterChain() { // TODO delete all filters?
-    if(context_) delete context_;
-}
-
-void FilterChain::reset() {
-    context_->reset();
-}
-
 void FilterChain::RegisterFilter(Filter *filter) {
-    switch(filter->type()) {
-    case Filter::kRequest:
-        AddFilter(request_filters_, filter);
-        break;
-    case Filter::kResponse:
-        AddFilter(response_filters_, filter);
-        break;
-    case Filter::kBoth:
-        AddFilter(request_filters_, filter);
-        AddFilter(response_filters_, filter);
-        break;
-    default:
-        XERROR << "Invalid filter type, name: " << filter->name();
-    }
-}
+    if(filter->type() != type_ && filter->type() != Filter::kBoth)
+        return;
 
-void FilterChain::FilterRequest() {
-    filter(request_filters_);
-}
-
-void FilterChain::FilterResponse() {
-    filter(response_filters_);
-}
-
-void FilterChain::AddFilter(container_type& container, Filter *filter) {
-    for(auto it = container.begin(); it != container.end(); ++it) {
+    for(auto it = filters_.begin(); it != filters_.end(); ++it) {
         if((*it)->priority() < filter->priority()) { // TODO check if there is bug here
-            container.insert(it, filter);
+            filters_.insert(it, filter);
             return;
         }
     }
 
-    container.push_back(filter);
+    filters_.push_back(filter);
 }
 
-void FilterChain::filter(container_type &container) {
+void FilterChain::filter() {
     // TODO enhance the logic here
-    for(auto it = container.begin(); it != container.end(); ++it) {
+    for(auto it = filters_.begin(); it != filters_.end(); ++it) {
         Filter::FilterResult result = (*it)->process(context_);
         switch(result) {
         // for skip and stop, we just return directly

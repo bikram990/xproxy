@@ -2,34 +2,31 @@
 #define FILTER_CHAIN_H
 
 #include <list>
+#include "filter.h"
+#include "filter_context.h"
 #include "resettable.h"
 
-class Filter;
-class FilterContext;
 
 class FilterChain : public Resettable {
 public:
-    typedef std::list<Filter*> container_type;
+    FilterChain(Filter::FilterType type)
+        : type_(type), context_(new class FilterContext) {}
 
-    FilterChain();
-
-    virtual ~FilterChain();
+    virtual ~FilterChain() {
+        if(context_) delete context_;
+    }
 
     void RegisterFilter(Filter *filter);
 
-    void FilterRequest();
-    void FilterResponse();
+    void filter();
 
     class FilterContext *FilterContext() const { return context_; }
 
-    virtual void reset();
+    virtual void reset() { context_->reset(); }
 
 private:
-    void AddFilter(container_type& container, Filter *filter);
-    void filter(container_type& container);
-
-    container_type request_filters_;
-    container_type response_filters_;
+    Filter::FilterType type_;
+    std::list<Filter*> filters_;
 
     class FilterContext *context_;
 };
