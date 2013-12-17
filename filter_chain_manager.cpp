@@ -6,6 +6,7 @@
 FilterChainManager::FilterChainManager() {
     builtin_filters_.push_back(new EntityCollectorFilter);
     builtin_filters_.push_back(new ServerConnectionObtainer);
+    builtin_filters_.push_back(new UriCanonicalizer);
     builtin_filters_.push_back(new RequestSenderFilter);
     builtin_filters_.push_back(new ResponseReceiverFilter);
 }

@@ -7,6 +7,7 @@
 #include "filter_context.h"
 #include "http_chunk.h"
 #include "http_headers.h"
+#include "http_request_initial.h"
 #include "log.h"
 #include "proxy_server.h"
 #include "server_connection_manager.h"
@@ -80,6 +81,9 @@ public:
             host = host.substr(0, sep);
         }
 
+        XDEBUG << "Remote host and port of current request are: "
+               << host << ", " << port << ".";
+
         ConnectionPtr connection = ProxyServer::ServerConnectionManager().RequireConnection(host, port);
         connection->FilterContext()->SetBridgedConnection(context->connection());
         context->SetBridgedConnection(connection);
@@ -93,6 +97,58 @@ public:
 
     virtual const std::string name() const {
         return "ServerConnectionObtainer";
+    }
+};
+
+class UriCanonicalizer : public Filter {
+public:
+    UriCanonicalizer() : Filter(kRequest) {}
+
+    virtual FilterResult process(FilterContext *context) {
+        HttpInitial *initial = context->container()->RetrieveInitial();
+        if(!initial) {
+            XERROR << "Invalid pointer, current container size: " << context->container()->size();
+            return kStop;
+        }
+        if(initial->type() != HttpObject::kHttpRequestInitial) {
+            XERROR << "Incorrect object type: " << initial->type();
+            return kStop;
+        }
+
+        HttpRequestInitial *ri = reinterpret_cast<HttpRequestInitial*>(initial);
+
+        if(ri->method() == "CONNECT") {
+            XDEBUG << "Https request, skip.";
+            return kContinue;
+        }
+
+        if(ri->uri()[0] == '/') { // already canonicalized
+            return kContinue;
+        }
+
+        std::string http("http://");
+        std::string::size_type end = std::string::npos;
+        if(ri->uri().compare(0, http.length(), http) != 0)
+            end = ri->uri().find('/');
+        else
+            end = ri->uri().find('/', http.length());
+
+        if(end == std::string::npos) {
+            XDEBUG << "No host end / found, consider as root: " << ri->uri();
+            ri->uri() = '/';
+            return kContinue;
+        }
+
+        ri->uri().erase(0, end);
+        return kContinue;
+    }
+
+    virtual int priority() {
+        return kHighest - 2;
+    }
+
+    virtual const std::string name() const {
+        return "UriCanonicalizer";
     }
 };
 
@@ -116,7 +172,7 @@ public:
     }
 
     virtual int priority() {
-        return kHighest - 2;
+        return kHighest - 3;
     }
 
     virtual const std::string name() const {
