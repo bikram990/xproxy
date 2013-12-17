@@ -16,6 +16,12 @@ public:
         if(context_) delete context_;
     }
 
+    template<typename Container>
+    void RegisterAll(const Container& filters) {
+        std::for_each(filters.begin(), filters.end(),
+                      [this](Filter *filter) { RegisterFilter(filter); });
+    }
+
     void RegisterFilter(Filter *filter);
 
     void filter();
