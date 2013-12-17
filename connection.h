@@ -37,6 +37,8 @@ public:
         if(chain_) delete chain_;
     }
 
+    boost::asio::io_service& service() const { return service_; }
+
     boost::asio::ip::tcp::socket& socket() const {
         return socket_->socket();
     }
@@ -44,6 +46,8 @@ public:
     const std::string& host() const { return host_; }
 
     short port() const { return port_; }
+
+    class FilterContext *FilterContext() const { return chain_->FilterContext(); }
 
     virtual void start() = 0;
 
@@ -82,7 +86,8 @@ public:
 
 protected:
     explicit Connection(boost::asio::io_service& service)
-        : socket_(Socket::Create(service)), decoder_(nullptr), chain_(nullptr),
+        : service_(service), socket_(Socket::Create(service)),
+          decoder_(nullptr), chain_(nullptr),
           connected_(false), state_(kAwaiting) {}
 
     virtual void InitDecoder() = 0;
@@ -158,6 +163,7 @@ protected:
     virtual void FilterHttpObject(HttpObject *object) = 0;
 
 protected:
+    boost::asio::io_service& service_;
     Socket *socket_;
     Decoder *decoder_;
     FilterChain *chain_;
