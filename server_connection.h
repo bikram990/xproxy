@@ -49,6 +49,7 @@ protected:
         // TODO add logic here
         chain_ = new FilterChain(Filter::kResponse);
         chain_->FilterContext()->SetConnection(shared_from_this());
+        chain_->RegisterAll(ProxyServer::FilterChainManager().BuiltinFilters());
         // chain_->RegisterFilter();
     }
 
