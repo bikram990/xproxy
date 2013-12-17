@@ -106,7 +106,6 @@ protected:
     virtual void callback(const boost::system::error_code& e, std::size_t size = 0) {
         switch(state_) {
         case kReading: {
-            XDEBUG << "size: " << size << ", size of in buffer: " << in_.size();
             if(size <= 0) {
                 if(in_.size() <= 0) {
                     XERROR << "No data, disconnecting the socket.";
@@ -116,7 +115,9 @@ protected:
             } else {
                 in_.commit(size);
             }
-            XDEBUG << "size: " << size << ", size of in buffer: " << in_.size();
+
+            XDEBUG << "Reading data from socket, size: " << size
+                   << ", buffer size: " << in_.size();
 
             HttpObject *object = nullptr;
             Decoder::DecodeResult result = decoder_->decode(in_, &object);

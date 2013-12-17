@@ -16,9 +16,12 @@ public:
     EntityCollectorFilter() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
+        XDEBUG << "In filter: " << name();
+
         HttpContainer *container = context->container();
 
-        XDEBUG << "========== Dump http request object: ==========" << '\n'
+        XDEBUG << "Dump http request object:\n"
+               << "==================== begin ====================" << '\n'
                << std::string(container->RetrieveLatest()->ByteContent()->data(),
                               container->RetrieveLatest()->ByteContent()->size())
                << '\n' << "===================== end =====================";
@@ -53,6 +56,8 @@ public:
     ServerConnectionObtainer() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
+        XDEBUG << "In filter: " << name();
+
         HttpContainer *container = context->container();
         HttpHeaders *headers = container->RetrieveHeaders();
 
@@ -96,6 +101,8 @@ public:
     RequestSenderFilter() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
+        XDEBUG << "In filter: " << name();
+
         boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers(new std::vector<boost::asio::const_buffer>);
         HttpContainer *container = context->container();
         for(std::size_t i = 0; i < container->size(); ++i) {
@@ -122,6 +129,8 @@ public:
     ResponseReceiverFilter() : Filter(kResponse) {}
 
     virtual FilterResult process(FilterContext *context) {
+        XDEBUG << "In filter: " << name();
+
         HttpObject *latest = context->container()->RetrieveLatest();
 
         if(!latest) {
@@ -129,9 +138,10 @@ public:
             return kStop;
         }
 
-        XDEBUG << "========== Dump http response object: ==========" << '\n'
+        XDEBUG << "Dump http response object:\n"
+               << "==================== begin ====================" << '\n'
                << std::string(latest->ByteContent()->data(), latest->ByteContent()->size())
-               << '\n'  << "===================== end ======================";
+               << '\n' << "===================== end =====================";
 
         boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers(new std::vector<boost::asio::const_buffer>);
         buffers->push_back(boost::asio::buffer(latest->ByteContent()->data(), latest->ByteContent()->size()));

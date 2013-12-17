@@ -90,6 +90,11 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
         XWARN << "Acceptor is not open, error message: " << e.message();
         return;
     }
+
+    XDEBUG << "A new connection is accepted, host: "
+           << current_connection_->socket().remote_endpoint().address()
+           << ", port: " << current_connection_->socket().remote_endpoint().port();
+
     if(!e)
         client_connection_manager_->start(current_connection_);
 
