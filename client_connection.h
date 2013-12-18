@@ -1,23 +1,33 @@
 #ifndef CLIENT_CONNECTION_H
 #define CLIENT_CONNECTION_H
 
+#include <boost/atomic.hpp>
+#include <boost/lexical_cast.hpp>
 #include "connection.h"
 #include "decoder.h"
 #include "filter_chain.h"
 #include "http_container.h"
 #include "http_request_decoder.h"
 
+#define LDEBUG XDEBUG << identifier() << " "
+#define LERROR XERROR << identifier() << " "
+#define LWARN  XWARN  << identifier() << " "
+
 class ClientConnection : public Connection {
 public:
-    explicit ClientConnection(boost::asio::io_service& service)
-        : Connection(service) {
-        InitDecoder();
-        InitFilterChain();
+    static Connection *create(boost::asio::io_service& service) {
+        ++counter_;
+        return new ClientConnection(service);
     }
 
     virtual void start() {
+        connected_ = true;
+
+        SetRemoteAddress(socket_->socket().remote_endpoint().address().to_string(),
+                         socket_->socket().remote_endpoint().port());
+
         chain_->FilterContext()->SetConnection(shared_from_this());
-        AsyncRead();
+        PostAsyncReadTask();
     }
 
     virtual void stop() {
@@ -25,9 +35,19 @@ public:
         ProxyServer::ClientConnectionManager().stop(shared_from_this());
     }
 
-    virtual void AsyncConnect() {}
+    virtual void AsyncConnect() {
+        LWARN << "This function should never be called.";
+    }
 
-protected:
+private:
+    static boost::atomic<std::size_t> counter_;
+
+    explicit ClientConnection(boost::asio::io_service& service)
+        : Connection(service), id_(counter_) {
+        InitDecoder();
+        InitFilterChain();
+    }
+
     virtual void InitDecoder() {
         decoder_ = new HttpRequestDecoder;
     }
@@ -37,53 +57,35 @@ protected:
         chain_->RegisterAll(ProxyServer::FilterChainManager().BuiltinFilters());
     }
 
-    virtual void FilterHttpObject(HttpObject *object) {
-        if(!chain_) {
-            XERROR << "The filter chain is not set.";
-            return;
-        }
-        if(!object) {
-            XERROR << "Invalid HttpObject pointer.";
-            return;
-        }
+    // It is OK to use the parent's HandleReading() function
+    // virtual void HandleReading(const boost::system::error_code& e);
 
-        chain_->FilterContext()->container()->AppendObject(object);
-        chain_->filter();
-
-        become(kFiltering);
+    virtual void HandleConnecting(const boost::system::error_code& e) {
+        LWARN << "This function should never be called.";
     }
 
-    // void Callback(const boost::system::error_code& e, std::size_t size = 0) {
-    //     switch(state_) {
-    //     case kReading: {
-    //         XDEBUG << "Read data from socket, size: " << size;
-    //         in_.commit(size);
+    virtual void HandleWriting(const boost::system::error_code& e) {
+        if(e) {
+            LERROR << "Error occurred during writing to remote peer, message: " << e.message();
+            // TODO add logic here
+            return;
+        }
+        LDEBUG << "Data has been written to socket.";
+        // TODO add logic for last writing
+    }
 
-    //         HttpObject *object = nullptr;
-    //         Decoder::DecodeResult result = decoder_->decode(in_, &object);
+    virtual std::string identifier() const {
+        return "[ClientConnection:" + std::to_string(id_) + "]";
+    }
 
-    //         switch(result) {
-    //         case Decoder::kIncomplete:
-    //             AsyncRead();
-    //             break;
-    //         case Decoder::kFailure:
-    //             // TODO add logic here
-    //         case Decoder::kComplete:
-    //         case Decoder::kFinished:
-    //             // TODO add logic here
-    //             chain_->FilterContext()->RequestContainer()->AppendObject(object);
-    //             chain_->FilterRequest();
-    //             break;
-    //         default:
-    //             break;
-    //         }
-    //         break;
-    //     }
-    //     // TODO add later
-    //     default:
-    //         ; // add colon to pass the compilation
-    //     }
-    // }
+private:
+    std::size_t id_;
 };
+
+boost::atomic<std::size_t> ClientConnection::counter_(0);
+
+#undef LDEBUG
+#undef LERROR
+#undef LWARN
 
 #endif // CLIENT_CONNECTION_H

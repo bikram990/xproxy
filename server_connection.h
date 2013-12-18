@@ -1,6 +1,7 @@
 #ifndef SERVER_CONNECTION_H
 #define SERVER_CONNECTION_H
 
+#include <boost/atomic.hpp>
 #include <boost/lexical_cast.hpp>
 #include "connection.h"
 #include "decoder.h"
@@ -8,14 +9,17 @@
 #include "http_container.h"
 #include "http_response_decoder.h"
 
+#define LDEBUG XDEBUG << identifier() << " "
+#define LERROR XERROR << identifier() << " "
+#define LWARN  XWARN  << identifier() << " "
+
 class ServerConnection : public Connection {
 public:
     typedef ServerConnection this_type;
 
-    explicit ServerConnection(boost::asio::io_service& service)
-        : Connection(service), resolver_(service) {
-        InitDecoder();
-        InitFilterChain();
+    static Connection *create(boost::asio::io_service& service) {
+        ++counter_;
+        return new ServerConnection(service);
     }
 
     virtual void start() {
@@ -26,23 +30,30 @@ public:
 
     virtual void AsyncConnect() {
         try {
+            become(kConnecting);
             boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
             boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver_.resolve(query);
 
-            XDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
+            LDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
             socket_->async_connect(endpoint_iterator, boost::bind(&this_type::callback,
-                                                                  this,
-                                                                  boost::asio::placeholders::error,
-                                                                  0));
-            become(kConnecting);
+                                                                  shared_from_this(),
+                                                                  boost::asio::placeholders::error));
         } catch(const boost::system::system_error& e) {
-            XERROR << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
+            LERROR << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
             // TODO add logic here
         }
     }
 
-protected:
+private:
+    static boost::atomic<std::size_t> counter_;
+
+    explicit ServerConnection(boost::asio::io_service& service)
+        : Connection(service), id_(counter_), resolver_(service) {
+        InitDecoder();
+        InitFilterChain();
+    }
+
     virtual void InitDecoder() {
         decoder_ = new HttpResponseDecoder;
     }
@@ -52,72 +63,28 @@ protected:
         chain_->RegisterAll(ProxyServer::FilterChainManager().BuiltinFilters());
     }
 
-    virtual void FilterHttpObject(HttpObject *object) {
-        if(!chain_) {
-            XERROR << "The filter chain is not set.";
-            return;
-        }
-        if(!object) {
-            XERROR << "Invalid HttpObject pointer.";
-            return;
-        }
+    // It is OK to use the parent's HandleReading() function
+    // virtual void HandleReading(const boost::system::error_code& e);
 
-        chain_->FilterContext()->container()->AppendObject(object);
-        chain_->filter();
+    // It is OK to use the parent's HandleConnecting() function
+    // virtual void HandleConnecting(const boost::system::error_code& e);
 
-        become(kFiltering);
+    // It is OK to use the parent's HandleConnecting() function
+    // virtual void HandleWriting(const boost::system::error_code& e);
+
+    virtual std::string identifier() const {
+        return "[ServerConnection:" + std::to_string(id_) + "]";
     }
 
-    // virtual void Callback(const boost::system::error_code& e, std::size_t size = 0) {
-    //     switch(state_) {
-    //     case kReading: {
-    //         in_.commit(size);
-
-    //         HttpObject *object = nullptr;
-    //         Decoder::DecodeResult result = decoder_->decode(in_, &object);
-
-    //         switch(result) {
-    //         case Decoder::kIncomplete:
-    //             AsyncRead();
-    //             break;
-    //         case Decoder::kFailure:
-    //             // TODO add logic here
-    //         case Decoder::kComplete:
-    //         case Decoder::kFinished:
-    //             // TODO add logic here
-    //             chain_->FilterContext()->ResponseContainer()->AppendObject(object);
-    //             chain_->FilterResponse();
-    //             break;
-    //         default:
-    //             break;
-    //         }
-    //         break;
-    //     }
-    //     case kWriting:
-    //         if(e) {
-    //             XERROR << "Error writing.";
-    //             // TODO add logic here
-    //             return;
-    //         }
-    //         AsyncRead();
-    //     case kConnecting:
-    //         if(e) {
-    //             XERROR << "Failed to connect to remote server, message: " << e.message();
-    //             // TODO add logic here
-    //             return;
-    //         }
-    //         connected_ = true;
-    //         // TODO IMPORTANT!!! correct invocation here
-    //         // AsyncWrite();
-    //         break;
-    //     // TODO add later
-    //     default:
-    //         ; // add a colon to pass the compilation
-    //     }
-    // }
-
 private:
+    std::size_t id_;
     boost::asio::ip::tcp::resolver resolver_;
 };
+
+boost::atomic<std::size_t> ServerConnection::counter_(0);
+
+#undef LDEBUG
+#undef LERROR
+#undef LWARN
 
 #endif // SERVER_CONNECTION_H

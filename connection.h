@@ -10,11 +10,13 @@
 #include "proxy_server.h"
 #include "socket.h"
 
+#define LDEBUG XDEBUG << identifier() << " "
+#define LERROR XERROR << identifier() << " "
+#define LWARN  XWARN  << identifier() << " "
 
 class Connection : public boost::enable_shared_from_this<Connection>,
                    private boost::noncopyable {
 public:
-    typedef boost::shared_ptr<Connection> Ptr;
     typedef Connection this_type;
 
     enum {
@@ -29,13 +31,13 @@ public:
         kFiltering   // filter decoded object
     };
 
-    static Ptr *Create(boost::asio::io_service& service);
-
     virtual ~Connection() {
         if(decoder_) delete decoder_;
         if(socket_) delete socket_;
         if(chain_) delete chain_;
     }
+
+public: // getters
 
     boost::asio::io_service& service() const { return service_; }
 
@@ -49,42 +51,81 @@ public:
 
     class FilterContext *FilterContext() const { return chain_->FilterContext(); }
 
-    virtual void start() = 0;
-
-    virtual void stop() = 0;
-
-    void AsyncRead() {
-        if(in_.size() > 0)
-            callback(boost::system::error_code(), 0);
-
-        socket_->async_read_some(in_.prepare(kDefaultBufferSize),
-                                 boost::bind(&this_type::callback,
-                                             shared_from_this(),
-                                             boost::asio::placeholders::error,
-                                             boost::asio::placeholders::bytes_transferred));
-        become(kReading);
-    }
-
-    void AsyncWrite(boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers) {
-        out_ = buffers;
-
-        if(!connected_) {
-            AsyncConnect();
-            become(kConnecting);
-            return;
-        }
-
-        AsyncWrite();
-    }
+public: // setters
 
     void SetRemoteAddress(const std::string& host, short port) {
         host_ = host;
         port_ = port;
     }
 
+public: // async tasks
+
+    void PostAsyncReadTask() {
+        become(kReading);
+        service_.post(boost::bind(&this_type::AsyncRead, shared_from_this()));
+    }
+
+    void PostAsyncWriteTask(boost::shared_ptr<std::vector<SharedBuffer>> buffers) {
+        /// We do not set state here, because currently the connection may be
+        /// not connected, so let the state be decided later
+        service_.post(boost::bind(&this_type::AsyncWriteStart, shared_from_this(), buffers));
+    }
+
+public:
+
+    virtual void start() = 0;
+
+    virtual void stop() = 0;
+
+protected: // real async IO tasks
+
+    void AsyncRead() {
+        /// Although the state is set in PostAsyncReadTask(), we set it again
+        /// here to ensure it is correctly set
+        become(kReading);
+
+        if(in_.size() > 0) {
+            LDEBUG << "There is still data in buffer, skip reading from socket.";
+            callback(boost::system::error_code());
+            return;
+        }
+
+        boost::asio::async_read(*socket_, in_, boost::asio::transfer_at_least(1),
+                                boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
+    }
+
+    void AsyncWriteStart(boost::shared_ptr<std::vector<SharedBuffer>> buffers) {
+        std::for_each(buffers->begin(), buffers->end(),
+                      [this](SharedBuffer buffer) {
+                          std::size_t copied = boost::asio::buffer_copy(out_.prepare(buffer->size()), boost::asio::buffer(buffer->data(), buffer->size()));
+                          if(copied != buffer->size()) {
+                              LERROR << "Data length mismatch, but this should never happen.";
+                              return;
+                          }
+                          out_.commit(copied);
+                      });
+
+        if(!connected_) {
+            LDEBUG << "The connection is not connected, connecting...";
+            become(kConnecting);
+            AsyncConnect();
+            return;
+        }
+
+        become(kWriting);
+        AsyncWrite();
+    }
+
+    void AsyncWrite() {
+        become(kWriting);
+        socket_->async_write_some(boost::asio::buffer(out_.data(), out_.size()),
+                                  boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
+    }
+
     virtual void AsyncConnect() = 0;
 
-protected:
+protected: // instantiation
+
     explicit Connection(boost::asio::io_service& service)
         : service_(service), socket_(Socket::Create(service)),
           decoder_(nullptr), chain_(nullptr),
@@ -94,76 +135,114 @@ protected:
 
     virtual void InitFilterChain() = 0;
 
+protected:
+
     void become(ConnectionState state) {
         state_ = state;
     }
 
-    void AsyncWrite() {
-        socket_->async_write_some(*out_, boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error, 0));
-        become(kWriting);
-    }
-
-    virtual void callback(const boost::system::error_code& e, std::size_t size = 0) {
+    virtual void callback(const boost::system::error_code& e) {
+        LDEBUG << "Function callback() called, current connection state: "
+               << static_cast<int>(state_);
         switch(state_) {
-        case kReading: {
-            if(size <= 0) {
-                if(in_.size() <= 0) {
-                    XERROR << "No data, disconnecting the socket.";
-                    // TODO disconnect here
-                    return;
-                }
-            } else {
-                in_.commit(size);
-            }
-
-            XDEBUG << "Reading data from socket, size: " << size
-                   << ", buffer size: " << in_.size();
-
-            HttpObject *object = nullptr;
-            Decoder::DecodeResult result = decoder_->decode(in_, &object);
-            switch(result) {
-            case Decoder::kIncomplete:
-                XDEBUG << "Incomplete buffer, continue reading.";
-                AsyncRead();
-                break;
-            case Decoder::kFailure:
-                XERROR << "Failed to decode object, return.";
-                return;
-                // TODO add logic here
-            case Decoder::kComplete:
-            case Decoder::kFinished:
-                if(!object)
-                    XERROR << "invalid pointer.";
-                FilterHttpObject(object);
-                break;
-            default:
-                break;
-            }
+        case kReading:
+            HandleReading(e);
             break;
-        }
         case kConnecting:
-            if(e) {
-                XERROR << "Failed to connect to remote peer, message: " << e.message();
-                // TODO add logic here
-                return;
-            }
-            XDEBUG << "Remote address connected: " << host_ << ", " << port_;
-            connected_ = true;
-            AsyncWrite();
+            HandleConnecting(e);
             break;
         case kWriting:
-            if(e) {
-                XERROR << "Error occurred during writing to remote peer, message: " << e.message();
-                // TODO add logic here
-                return;
-            }
-            AsyncRead();
+            HandleWriting(e);
+            break;
         default:
+            LERROR << "The connection is in a wrong state: "
+                   << static_cast<int>(state_);
             break;
         }
     }
 
-    virtual void FilterHttpObject(HttpObject *object) = 0;
+    /// The handler for kReading state in callback() function
+    /**
+     * @brief HandleReading
+     *
+     * Derived classes should override this function, if its logic cannot
+     * meet the requirement.
+     *
+     * Same as below functions: HandleConnecting(), HandleWriting().
+     */
+    virtual void HandleReading(const boost::system::error_code& e) {
+        if(in_.size() <= 0) {
+            LERROR << "No data, disconnecting the socket.";
+            // TODO disconnect here
+            return;
+        }
+
+        LDEBUG << "Read data from socket, buffer size: " << in_.size();
+
+        LDEBUG << "Content in raw buffer:\n"
+               << boost::asio::buffer_cast<const char *>(in_.data());
+
+        HttpObject *object = nullptr;
+        Decoder::DecodeResult result = decoder_->decode(in_, &object);
+
+        switch(result) {
+        case Decoder::kIncomplete:
+            LDEBUG << "Incomplete buffer, continue reading.";
+            PostAsyncReadTask();
+            break;
+        case Decoder::kFailure:
+            LERROR << "Failed to decode object, return.";
+            // TODO add logic here
+            break;
+        case Decoder::kComplete:
+        case Decoder::kFinished:
+            if(!object) {
+                LERROR << "The decoding is finished, but the pointer is invalid.";
+                // TODO add logic here
+                return;
+            }
+            become(kFiltering); // TODO do we really need this state?
+            chain_->FilterContext()->container()->AppendObject(object);
+            chain_->filter();
+            LDEBUG << "The filtering process finished.";
+            break;
+        default:
+            LERROR << "Invalid result: " << static_cast<int>(result);
+            break;
+        }
+    }
+
+    virtual void HandleConnecting(const boost::system::error_code& e) {
+        if(e) {
+            LERROR << "Error occurred during connecting to remote peer, message: " << e.message();
+            // TODO add logic here
+            return;
+        }
+
+        LDEBUG << "Remote peer connected: " << host_ << ":" << port_;
+        connected_ = true;
+        AsyncWrite();
+    }
+
+    virtual void HandleWriting(const boost::system::error_code& e) {
+        if(e) {
+            LERROR << "Error occurred during writing to remote peer, message: " << e.message();
+            // TODO add logic here
+            return;
+        }
+        LDEBUG << "Data has been written to socket, now start reading...";
+        PostAsyncReadTask();
+    }
+
+    /// Return a string which can identify current connection.
+    /**
+     * This function is mainly used for debugging, the ideal invocation result
+     * of this function should be something like: "[ServerConnection:1]"
+     *
+     * @brief identifier
+     * @return a string which can identify current connection
+     */
+    virtual std::string identifier() const = 0;
 
 protected:
     boost::asio::io_service& service_;
@@ -175,9 +254,13 @@ protected:
     std::string host_;
     short port_;
     boost::asio::streambuf in_;
-    boost::shared_ptr<std::vector<boost::asio::const_buffer>> out_;
+    boost::asio::streambuf out_;
 };
 
 typedef boost::shared_ptr<Connection> ConnectionPtr;
+
+#undef LDEBUG
+#undef LERROR
+#undef LWARN
 
 #endif // CONNECTION_H
