@@ -9,3 +9,5 @@
 2. in =HttpRequestDecoder= and =HttpResponseDecoder=, use =std::unique_ptr= instead naked =new= operation
 
 3. make methods =start()=, =stop()= in =Connection= virtual, the implementation of =ServerConnection= and =ClientConnection= should be different
+
+4. some initialization work need to be done when constructing a connection class, try to do in =XXXConnection::create()= method
