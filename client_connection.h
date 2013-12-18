@@ -19,15 +19,15 @@ public:
 
     static Connection *create(boost::asio::io_service& service) {
         ++counter_;
-        ClientConnection *connection = new ClientConnection(service);
+        boost::shared_ptr<ClientConnection> connection(new ClientConnection(service));
         connection->connected_ = true;
-        connection->SetRemoteAddress(connection->socket_->socket().remote_endpoint().address().to_string(),
-                                     connection->socket_->socket().remote_endpoint().port());
-        connection->FilterContext()->SetConnection(connection->shared_from_this());
-        return connection;
+        connection->FilterContext()->SetConnection(connection);
+        return connection.get();
     }
 
     virtual void start() {
+        SetRemoteAddress(socket_->socket().remote_endpoint().address().to_string(),
+                         socket_->socket().remote_endpoint().port());
         PostAsyncReadTask();
     }
 

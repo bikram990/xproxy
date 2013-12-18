@@ -19,9 +19,9 @@ public:
 
     static Connection *create(boost::asio::io_service& service) {
         ++counter_;
-        ServerConnection *connection = new ServerConnection(service);
-        connection->FilterContext()->SetConnection(connection->shared_from_this());
-        return connection;
+        boost::shared_ptr<ServerConnection> connection(new ServerConnection(service));
+        connection->FilterContext()->SetConnection(connection);
+        return connection.get();
     }
 
     virtual void start() {
