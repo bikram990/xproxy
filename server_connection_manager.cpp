@@ -8,7 +8,7 @@ ConnectionPtr ServerConnectionManager::RequireConnection(const std::string &host
 
     auto it = connections_.find(key);
     if(it == connections_.end()) {
-        ConnectionPtr connection(new ServerConnection(fetch_service_));
+        ConnectionPtr connection(ServerConnection::create(fetch_service_));
         connection->SetRemoteAddress(host, port);
         return connection;
     }
@@ -20,7 +20,7 @@ ConnectionPtr ServerConnectionManager::RequireConnection(const std::string &host
         return connection;
     }
 
-    ConnectionPtr connection(new ServerConnection(fetch_service_));
+    ConnectionPtr connection(ServerConnection::create(fetch_service_));
     connection->SetRemoteAddress(host, port);
     return connection;
 }
