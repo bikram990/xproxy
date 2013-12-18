@@ -19,11 +19,13 @@ public:
 
     static Connection *create(boost::asio::io_service& service) {
         ++counter_;
-        return new ServerConnection(service);
+        ServerConnection *connection = new ServerConnection(service);
+        connection->FilterContext()->SetConnection(connection->shared_from_this());
+        return connection;
     }
 
     virtual void start() {
-        chain_->FilterContext()->SetConnection(shared_from_this());
+        LDEBUG << "This function has no use.";
     }
 
     virtual void stop() {}
