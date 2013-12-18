@@ -13,7 +13,7 @@ ProxyServer& ProxyServer::instance() {
     return server_.get();
 }
 
-ProxyServer::ProxyServer(short port,
+ProxyServer::ProxyServer(unsigned short port,
                          int main_thread_count,
                          int fetch_thread_count)
     : state_(kUninitialized), port_(port),

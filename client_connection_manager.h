@@ -13,7 +13,7 @@ class ClientConnectionManager : private boost::noncopyable {
 public:
     void start(boost::shared_ptr<Connection> connection);
     void stop(boost::shared_ptr<Connection> connection);
-    boost::shared_ptr<Connection> find(const std::string& host, short port);
+    boost::shared_ptr<Connection> find(const std::string& host, unsigned short port);
     void StopAll();
 
 private:

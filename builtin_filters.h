@@ -69,7 +69,7 @@ public:
         }
 
         std::string host;
-        short port = 80;
+        unsigned short port = 80;
         if(!headers->find("Host", host)) {
             XERROR << "no host found, this should never happen.";
             return kStop;
@@ -77,7 +77,7 @@ public:
 
         std::string::size_type sep = host.find(':');
         if(sep != std::string::npos) {
-            port = boost::lexical_cast<short>(host.substr(sep + 1));
+            port = boost::lexical_cast<unsigned short>(host.substr(sep + 1));
             host = host.substr(0, sep);
         }
 

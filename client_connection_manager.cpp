@@ -18,7 +18,7 @@ void ClientConnectionManager::stop(ConnectionPtr connection) {
     connections_.erase(addr + ":" + port);
 }
 
-ConnectionPtr ClientConnectionManager::find(const std::string& host, short port) {
+ConnectionPtr ClientConnectionManager::find(const std::string& host, unsigned short port) {
     std::string key = host + ":" + std::to_string(port);
     auto it = connections_.find(key);
     if(it != connections_.end())

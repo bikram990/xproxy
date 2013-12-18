@@ -40,7 +40,7 @@ private:
 
     static ProxyServer& instance();
 
-    ProxyServer(short port = 7077,
+    ProxyServer(unsigned short port = 7077,
                 int main_thread_count = 2,
                 int fetch_thread_count = 10);
 
@@ -69,7 +69,7 @@ private:
 
     State state_;
 
-    short port_;
+    unsigned short port_;
 
     int main_thread_pool_size_;
     int fetch_thread_pool_size_;

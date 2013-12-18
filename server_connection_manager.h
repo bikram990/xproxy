@@ -13,7 +13,7 @@ class ProxyServer;
 class ServerConnectionManager {
     friend class ProxyServer;
 public:
-    boost::shared_ptr<Connection> RequireConnection(const std::string &host, short port);
+    boost::shared_ptr<Connection> RequireConnection(const std::string &host, unsigned short port);
 
     void ReleaseConnection(boost::shared_ptr<Connection> connection);
 

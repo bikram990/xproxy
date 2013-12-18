@@ -57,7 +57,7 @@ public:
     bool LoadConfig();
     bool LoadConfig(const std::string& conf_file);
 
-    short GetProxyPort(short default_value = 7077);
+    unsigned short GetProxyPort(unsigned short default_value = 7077);
     int GetMainThreadCount(int default_value = 2);
     int GetFetchThreadCount(int default_value = 10);
     std::string GetLogLevel(std::string default_value = "info");
@@ -191,8 +191,8 @@ inline bool ResourceManager::ServerConfig::LoadConfig(const std::string& conf_fi
     return LoadConfig();
 }
 
-inline short ResourceManager::ServerConfig::GetProxyPort(short default_value) {
-    short result;
+inline unsigned short ResourceManager::ServerConfig::GetProxyPort(unsigned short default_value) {
+    unsigned short result;
     return GetConfig(kConfPortKey, result) ? result : default_value;
 }
 

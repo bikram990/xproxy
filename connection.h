@@ -47,13 +47,13 @@ public: // getters
 
     const std::string& host() const { return host_; }
 
-    short port() const { return port_; }
+    unsigned short port() const { return port_; }
 
     class FilterContext *FilterContext() const { return chain_->FilterContext(); }
 
 public: // setters
 
-    void SetRemoteAddress(const std::string& host, short port) {
+    void SetRemoteAddress(const std::string& host, unsigned short port) {
         host_ = host;
         port_ = port;
     }
@@ -252,7 +252,7 @@ protected:
     bool connected_;
     ConnectionState state_;
     std::string host_;
-    short port_;
+    unsigned short port_;
     boost::asio::streambuf in_;
     boost::asio::streambuf out_;
 };
