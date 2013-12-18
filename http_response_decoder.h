@@ -16,6 +16,17 @@ public:
 
     virtual DecodeResult decode(boost::asio::streambuf& buffer, HttpObject **object);
 
+    virtual void reset() {
+        result_ = kIncomplete;
+        state_ = kResponseStart;
+        if(temp_object_) {
+            delete temp_object_;
+            temp_object_ = nullptr;
+        }
+        body_length_ = 0;
+        chunked_ = false;
+    }
+
 private:
     enum DecodeState {
         kResponseStart, kProtocolH, kProtocolT1, kProtocolT2, kProtocolP,

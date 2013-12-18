@@ -259,6 +259,10 @@ protected:
 
         InitSSLContext();
 
+        // because we have decoded "CONNECT..." request, so we reset it here
+        // to decode new request
+        decoder_->reset();
+
         become(kReading);
         AsyncRead();
     }

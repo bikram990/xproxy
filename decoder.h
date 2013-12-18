@@ -2,6 +2,7 @@
 #define DECODER_H
 
 #include <boost/asio.hpp>
+#include "resettable.h"
 
 class HttpObject;
 
@@ -10,7 +11,7 @@ class HttpObject;
  *
  * Classes inherit from this interface are used to decode byte content into object
  */
-class Decoder {
+class Decoder : public Resettable {
 public:
     enum DecodeResult {
         kFailure,    // decoding failed, invalid data
