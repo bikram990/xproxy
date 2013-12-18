@@ -52,12 +52,74 @@ public:
     }
 };
 
+class SSLHandler : public Filter {
+public:
+    SSLHandler() : Filter(kRequest) {}
+
+    virtual FilterResult process(FilterContext *context) {
+        XDEBUG << "In filter: " << name();
+
+        HttpInitial *initial = context->container()->RetrieveInitial();
+        if(!initial) {
+            XERROR << "Invalid pointer, current container size: " << context->container()->size();
+            return kStop;
+        }
+        if(initial->type() != HttpObject::kHttpRequestInitial) {
+            XERROR << "Incorrect object type: " << initial->type();
+            return kStop;
+        }
+
+        HttpRequestInitial *ri = reinterpret_cast<HttpRequestInitial*>(initial);
+
+        if(ri->method() != "CONNECT") {
+            XDEBUG << "Not a Https request, continue.";
+            return kContinue;
+        }
+
+        // for ssl connections, we set the host and port here
+        std::string host;
+        unsigned short port = 443;
+        std::string::size_type sep = ri->uri().find(':');
+        if(sep != std::string::npos) {
+            port = boost::lexical_cast<unsigned short>(ri->uri().substr(sep + 1));
+            host = ri->uri().substr(0, sep);
+        }
+
+        ConnectionPtr connection = ProxyServer::ServerConnectionManager().RequireConnection(host, port);
+        connection->FilterContext()->SetBridgedConnection(context->connection());
+        context->SetBridgedConnection(connection);
+
+        static std::string response("HTTP/1.1 200 Connection Established\r\nConnection: Keep-Alive\r\n\r\n");
+
+        boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
+        SharedBuffer buffer(new ByteBuffer);
+        *buffer << response;
+
+        context->connection()->PostAsyncWriteTask(buffers);
+
+        return kStop;
+    }
+
+    virtual int priority() {
+        return kHighest - 1;
+    }
+
+    virtual const std::string name() const {
+        return "SSLHandler";
+    }
+};
+
 class ServerConnectionObtainer : public Filter {
 public:
     ServerConnectionObtainer() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
         XDEBUG << "In filter: " << name();
+
+        if(context->BridgedConnection()) {
+            XDEBUG << "The server connection is set, seems to be a https connection.";
+            return kContinue;
+        }
 
         HttpContainer *container = context->container();
         HttpHeaders *headers = container->RetrieveHeaders();
@@ -92,7 +154,7 @@ public:
     }
 
     virtual int priority() {
-        return kHighest - 1;
+        return kHighest - 2;
     }
 
     virtual const std::string name() const {
@@ -144,7 +206,7 @@ public:
     }
 
     virtual int priority() {
-        return kHighest - 2;
+        return kHighest - 3;
     }
 
     virtual const std::string name() const {
