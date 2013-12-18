@@ -89,13 +89,8 @@ public:
         connection->FilterContext()->SetBridgedConnection(context->connection());
         context->SetBridgedConnection(connection);
 
-        static std::string response("HTTP/1.1 200 Connection Established\r\nConnection: Keep-Alive\r\n\r\n");
-
-        boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
-        SharedBuffer buffer(new ByteBuffer);
-        *buffer << response;
-
-        context->connection()->PostAsyncWriteTask(buffers);
+        context->connection()->PostSSLInitTask();
+        connection->PostSSLInitTask();
 
         return kStop;
     }

@@ -15,6 +15,8 @@
 
 class ClientConnection : public Connection {
 public:
+    typedef ClientConnection this_type;
+
     static Connection *create(boost::asio::io_service& service) {
         ++counter_;
         ClientConnection *connection = new ClientConnection(service);
@@ -34,8 +36,18 @@ public:
         ProxyServer::ClientConnectionManager().stop(shared_from_this());
     }
 
+private:
+
     virtual void AsyncConnect() {
         LWARN << "This function should never be called.";
+    }
+
+    virtual void AsyncInitSSLContext() {
+        static std::string response("HTTP/1.1 200 Connection Established\r\nConnection: Keep-Alive\r\n\r\n");
+
+        become(kSSLReplying);
+        socket_->async_write_some(boost::asio::buffer(response),
+                                  boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
     }
 
 private:
@@ -72,6 +84,9 @@ private:
         LDEBUG << "Data has been written to socket.";
         // TODO add logic for last writing
     }
+
+    // It is OK to use the parent's HandleSSLReplying() function
+    // virtual void HandleSSLReplying(const boost::system::error_code& e);
 
     virtual std::string identifier() const {
         return "[ClientConnection:" + std::to_string(id_) + "]";

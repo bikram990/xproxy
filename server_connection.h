@@ -30,6 +30,8 @@ public:
 
     virtual void stop() {}
 
+private:
+
     virtual void AsyncConnect() {
         try {
             become(kConnecting);
@@ -45,6 +47,11 @@ public:
             LERROR << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
             // TODO add logic here
         }
+    }
+
+    virtual void AsyncInitSSLContext() {
+        socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
+                ResourceManager::CertManager::DHParametersPtr>(kHttps);
     }
 
 private:
@@ -73,6 +80,10 @@ private:
 
     // It is OK to use the parent's HandleConnecting() function
     // virtual void HandleWriting(const boost::system::error_code& e);
+
+    virtual void HandleSSLReplying(const boost::system::error_code& e) {
+        LERROR << "This function should never be called.";
+    }
 
     virtual std::string identifier() const {
         return "[ServerConnection:" + std::to_string(id_) + "]";

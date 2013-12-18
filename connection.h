@@ -8,6 +8,7 @@
 #include "filter_context.h"
 #include "log.h"
 #include "proxy_server.h"
+#include "resource_manager.h"
 #include "socket.h"
 
 #define LDEBUG XDEBUG << identifier() << " "
@@ -28,6 +29,7 @@ public:
         kReading,    // reading data from socket
         kConnecting, // connecting to remote peer
         kWriting,    // writing data to socket
+        kSSLReplying,// writing SSL reply to browser
         kFiltering   // filter decoded object
     };
 
@@ -69,6 +71,10 @@ public: // async tasks
         /// We do not set state here, because currently the connection may be
         /// not connected, so let the state be decided later
         service_.post(boost::bind(&this_type::AsyncWriteStart, shared_from_this(), buffers));
+    }
+
+    void PostSSLInitTask() {
+        service_.post(boost::bind(&this_type::AsyncInitSSLContext, shared_from_this()));
     }
 
 public:
@@ -127,6 +133,10 @@ protected: // real async IO tasks
 
     virtual void AsyncConnect() = 0;
 
+    /// For ServerConnection & ClientConnection, The process is not the same, so
+    /// we make this function pure virtual
+    virtual void AsyncInitSSLContext() = 0;
+
 protected: // instantiation
 
     explicit Connection(boost::asio::io_service& service)
@@ -156,6 +166,9 @@ protected:
             break;
         case kWriting:
             HandleWriting(e);
+            break;
+        case kSSLReplying:
+            HandleSSLReplying(e);
             break;
         default:
             LERROR << "The connection is in a wrong state: "
@@ -235,6 +248,30 @@ protected:
         }
         LDEBUG << "Data has been written to socket, now start reading...";
         PostAsyncReadTask();
+    }
+
+    virtual void HandleSSLReplying(const boost::system::error_code& e) {
+        if(e) {
+            LERROR << "Error occurred during writing SSL OK reply to socket, message: " << e.message();
+            // TODO add logic here
+            return;
+        }
+
+        InitSSLContext();
+
+        become(kReading);
+        AsyncRead();
+    }
+
+    virtual void InitSSLContext() {
+        if(!chain_->FilterContext()->BridgedConnection()) {
+            LERROR << "The bridged connection is not set, but this should never happen.";
+            return;
+        }
+
+        auto ca = ResourceManager::GetCertManager().GetCertificate(chain_->FilterContext()->BridgedConnection()->host());
+        auto dh = ResourceManager::GetCertManager().GetDHParameters();
+        socket_->SwitchProtocol(kHttps, kServer, ca, dh);
     }
 
     /// Return a string which can identify current connection.
