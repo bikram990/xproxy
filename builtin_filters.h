@@ -30,13 +30,13 @@ public:
         HttpHeaders *headers = container->RetrieveHeaders();
 
         if(!headers) {
-            context->connection()->AsyncRead();
+            context->connection()->PostAsyncReadTask();
             return kStop;
         }
 
         std::string content_length;
         if(headers->find("Content-Length", content_length) && container->size() <= 2) {
-            context->connection()->AsyncRead();
+            context->connection()->PostAsyncReadTask();
             return kStop;
         }
 
@@ -159,15 +159,13 @@ public:
     virtual FilterResult process(FilterContext *context) {
         XDEBUG << "In filter: " << name();
 
-        boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers(new std::vector<boost::asio::const_buffer>);
+        boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
         HttpContainer *container = context->container();
         for(std::size_t i = 0; i < container->size(); ++i) {
             HttpObject *object = container->RetrieveObject(i);
-            buffers->push_back(boost::asio::buffer(object->ByteContent()->data(), object->ByteContent()->size()));
+            buffers->push_back(object->ByteContent());
         }
-        // TODO check here
-        context->BridgedConnection()->service().post(boost::bind(&Connection::AsyncWrite, context->BridgedConnection(), buffers));
-        // context->BridgedConnection()->AsyncWrite(buffers);
+        context->BridgedConnection()->PostAsyncWriteTask(buffers);
         return kContinue;
     }
 
@@ -199,19 +197,19 @@ public:
                << std::string(latest->ByteContent()->data(), latest->ByteContent()->size())
                << '\n' << "===================== end =====================";
 
-        boost::shared_ptr<std::vector<boost::asio::const_buffer>> buffers(new std::vector<boost::asio::const_buffer>);
-        buffers->push_back(boost::asio::buffer(latest->ByteContent()->data(), latest->ByteContent()->size()));
-        context->BridgedConnection()->service().post(boost::bind(&Connection::AsyncWrite, context->BridgedConnection(), buffers));
+        boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
+        buffers->push_back(latest->ByteContent());
+        context->BridgedConnection()->PostAsyncWriteTask(buffers);
 
         if(latest->type() != HttpObject::kHttpChunk) {
-            context->connection()->AsyncRead();
+            context->connection()->PostAsyncReadTask();
             return kStop;
         }
 
         HttpChunk *chunk = reinterpret_cast<HttpChunk*>(latest);
 
         if(!chunk->IsLast()) {
-            context->connection()->AsyncRead();
+            context->connection()->PostAsyncReadTask();
             return kStop;
         }
 
