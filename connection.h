@@ -95,6 +95,9 @@ protected: // real async IO tasks
     }
 
     void AsyncWriteStart(boost::shared_ptr<std::vector<SharedBuffer>> buffers) {
+        // clear the out buffer first
+        out_.consume(out_.size());
+
         std::for_each(buffers->begin(), buffers->end(),
                       [this](SharedBuffer buffer) {
                           std::size_t copied = boost::asio::buffer_copy(out_.prepare(buffer->size()), boost::asio::buffer(buffer->data(), buffer->size()));
