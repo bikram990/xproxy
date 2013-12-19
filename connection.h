@@ -263,8 +263,8 @@ protected:
         // to decode new request
         decoder_->reset();
 
-        // also reset the filter chain, to clear previously decoded http object
-        chain_->reset();
+        // also reset the container, to clear previously decoded http object
+        chain_->FilterContext()->container()->reset();
 
         become(kReading);
         AsyncRead();

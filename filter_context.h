@@ -28,7 +28,9 @@ public:
     HttpContainer *container() const { return container_.get(); }
 
     virtual void reset() {
-        container_.reset(new HttpContainer);
+        connection_.reset();
+        bridged_connection_.reset();
+        container_->reset();
     }
 
 protected:

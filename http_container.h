@@ -4,8 +4,9 @@
 #include <boost/shared_ptr.hpp>
 #include "http_headers.h"
 #include "http_initial.h"
+#include "resettable.h"
 
-class HttpContainer {
+class HttpContainer : public Resettable {
 public:
     virtual ~HttpContainer() {
         for(auto it = objects_.begin(); it != objects_.end(); ++it)
@@ -53,6 +54,12 @@ public:
         if(size() <= 0)
             return nullptr;
         return objects_[size() - 1];
+    }
+
+    virtual void reset() {
+        std::for_each(objects_.begin(), objects_.end(),
+                      [](HttpObject* object) { if(object) delete object; });
+        objects_.clear();
     }
 
 private:
