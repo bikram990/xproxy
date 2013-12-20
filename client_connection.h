@@ -17,6 +17,10 @@ class ClientConnection : public Connection {
 public:
     typedef ClientConnection this_type;
 
+    enum {
+        kDefaultTimeout = 60 // 60 second
+    };
+
     static Connection *create(boost::asio::io_service& service) {
         ++counter_;
         boost::shared_ptr<ClientConnection> connection(new ClientConnection(service));
@@ -32,7 +36,14 @@ public:
     }
 
     virtual void stop() {
+        connected_ = false;
         socket_->close();
+
+        /// because we still have a connection shared_ptr and a bridged
+        /// connection shared_ptr in filter context, so do not forget to reset
+        /// it here to free the connection resource
+        chain_->FilterContext()->reset();
+
         ProxyServer::ClientConnectionManager().stop(shared_from_this());
     }
 
@@ -48,6 +59,35 @@ private:
         become(kSSLReplying);
         socket_->async_write_some(boost::asio::buffer(response),
                                   boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
+    }
+
+    virtual void Cleanup(bool disconnect) {
+        if(disconnect) {
+            stop();
+            return;
+        }
+
+        /// if this is a persistent connection, we just "reset" the connection
+
+        decoder_->reset();
+
+        // reset the context here, but do not forget to set the connection
+        // pointer back
+        chain_->FilterContext()->reset();
+        chain_->FilterContext()->SetConnection(shared_from_this());
+
+        state_ = kAwaiting;
+
+        if(in_.size() > 0)
+            in_.consume(in_.size());
+
+        timer_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
+        timer_.async_wait(boost::bind(&this_type::HandleTimeout,
+                                      shared_from_this(),
+                                      boost::asio::placeholders::error));
+
+        /// after the resetting, we start a new reading task
+        PostAsyncReadTask();
     }
 
 private:
@@ -74,6 +114,9 @@ private:
             // TODO disconnect here
             return;
         }
+
+        /// cancel the timer
+        timer_.cancel();
 
         LDEBUG << "Read data from socket, buffer size: " << in_.size();
 

@@ -87,6 +87,10 @@ public: // async tasks
         service_.post(boost::bind(&this_type::AsyncInitSSLContext, shared_from_this()));
     }
 
+    void PostCleanupTask(bool persistent_connection = true) {
+        service_.post(boost::bind(&this_type::Cleanup, shared_from_this(), !persistent_connection));
+    }
+
 public:
 
     virtual void start() = 0;
@@ -111,6 +115,11 @@ protected: // real async IO tasks
     }
 
     void AsyncWriteStart(boost::shared_ptr<std::vector<SharedBuffer>> buffers) {
+        /// cancel the timer_ before writing for persistent server connection
+        /// for client connection, we do not need to cancel timer_ here, but
+        /// it does not affect
+        timer_.cancel();
+
         // clear the out buffer first
         out_.consume(out_.size());
 
@@ -147,12 +156,23 @@ protected: // real async IO tasks
     /// we make this function pure virtual
     virtual void AsyncInitSSLContext() = 0;
 
+    /**
+     * Handle cleanup work
+     *
+     * For persistent connection, disconnect is false, and the timer_ will start
+     * until timed out, for nonpersistent connection, we close the socket.
+     *
+     * @brief Cleanup
+     * @param disconnect whether to disconnect the socket
+     */
+    virtual void Cleanup(bool disconnect) = 0;
+
 protected: // instantiation
 
     explicit Connection(boost::asio::io_service& service)
         : service_(service), socket_(Socket::Create(service)),
           decoder_(nullptr), chain_(nullptr),
-          connected_(false), state_(kAwaiting) {}
+          connected_(false), state_(kAwaiting), timer_(service) {}
 
     virtual void InitDecoder() = 0;
 
@@ -184,6 +204,17 @@ protected:
             LERROR << "The connection is in a wrong state: "
                    << static_cast<int>(state_);
             break;
+        }
+    }
+
+    virtual void HandleTimeout(const boost::system::error_code& e) {
+        if(e == boost::asio::error::operation_aborted)
+            LDEBUG << "The timeout timer is cancelled.";
+        else if(e)
+            LERROR << "Error occurred with the timer, message: " << e.message();
+        else if(timer_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
+            LDEBUG << "Connection timed out, close it.";
+            stop();
         }
     }
 
@@ -302,6 +333,17 @@ protected:
     unsigned short port_;
     boost::asio::streambuf in_;
     boost::asio::streambuf out_;
+
+    /**
+     * Persistent connection timeout checker
+     *
+     * For client connection, we consider all connection as persistent
+     * connection; for server connection, we decide according to response
+     * header "Connection".
+     *
+     * @brief timer_
+     */
+    boost::asio::deadline_timer timer_;
 };
 
 typedef boost::shared_ptr<Connection> ConnectionPtr;
