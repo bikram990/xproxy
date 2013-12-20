@@ -12,6 +12,137 @@
 #include "proxy_server.h"
 #include "server_connection_manager.h"
 
+class DefaultRequestFilter : public Filter {
+public:
+    static const int kPriority = kMiddle;
+
+    DefaultRequestFilter() : Filter(kRequest) {}
+
+    virtual FilterResult process(FilterContext *context) {
+        XDEBUG << "Filter [" << name() << "] is called, start to processing "
+               << context->connection()->identifier() << "...";
+
+        // TODO the following variable should depend on something
+        bool need_proxy = false;
+        bool https = false;
+
+        HttpInitial *initial = context->container()->RetrieveInitial();
+
+        if(!initial) {
+            XERROR << "Invalid request, but this should never happen.";
+            // TODO write bad request back to client
+            return kStop;
+        }
+
+        HttpHeaders *headers = context->container()->RetrieveHeaders();
+
+        if(!headers) {
+            XERROR << "No headers found in request, but this should never happen.";
+            // TODO write bad request back to client
+            return kStop;
+        }
+
+        if(initial->type() != HttpObject::kHttpRequestInitial) {
+            XERROR << "Incorrect request object type: " << initial->type();
+            // TODO write bad request back to client
+            return kStop;
+        }
+
+        HttpRequestInitial *ri = reinterpret_cast<HttpRequestInitial*>(initial);
+
+        std::string host;
+        unsigned short port;
+        if(need_proxy) {
+            // TODO get proxy host port here
+            // host = ...
+            // port = ...
+        } else {
+            /// for CONNECT method, we get host, port from the initial line
+            /// for other methods, we get host, port from header "Host"
+            if(ri->method() == "CONNECT") {
+                https = true;
+
+                std::string::size_type sep = ri->uri().find(':');
+                if(sep != std::string::npos) {
+                    port = boost::lexical_cast<unsigned short>(ri->uri().substr(sep + 1));
+                    host = ri->uri().substr(0, sep);
+                } else {
+                    port = 443;
+                    host = ri->uri();
+                }
+            } else {
+                if(!headers->find("Host", host)) {
+                    XERROR << "No host found in header, but this should never happen.";
+                    // TODO write bad request back to client
+                    return kStop;
+                }
+
+                std::string::size_type sep = host.find(':');
+                if(sep != std::string::npos) {
+                    port = boost::lexical_cast<unsigned short>(host.substr(sep + 1));
+                    host = host.substr(0, sep);
+                } else {
+                    port = 80;
+                }
+            }
+        }
+
+        /// Now we get the desired host, port
+        ConnectionPtr connection = ProxyServer::ServerConnectionManager().RequireConnection(host, port);
+        connection->FilterContext()->SetBridgedConnection(context->connection());
+        context->SetBridgedConnection(connection);
+
+        /// we use HTTPS mode when we use a proxy
+        if(https || need_proxy) {
+            connection->PostSSLInitTask();
+        }
+
+        /// if it is HTTPS mode, we continue to read from client socket, so
+        /// we stop here
+        if(https) {
+            context->connection()->PostSSLInitTask();
+            return kStop;
+        }
+
+        /// so the request is not a "CONNECT" request, then we canonicalize
+        /// the URI, from "http://host/uri" to "/uri"
+        if(ri->uri()[0] != '/') { // the URI is not canonicalized
+            std::string http("http://");
+            std::string::size_type end = std::string::npos;
+
+            if(ri->uri().compare(0, http.length(), http) != 0) {
+                end = ri->uri().find('/');
+            } else {
+                end = ri->uri().find('/', http.length());
+            }
+
+            if(end != std::string::npos) {
+                ri->uri().erase(0, end);
+            } else {
+                XDEBUG << "No host end / found, consider as root: " << ri->uri();
+                ri->uri() = '/';
+            }
+        }
+
+        /// next we build the proxy request if it is needed
+        if(need_proxy) {
+            // TODO build proxy request here
+        }
+
+        return kContinue;
+    }
+
+    virtual int priority() {
+        /// we only set the default request filter to middle priority, for some
+        /// real emergency filters, they can be set to higher priority
+        return kPriority;
+    }
+
+    virtual const std::string name() const {
+        return "DefaultRequestFilter";
+    }
+};
+
 class EntityCollectorFilter : public Filter {
 public:
     EntityCollectorFilter() : Filter(kRequest) {}
@@ -211,10 +342,13 @@ public:
 
 class RequestSenderFilter : public Filter {
 public:
+    static const int kPriority = kLowest;
+
     RequestSenderFilter() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
-        XDEBUG << "In filter: " << name();
+        XDEBUG << "Filter [" << name() << "] is called, start to processing "
+               << context->connection()->identifier() << "...";
 
         boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
         HttpContainer *container = context->container();
@@ -227,7 +361,9 @@ public:
     }
 
     virtual int priority() {
-        return kHighest - 3;
+        /// we set this filter to lowest priority, as this is the last filter,
+        /// so all other filters should be placed before this filter
+        return kPriority;
     }
 
     virtual const std::string name() const {

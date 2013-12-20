@@ -53,6 +53,16 @@ public: // getters
 
     class FilterContext *FilterContext() const { return chain_->FilterContext(); }
 
+    /// Return a string which can identify current connection.
+    /**
+     * This function is mainly used for debugging, the ideal invocation result
+     * of this function should be something like: "[ServerConnection:1]"
+     *
+     * @brief identifier
+     * @return a string which can identify current connection
+     */
+    virtual std::string identifier() const = 0;
+
 public: // setters
 
     void SetRemoteAddress(const std::string& host, unsigned short port) {
@@ -280,16 +290,6 @@ protected:
         auto dh = ResourceManager::GetCertManager().GetDHParameters();
         socket_->SwitchProtocol(kHttps, kServer, ca, dh);
     }
-
-    /// Return a string which can identify current connection.
-    /**
-     * This function is mainly used for debugging, the ideal invocation result
-     * of this function should be something like: "[ServerConnection:1]"
-     *
-     * @brief identifier
-     * @return a string which can identify current connection
-     */
-    virtual std::string identifier() const = 0;
 
 protected:
     boost::asio::io_service& service_;
