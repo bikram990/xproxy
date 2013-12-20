@@ -4,12 +4,9 @@
 #include "filter_chain_manager.h"
 
 FilterChainManager::FilterChainManager() {
-    builtin_filters_.push_back(new EntityCollectorFilter);
-    builtin_filters_.push_back(new SSLHandler);
-    builtin_filters_.push_back(new ServerConnectionObtainer);
-    builtin_filters_.push_back(new UriCanonicalizer);
+    builtin_filters_.push_back(new DefaultRequestFilter);
     builtin_filters_.push_back(new RequestSenderFilter);
-    builtin_filters_.push_back(new ResponseReceiverFilter);
+    builtin_filters_.push_back(new DefaultResponseFilter);
 }
 
 FilterChainManager::~FilterChainManager() {
