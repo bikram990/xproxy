@@ -371,17 +371,24 @@ public:
     }
 };
 
-class ResponseReceiverFilter : public Filter {
+class DefaultResponseFilter: public Filter {
 public:
-    ResponseReceiverFilter() : Filter(kResponse) {}
+    static const int kPriority = kMiddle;
+
+    DefaultResponseFilter() : Filter(kResponse) {}
 
     virtual FilterResult process(FilterContext *context) {
-        XDEBUG << "In filter: " << name();
+        XDEBUG << "Filter [" << name() << "] is called, start to processing "
+               << context->connection()->identifier() << "...";
+
+        // TODO the variable below should be set according to something
+        bool proxy_used = false;
 
         HttpObject *latest = context->container()->RetrieveLatest();
 
         if(!latest) {
             XERROR << "Invalid object, this should never happen.";
+            // TODO add logic here
             return kStop;
         }
 
@@ -390,31 +397,76 @@ public:
                << std::string(latest->ByteContent()->data(), latest->ByteContent()->size())
                << '\n' << "===================== end =====================";
 
-        boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
-        buffers->push_back(latest->ByteContent());
-        context->BridgedConnection()->PostAsyncWriteTask(buffers);
+        if(!proxy_used) {
+            boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
+            buffers->push_back(latest->ByteContent());
+            context->BridgedConnection()->PostAsyncWriteTask(buffers);
+        } else {
+            // TODO we need to decode the proxy message here, and then decide
+            // whether we should write it to client
+        }
 
-        if(latest->type() != HttpObject::kHttpChunk) {
+        if(latest->type() == HttpObject::kHttpHeaders) {
+            HttpHeaders *headers = reinterpret_cast<HttpHeaders*>(latest);
+            std::string value;
+
+            if(headers->find("Content-Length", value)
+                    && boost::lexical_cast<std::size_t>(value) > 0) {
+                context->connection()->PostAsyncReadTask();
+                return kStop;
+            }
+
+            if(headers->find("Transfer-Encoding", value)
+                      && value == "chunked") {
+                context->connection()->PostAsyncReadTask();
+                return kStop;
+            }
+
+            XDEBUG << "The response seems have no body, stop.";
+        } else if(latest->type() == HttpObject::kHttpChunk) {
+            HttpChunk *chunk = reinterpret_cast<HttpChunk*>(latest);
+            if(!chunk->IsLast()) {
+                context->connection()->PostAsyncReadTask();
+                return kStop;
+            }
+
+            XDEBUG << "This is the last chunk of this response.";
+        } else {
+            XDEBUG << "The type of current response object is: " << latest->type()
+                   << ", continue to read from server...";
             context->connection()->PostAsyncReadTask();
             return kStop;
         }
 
-        HttpChunk *chunk = reinterpret_cast<HttpChunk*>(latest);
-
-        if(!chunk->IsLast()) {
-            context->connection()->PostAsyncReadTask();
-            return kStop;
+        /// The response is finished here, we should do cleanup work now
+        HttpHeaders *headers = context->container()->RetrieveHeaders();
+        std::string keep_alive;
+        if(headers->find("Connection", keep_alive)) {
+            std::for_each(keep_alive.begin(), keep_alive.end(),
+                          [](char& c) { c = std::tolower(c); });
+//            std::transform(connection.begin(), connection.end(),
+//                           connection.begin(),
+//                           std::ptr_fun<int, int>(std::tolower));
+            if(keep_alive == "keep-alive")
+                context->connection()->PostCleanupTask(true);
         }
+        /// we always consider client connection persistent
+        context->BridgedConnection()->PostCleanupTask(true);
 
         return kContinue;
     }
 
     virtual int priority() {
-        return kHighest;
+        /// response objects are processed one by one, and when response is not
+        /// complete, the filtering process will stop here, so we set this
+        /// filter's priority to middle, for those real emergency filters, we
+        /// should put them before this, for those filters who need entire
+        /// response, we can put them after this
+        return kPriority;
     }
 
     virtual const std::string name() const {
-        return "ResponseReceiverFilter";
+        return "DefaultResponseFilter";
     }
 };
 
