@@ -203,7 +203,7 @@ protected:
 
         switch(result) {
         case Decoder::kIncomplete:
-            LDEBUG << "Incomplete buffer, continue reading.";
+            LDEBUG << "Incomplete buffer, continue reading...";
             PostAsyncReadTask();
             break;
         case Decoder::kFailure:
@@ -213,7 +213,7 @@ protected:
         case Decoder::kComplete:
         case Decoder::kFinished:
             if(!object) {
-                LERROR << "The decoding is finished, but the pointer is invalid.";
+                LERROR << "Invalid object pointer, but this should never happen.";
                 // TODO add logic here
                 return;
             }

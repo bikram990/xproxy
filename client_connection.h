@@ -68,8 +68,51 @@ private:
         chain_->RegisterAll(ProxyServer::FilterChainManager().BuiltinFilters());
     }
 
-    // It is OK to use the parent's HandleReading() function
-    // virtual void HandleReading(const boost::system::error_code& e);
+    virtual void HandleReading(const boost::system::error_code& e) {
+        if(in_.size() <= 0) {
+            LERROR << "No data, disconnecting the socket.";
+            // TODO disconnect here
+            return;
+        }
+
+        LDEBUG << "Read data from socket, buffer size: " << in_.size();
+
+        LDEBUG << "Content in raw buffer:\n"
+               << boost::asio::buffer_cast<const char *>(in_.data());
+
+        HttpObject *object = nullptr;
+        Decoder::DecodeResult result = decoder_->decode(in_, &object);
+
+        switch(result) {
+        case Decoder::kIncomplete:
+            LDEBUG << "Incomplete buffer, continue reading...";
+            PostAsyncReadTask();
+            break;
+        case Decoder::kComplete:
+            LDEBUG << "Only decoded one object, continue decoding...";
+            chain_->FilterContext()->container()->AppendObject(object);
+            PostAsyncReadTask();
+            break;
+        case Decoder::kFailure:
+            LERROR << "Failed to decode object, return.";
+            // TODO add logic here
+            break;
+        case Decoder::kFinished:
+            if(!object) {
+                LERROR << "Invalid object pointer, but this should never happen.";
+                // TODO add logic here
+                return;
+            }
+            become(kFiltering); // TODO do we really need this state?
+            chain_->FilterContext()->container()->AppendObject(object);
+            chain_->filter();
+            LDEBUG << "The filtering process finished.";
+            break;
+        default:
+            LERROR << "Invalid result: " << static_cast<int>(result);
+            break;
+        }
+    }
 
     virtual void HandleConnecting(const boost::system::error_code& e) {
         LWARN << "This function should never be called.";
