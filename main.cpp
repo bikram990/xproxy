@@ -12,10 +12,10 @@ int main(int argc, char* argv[]) {
 
     xproxy::log::SetLogLevel(ResourceManager::GetServerConfig().GetLogLevel());
 
-//    ResourceManager::instance().GetRuleConfig() << "youtube.com"
-//                                                << "facebook.com"
-//                                                << "google-analytics.com"
-//                                                << "twitter.com";
+    ResourceManager::GetRuleConfig() << "youtube.com"
+                                     << "facebook.com"
+                                     << "google-analytics.com"
+                                     << "twitter.com";
 
     try {
         ProxyServer::Start();
