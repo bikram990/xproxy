@@ -22,7 +22,7 @@ public:
     typedef Connection this_type;
 
     enum {
-        kDefaultBufferSize =2048
+        kDefaultBufferSize = 8192
     };
 
     enum ConnectionState {
@@ -133,6 +133,9 @@ protected: // real async IO tasks
             return;
         }
 
+        /// by default, asio only set the buffer size to 512, it is very very
+        /// inefficient, we manually set it to a larger value here
+        in_.prepare(kDefaultBufferSize);
         boost::asio::async_read(*socket_, in_, boost::asio::transfer_at_least(1),
                                 boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
     }
