@@ -1,3 +1,4 @@
+#include "connection.h"
 #include "filter.h"
 #include "filter_chain.h"
 #include "filter_context.h"
@@ -25,11 +26,13 @@ void FilterChain::filter() {
         // for skip and stop, we just return directly
         case Filter::kSkip:
         case Filter::kStop:
-            XDEBUG << "Filter " << (*it)->name() << " wants to stop or skip.";
+            XDEBUG << context_->connection()->identifier()
+                   << " Filter " << (*it)->name() << " wants to stop or skip.";
             return;
         // for continue, we continue the filtering
         case Filter::kContinue:
-            XDEBUG << "Filter " << (*it)->name() << " wants to continue.";
+            XDEBUG << context_->connection()->identifier()
+                   << " Filter " << (*it)->name() << " wants to continue.";
         default:
             // do nothing here
             ; // add the comma to pass the compilation

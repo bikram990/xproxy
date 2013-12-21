@@ -19,8 +19,21 @@ public:
     DefaultRequestFilter() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
-        XDEBUG << "Filter [" << name() << "] is called, start to processing "
-               << context->connection()->identifier() << "...";
+        XDEBUG << context->connection()->identifier()
+               << " Filter [" << name() << "] is called, start to processing...";
+
+        std::string request;
+        for(std::size_t i = 0; i < context->container()->size(); ++i) {
+            HttpObject *object = context->container()->RetrieveObject(i);
+            request.append(std::string(object->ByteContent()->data(),
+                                       object->ByteContent()->size()));
+        }
+
+        XDEBUG << context->connection()->identifier()
+               << " Dump http request object:\n"
+               << "==================== begin ====================" << '\n'
+               << request
+               << '\n' << "===================== end =====================";
 
         // TODO the following variable should depend on something
         bool need_proxy = false;
@@ -347,8 +360,8 @@ public:
     RequestSenderFilter() : Filter(kRequest) {}
 
     virtual FilterResult process(FilterContext *context) {
-        XDEBUG << "Filter [" << name() << "] is called, start to processing "
-               << context->connection()->identifier() << "...";
+        XDEBUG << context->connection()->identifier()
+               << " Filter [" << name() << "] is called, start to processing...";
 
         boost::shared_ptr<std::vector<SharedBuffer>> buffers(new std::vector<SharedBuffer>);
         HttpContainer *container = context->container();
@@ -378,8 +391,8 @@ public:
     DefaultResponseFilter() : Filter(kResponse) {}
 
     virtual FilterResult process(FilterContext *context) {
-        XDEBUG << "Filter [" << name() << "] is called, start to processing "
-               << context->connection()->identifier() << "...";
+        XDEBUG << context->connection()->identifier()
+               << " Filter [" << name() << "] is called, start to processing...";
 
         // TODO the variable below should be set according to something
         bool proxy_used = false;
@@ -392,7 +405,8 @@ public:
             return kStop;
         }
 
-        XDEBUG << "Dump http response object:\n"
+        XDEBUG << context->connection()->identifier()
+               << " Dump http response object:\n"
                << "==================== begin ====================" << '\n'
                << std::string(latest->ByteContent()->data(), latest->ByteContent()->size())
                << '\n' << "===================== end =====================";
@@ -422,7 +436,8 @@ public:
                 return kStop;
             }
 
-            XDEBUG << "The response seems have no body, stop.";
+            XDEBUG << context->connection()->identifier()
+                   << " The response seems have no body, stop.";
         } else if(latest->type() == HttpObject::kHttpChunk) {
             HttpChunk *chunk = reinterpret_cast<HttpChunk*>(latest);
             if(!chunk->IsLast()) {
@@ -430,9 +445,11 @@ public:
                 return kStop;
             }
 
-            XDEBUG << "This is the last chunk of this response.";
+            XDEBUG << context->connection()->identifier()
+                   << " This is the last chunk of this response.";
         } else {
-            XDEBUG << "The type of current response object is: " << latest->type()
+            XDEBUG << context->connection()->identifier()
+                   << " The type of current response object is: " << latest->type()
                    << ", continue to read from server...";
             context->connection()->PostAsyncReadTask();
             return kStop;
@@ -447,8 +464,15 @@ public:
 //            std::transform(connection.begin(), connection.end(),
 //                           connection.begin(),
 //                           std::ptr_fun<int, int>(std::tolower));
-            if(keep_alive == "keep-alive")
+            if(keep_alive == "keep-alive") {
+                XDEBUG << context->connection()->identifier()
+                       << " The connection is a persistent connection.";
                 context->connection()->PostCleanupTask(true);
+            } else {
+                XDEBUG << context->connection()->identifier()
+                       << " Not a persistent connection, closing it...";
+                context->connection()->PostCleanupTask(false);
+            }
         }
         /// we always consider client connection persistent
         context->BridgedConnection()->PostCleanupTask(true);

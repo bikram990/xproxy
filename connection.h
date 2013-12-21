@@ -52,7 +52,9 @@ public:
 
         /// reset the context, but do not forget to set the connection back
         chain_->FilterContext()->reset();
-        chain_->FilterContext()->SetConnection(shared_from_this());
+        /// we do not need this now, because we have not reset the connection
+        /// in reset() of FilterContext
+        // chain_->FilterContext()->SetConnection(shared_from_this());
 
         state_ = kAwaiting;
 
@@ -256,9 +258,7 @@ protected:
             return;
         }
 
-        LDEBUG << "Read data from socket, buffer size: " << in_.size();
-
-        LDEBUG << "Content in raw buffer:\n"
+        LDEBUG << "Content in raw buffer[size: " << in_.size() << "]:\n"
                << boost::asio::buffer_cast<const char *>(in_.data());
 
         HttpObject *object = nullptr;

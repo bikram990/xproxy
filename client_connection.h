@@ -108,9 +108,7 @@ private:
         /// cancel the timer
         timer_.cancel();
 
-        LDEBUG << "Read data from socket, buffer size: " << in_.size();
-
-        LDEBUG << "Content in raw buffer:\n"
+        LDEBUG << "Content in raw buffer[size: " << in_.size() << "]:\n"
                << boost::asio::buffer_cast<const char *>(in_.data());
 
         HttpObject *object = nullptr;
@@ -122,7 +120,7 @@ private:
             PostAsyncReadTask();
             break;
         case Decoder::kComplete:
-            LDEBUG << "Only decoded one object, continue decoding...";
+            LDEBUG << "Decoded one object, continue decoding...";
             chain_->FilterContext()->container()->AppendObject(object);
             PostAsyncReadTask();
             break;
