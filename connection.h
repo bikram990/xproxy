@@ -142,7 +142,8 @@ protected: // real async IO tasks
         timer_.cancel();
 
         // clear the out buffer first
-        out_.consume(out_.size());
+        if(out_.size() > 0)
+            out_.consume(out_.size());
 
         std::for_each(buffers->begin(), buffers->end(),
                       [this](SharedBuffer buffer) {
