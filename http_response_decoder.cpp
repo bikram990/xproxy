@@ -252,7 +252,7 @@ inline void HttpResponseDecoder::DecodeInitialLine(boost::asio::streambuf& buffe
             result_ = CTN;
             break;
         case kStatusMessageStart:
-            if(!std::isalpha(current_byte)) {
+            if(!ischar(current_byte)) {
                 result_ = ERR;
                 break;
             }
@@ -266,7 +266,7 @@ inline void HttpResponseDecoder::DecodeInitialLine(boost::asio::streambuf& buffe
                 result_ = CTN;
                 break;
             }
-            if(!std::isalpha(current_byte)) {
+            if(!ischar(current_byte)) {
                 result_ = ERR;
                 break;
             }
