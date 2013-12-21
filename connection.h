@@ -256,8 +256,9 @@ protected:
      */
     virtual void HandleReading(const boost::system::error_code& e) {
         if(in_.size() <= 0) {
-            LERROR << "No data, disconnecting the socket.";
-            // TODO disconnect here
+            // TODO disconnect here or do nothing??
+            LDEBUG << "No data in socket, does the browser want to keep the connection alive?";
+            // PostAsyncReadTask();
             return;
         }
 
