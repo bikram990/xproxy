@@ -4,6 +4,8 @@
 #include "log.h"
 
 void ClientConnectionManager::start(ConnectionPtr connection) {
+    /// here we cannot use connection->host() and connection->port(), because
+    /// we have not set them
     boost::asio::ip::tcp::socket& socket = connection->socket();
     std::string addr = socket.remote_endpoint().address().to_string();
     std::string port = std::to_string(socket.remote_endpoint().port());
@@ -12,10 +14,7 @@ void ClientConnectionManager::start(ConnectionPtr connection) {
 }
 
 void ClientConnectionManager::stop(ConnectionPtr connection) {
-    boost::asio::ip::tcp::socket& socket = connection->socket();
-    std::string addr = socket.remote_endpoint().address().to_string();
-    std::string port = std::to_string(socket.remote_endpoint().port());
-    connections_.erase(addr + ":" + port);
+    connections_.erase(connection->host() + ":" + std::to_string(connection->port()));
 }
 
 ConnectionPtr ClientConnectionManager::find(const std::string& host, unsigned short port) {
