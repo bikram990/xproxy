@@ -42,7 +42,7 @@ public:
         /// because we still have a connection shared_ptr and a bridged
         /// connection shared_ptr in filter context, so do not forget to reset
         /// it here to free the connection resource
-        chain_->FilterContext()->reset();
+        chain_->FilterContext()->reset(true);
 
         ProxyServer::ClientConnectionManager().stop(shared_from_this());
     }
