@@ -96,7 +96,8 @@ private:
             return;
 
         char *tmp = data_;
-        capacity_ *= kGrowFactor;
+        // TODO the allocation algorithm here could be refined
+        capacity_ = capacity_ * kGrowFactor + size;
         data_ = new char[capacity_];
         std::memcpy(data_, tmp, size_);
         delete [] tmp;
