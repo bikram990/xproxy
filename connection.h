@@ -15,7 +15,8 @@
 #define LERROR XERROR << identifier() << " "
 #define LWARN  XWARN  << identifier() << " "
 
-class Connection : public boost::enable_shared_from_this<Connection>,
+class Connection : public Resettable,
+                   public boost::enable_shared_from_this<Connection>,
                    private boost::noncopyable {
 public:
     typedef Connection this_type;
@@ -37,6 +38,26 @@ public:
         if(decoder_) delete decoder_;
         if(socket_) delete socket_;
         if(chain_) delete chain_;
+    }
+
+    /**
+     * @brief reset
+     *
+     * Reset the server connection
+     *
+     * If a connection need to be reused, it should be reset first.
+     */
+    virtual void reset() {
+        decoder_->reset();
+
+        /// reset the context, but do not forget to set the connection back
+        chain_->FilterContext()->reset();
+        chain_->FilterContext()->SetConnection(shared_from_this());
+
+        state_ = kAwaiting;
+
+        if(in_.size() > 0)
+            in_.consume(in_.size());
     }
 
 public: // getters

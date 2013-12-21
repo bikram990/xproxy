@@ -67,19 +67,7 @@ private:
             return;
         }
 
-        /// if this is a persistent connection, we just "reset" the connection
-
-        decoder_->reset();
-
-        // reset the context here, but do not forget to set the connection
-        // pointer back
-        chain_->FilterContext()->reset();
-        chain_->FilterContext()->SetConnection(shared_from_this());
-
-        state_ = kAwaiting;
-
-        if(in_.size() > 0)
-            in_.consume(in_.size());
+        reset();
 
         timer_.expires_from_now(boost::posix_time::seconds(kDefaultTimeout));
         timer_.async_wait(boost::bind(&this_type::HandleTimeout,
@@ -87,6 +75,8 @@ private:
                                       boost::asio::placeholders::error));
 
         /// after the resetting, we start a new reading task
+        /// but this task will timeout after 60 seconds if client does not send
+        /// a request
         PostAsyncReadTask();
     }
 
