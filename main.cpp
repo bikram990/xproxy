@@ -1,5 +1,6 @@
 #include "proxy_server.h"
 #include "resource_manager.h"
+#include "openssl/applink.c"
 
 int main(int argc, char* argv[]) {
     xproxy::log::InitLogging();
