@@ -28,6 +28,12 @@ public:
         return connection;
     }
 
+    virtual ~ServerConnection() {
+        /// we cannot call the virtual function identifier() here, so we should
+        /// compose the debug string ourselves
+        XDEBUG << "[ServerConnection:" << id_ << "] destructing...";
+    }
+
     virtual void start() {
         LDEBUG << "This function has no use.";
     }

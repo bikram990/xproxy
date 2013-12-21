@@ -29,6 +29,12 @@ public:
         return connection;
     }
 
+    virtual ~ClientConnection() {
+        /// we cannot call the virtual function identifier() here, so we should
+        /// compose the debug string ourselves
+        XDEBUG << "[ClientConnection:" << id_ << "] destructing...";
+    }
+
     virtual void start() {
         SetRemoteAddress(socket_->socket().remote_endpoint().address().to_string(),
                          socket_->socket().remote_endpoint().port());
