@@ -100,10 +100,17 @@ public:
             }
         }
 
-        /// Now we get the desired host, port
-        ConnectionPtr connection = ProxyServer::ServerConnectionManager().RequireConnection(host, port);
-        connection->FilterContext()->SetBridgedConnection(context->connection());
-        context->SetBridgedConnection(connection);
+        /// Now we set the bridged server connection, if it is set, it should
+        /// be a https connection, and it is set during the "CONNECT" request
+        ConnectionPtr connection;
+        if(context->BridgedConnection()) {
+            XDEBUG << "The server connection is set, seems to be a https connection.";
+            connection = context->BridgedConnection();
+        } else {
+            connection = ProxyServer::ServerConnectionManager().RequireConnection(host, port);
+            connection->FilterContext()->SetBridgedConnection(context->connection());
+            context->SetBridgedConnection(connection);
+        }
 
         /// we use HTTPS mode when we use a proxy
         if(https || need_proxy) {
