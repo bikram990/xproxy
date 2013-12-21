@@ -21,11 +21,11 @@ public:
         kDefaultTimeout = 15 // 15 seconds
     };
 
-    static Connection *create(boost::asio::io_service& service) {
+    static ConnectionPtr create(boost::asio::io_service& service) {
         ++counter_;
         boost::shared_ptr<ServerConnection> connection(new ServerConnection(service));
         connection->FilterContext()->SetConnection(connection);
-        return connection.get();
+        return connection;
     }
 
     virtual void start() {
