@@ -65,7 +65,7 @@ private:
 
             LDEBUG << "Connecting to remote address: " << endpoint_iterator->endpoint().address();
 
-            socket_->async_connect(endpoint_iterator, boost::bind(&this_type::callback,
+            socket_->async_connect(endpoint_iterator, boost::bind(&this_type::HandleConnecting,
                                                                   shared_from_this(),
                                                                   boost::asio::placeholders::error));
         } catch(const boost::system::system_error& e) {

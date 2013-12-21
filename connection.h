@@ -129,7 +129,7 @@ protected: // real async IO tasks
 
         if(in_.size() > 0) {
             LDEBUG << "There is still data in buffer, skip reading from socket.";
-            callback(boost::system::error_code());
+            HandleReading(boost::system::error_code());
             return;
         }
 
@@ -137,7 +137,8 @@ protected: // real async IO tasks
         /// inefficient, we manually set it to a larger value here
         in_.prepare(kDefaultBufferSize);
         boost::asio::async_read(*socket_, in_, boost::asio::transfer_at_least(1),
-                                boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
+                                boost::bind(&this_type::HandleReading, shared_from_this(), boost::asio::placeholders::error));
+
     }
 
     void AsyncWriteStart(boost::shared_ptr<std::vector<SharedBuffer>> buffers) {
@@ -174,7 +175,7 @@ protected: // real async IO tasks
     void AsyncWrite() {
         become(kWriting);
         socket_->async_write_some(boost::asio::buffer(out_.data(), out_.size()),
-                                  boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
+                                  boost::bind(&this_type::HandleWriting, shared_from_this(), boost::asio::placeholders::error));
     }
 
     virtual void AsyncConnect() = 0;
@@ -209,29 +210,6 @@ protected:
 
     void become(ConnectionState state) {
         state_ = state;
-    }
-
-    virtual void callback(const boost::system::error_code& e) {
-        LDEBUG << "Function callback() called, current connection state: "
-               << static_cast<int>(state_);
-        switch(state_) {
-        case kReading:
-            HandleReading(e);
-            break;
-        case kConnecting:
-            HandleConnecting(e);
-            break;
-        case kWriting:
-            HandleWriting(e);
-            break;
-        case kSSLReplying:
-            HandleSSLReplying(e);
-            break;
-        default:
-            LERROR << "The connection is in a wrong state: "
-                   << static_cast<int>(state_);
-            break;
-        }
     }
 
     virtual void HandleTimeout(const boost::system::error_code& e) {

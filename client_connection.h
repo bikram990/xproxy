@@ -64,7 +64,7 @@ private:
 
         become(kSSLReplying);
         socket_->async_write_some(boost::asio::buffer(response),
-                                  boost::bind(&this_type::callback, shared_from_this(), boost::asio::placeholders::error));
+                                  boost::bind(&this_type::HandleSSLReplying, shared_from_this(), boost::asio::placeholders::error));
     }
 
     virtual void Cleanup(bool disconnect) {
