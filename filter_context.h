@@ -3,6 +3,7 @@
 
 #include "boost/shared_ptr.hpp"
 #include "http_container.h"
+#include "log.h"
 #include "resettable.h"
 
 class Connection;
@@ -21,11 +22,26 @@ public:
         bridged_connection_ = connection;
     }
 
-    boost::shared_ptr<Connection> connection() const { return connection_; }
+    boost::shared_ptr<Connection> connection() const {
+        if(!connection_) {
+            XERROR << "The connection has been reset.";
+        }
+        return connection_;
+    }
 
-    boost::shared_ptr<Connection> BridgedConnection() const { return bridged_connection_; }
+    boost::shared_ptr<Connection> BridgedConnection() const {
+        if(!bridged_connection_) {
+            XERROR << "The bridge connection has been reset.";
+        }
+        return bridged_connection_;
+    }
 
-    HttpContainer *container() const { return container_.get(); }
+    HttpContainer *container() const {
+        if(!container_) {
+            XERROR << "The container has been reset.";
+        }
+        return container_.get();
+    }
 
     /**
      * @brief reset
