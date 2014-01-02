@@ -463,6 +463,9 @@ public:
         }
 
         /// The response is finished here, we should do cleanup work now
+        /// we always consider client connection persistent
+        context->BridgedConnection()->PostCleanupTask(true);
+
         HttpHeaders *headers = context->container()->RetrieveHeaders();
         std::string keep_alive;
         if(headers->find("Connection", keep_alive)) {
@@ -481,8 +484,6 @@ public:
                 context->connection()->PostCleanupTask(false);
             }
         }
-        /// we always consider client connection persistent
-        context->BridgedConnection()->PostCleanupTask(true);
 
         return kContinue;
     }
