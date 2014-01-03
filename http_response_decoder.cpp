@@ -350,7 +350,14 @@ inline void HttpResponseDecoder::DecodeHeaders(boost::asio::streambuf& buffer, H
             result_ = CTN;
             break;
         case kHeaderValueSpaceBefore:
-            if(current_byte != ' ') {
+            /// for some websites, they do not obey the standard below:
+            ///     header-name: header-value (there is a space after :)
+            /// they just set header like this:
+            ///     header-name:header-value
+            /// so, we have to skip the space verification here
+            /// sigh...
+            // if(current_byte != ' ') {
+            if(current_byte != ' ' && !ischar(current_byte)) {
                 result_ = ERR;
                 break;
             }
