@@ -5,37 +5,77 @@
 #include "log.h"
 
 void FilterChain::RegisterFilter(Filter *filter) {
-    if(filter->type() != type_ && filter->type() != Filter::kBoth)
-        return;
-
-    for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-        if((*it)->priority() < filter->priority()) { // TODO check if there is bug here
-            filters_.insert(it, filter);
-            return;
-        }
+    switch(filter->type()) {
+    case Filter::kRequest:
+        insert(request_filters_, filter);
+        break;
+    case Filter::kResponse:
+        insert(response_filters_, filter);
+        break;
+    case Filter::kBoth:
+        insert(request_filters_, filter);
+        insert(response_filters_, filter);
+        break;
+    default:
+        break;
     }
-
-    filters_.push_back(filter);
 }
 
-void FilterChain::filter() {
-    // TODO enhance the logic here
-    for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-        Filter::FilterResult result = (*it)->process(context_);
+HttpContainer *FilterChain::FilterRequest(HttpContainer *container) {
+    for(auto it : request_filters_) {
+        HttpContainer *out = nullptr;
+        Filter::FilterResult result = (*it)->process(container, &out);
         switch(result) {
-        // for skip and stop, we just return directly
         case Filter::kSkip:
+            XDEBUG << "Filter " << (*it)->name() << " wants to skip.";
+
+            /// skipping other filters means the request will be sent to server,
+            /// so the return value should be nullptr
+            assert(out == nullptr);
+            return nullptr;
         case Filter::kStop:
-            XDEBUG << context_->connection()->identifier()
-                   << " Filter " << (*it)->name() << " wants to stop or skip.";
-            return;
-        // for continue, we continue the filtering
+            XDEBUG << "Filter " << (*it)->name() << " wants to stop.";
+
+            /// stopping means the request will be terminated,
+            /// so the return value should be not null
+            assert(out != nullptr);
+            return out;
         case Filter::kContinue:
-            XDEBUG << context_->connection()->identifier()
-                   << " Filter " << (*it)->name() << " wants to continue.";
+            XDEBUG << "Filter " << (*it)->name() << " wants to continue.";
+            break;
         default:
-            // do nothing here
-            ; // add the comma to pass the compilation
+            break;
         }
     }
+
+    // if the program goes here, it means all filters are passed
+    return nullptr;
+}
+
+void FilterChain::FilterResponse(HttpContainer *container) {
+    for(auto it : response_filters_) {
+        Filter::FilterResult result = (*it)->process(container);
+        switch(result) {
+        case Filter::kSkip:
+        case Filter::kStop:
+            XDEBUG << "Filter " << (*it)->name() << " wants to skip or stop.";
+            return;
+        case Filter::kContinue:
+            XDEBUG << "Filter " << (*it)->name() << " wants to continue.";
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void FilterChain::insert(std::list<Filter *> filters, Filter *filter) {
+    for(auto it : filters) {
+        if((*it)->priority() < filter->priority()) {
+            filters.insert(it, filter);
+            return;
+        }
+    }
+
+    filters.push_back(filter);
 }

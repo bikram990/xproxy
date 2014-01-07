@@ -2,18 +2,18 @@
 #define FILTER_CHAIN_H
 
 #include <list>
-#include "filter.h"
-#include "filter_context.h"
-#include "resettable.h"
 
+class Filter;
+class HttpContainer;
 
-class FilterChain : public Resettable {
+class FilterChain {
 public:
-    FilterChain(Filter::FilterType type)
-        : type_(type), context_(new class FilterContext) {}
-
     virtual ~FilterChain() {
-        if(context_) delete context_;
+        for(auto it : request_filters_)
+            delete *it;
+
+        for(auto it : response_filters_)
+            delete *it;
     }
 
     template<typename Container>
@@ -24,17 +24,37 @@ public:
 
     void RegisterFilter(Filter *filter);
 
-    void filter();
+    /**
+     * Filter http request.
+     *
+     * @brief FilterRequest
+     * @param container         the request to be filtered
+     * @return HttpContainer    should be null or a valid http response
+     *
+     * When the return value is not nullptr, it means the request should not be
+     * sent to server, instead, the returned HttpContainer instance should be
+     * written to client socket. Otherwise the request should be sent to server.
+     */
+    HttpContainer *FilterRequest(HttpContainer *container);
 
-    class FilterContext *FilterContext() const { return context_; }
-
-    virtual void reset() { context_->reset(); }
+    /**
+     * Filter http response.
+     *
+     * @brief FilterResponse
+     * @param container         the response to be filtered
+     *
+     * This is different from FilterResponse(), no matter what the filtering
+     * result is, something should be written to client socket. So, if the
+     * response needs to be modified, just modify the parameter directly.
+     */
+    void FilterResponse(HttpContainer *container);
 
 private:
-    Filter::FilterType type_;
-    std::list<Filter*> filters_;
+    void insert(std::list<Filter*> filters, Filter *filter);
 
-    class FilterContext *context_;
+private:
+    std::list<Filter*> request_filters_;
+    std::list<Filter*> response_filters_;
 };
 
 #endif // FILTER_CHAIN_H

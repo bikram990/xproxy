@@ -33,7 +33,7 @@ public:
 
     virtual ~Filter() {}
 
-    virtual FilterResult process(FilterContext *context) = 0;
+    virtual FilterResult process(HttpContainer *in, HttpContainer **out = 0) = 0;
 
     virtual int priority() = 0;
 
