@@ -2,12 +2,29 @@
 #define SESSION_H
 
 #include <boost/asio.hpp>
+#include <boost/atomic.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include "filter_chain.h"
+#include "http_container.h"
+#include "http_request_decoder.h"
+#include "http_response_decoder.h"
+#include "resource_manager.h"
 #include "socket.h"
 
-class Session : private boost::noncopyable {
+class Session : public boost::enable_shared_from_this<Session>,
+                private boost::noncopyable {
 public:
+    typedef Session this_type;
+
+    enum {
+        kDefaultClientInBufferSize = 8192,
+        kDefaultServerInBufferSize = 8192,  // TODO decide the proper value
+        kDefaultClientTimeoutValue = 60,    // 60 seconds
+        kDefaultServerTimeoutValue = 15     // 15 seconds
+    };
+
     static Session *create(const boost::asio::io_service& service) {
-        // TODO add counter feature here later
+        ++counter_;
         return new Session(service);
     }
 
@@ -23,20 +40,85 @@ public:
 
     void start();
 
+    void AsyncReadFromClient();
+    void AsyncWriteSSLReplyToClient();
+    void AsyncConnectToServer();
+    void AsyncWriteToServer();
+    void AsyncReadFromServer();
+    void AsyncWriteToClient();
+
     virtual ~Session() {
         if(client_socket_) delete client_socket_;
         if(server_socket_) delete server_socket_;
+        if(chain_) delete chain_;
+        if(request_decoder_) delete request_decoder_;
+        if(response_decoder_) delete response_decoder_;
+        if(request_) delete request_;
+        if(response_) delete response_;
     }
 
 private:
     Session(const boost::asio::io_service& service)
-        : service_(service), client_socket_(Socket::Create(service)),
-          server_socket_(Socket::Create(service)) {}
+        : id_(counter_),
+          service_(service),
+          client_socket_(Socket::Create(service)),
+          server_socket_(Socket::Create(service)),
+          resolver_(service),
+          chain_(new FilterChain),
+          request_decoder_(new HttpRequestDecoder),
+          response_decoder_(new HttpResponseDecoder),
+          request_(new HttpContainer),
+          response_(new HttpContainer),
+          server_connected_(false),
+          https_(false) {}
 
 private:
+    void OnClientDataReceived(const boost::system::error_code& e);
+    void OnClientSSLReplySent(const boost::system::error_code& e);
+    void OnServerConnected(const boost::system::error_code& e);
+    void OnServerDataSent(const boost::system::error_code& e);
+    void OnServerDataReceived(const boost::system::error_code& e);
+    void OnClientDataSent(const boost::system::error_code& e);
+    void OnServerTimeout(const boost::system::error_code& e);
+    void OnClientTimeout(const boost::system::error_code& e);
+
+private:
+    InitClientSSLContext() {
+        auto ca = ResourceManager::GetCertManager().GetCertificate(host_);
+        auto dh = ResourceManager::GetCertManager().GetDHParameters();
+        client_socket_->SwitchProtocol(kHttps, kServer, ca, dh);
+    }
+
+private:
+    static boost::atomic<std::size_t> counter_;
+
+private:
+    std::size_t id_;
+
     boost::asio::io_service& service_;
     Socket *client_socket_;
     Socket *server_socket_;
+
+    boost::asio::ip::tcp::resolver resolver_;
+
+    FilterChain *chain_;
+
+    Decoder *request_decoder_;
+    Decoder *response_decoder_;
+
+    HttpContainer *request_;
+    HttpContainer *response_;
+
+    std::string host_;
+    unsigned short port_;
+
+    bool server_connected_;
+    bool https_;
+
+    boost::asio::streambuf client_in_;
+    boost::asio::streambuf client_out_;
+    boost::asio::streambuf server_in_;
+    boost::asio::streambuf server_out_;
 };
 
 #endif // SESSION_H
