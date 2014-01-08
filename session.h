@@ -24,7 +24,7 @@ public:
         kDefaultServerTimeoutValue = 15     // 15 seconds
     };
 
-    static Session *create(const boost::asio::io_service& service) {
+    static Session *create(boost::asio::io_service& service) {
         ++counter_;
         return new Session(service);
     }
@@ -81,7 +81,7 @@ public:
     }
 
 private:
-    Session(const boost::asio::io_service& service)
+    Session(boost::asio::io_service& service)
         : id_(counter_),
           service_(service),
           client_socket_(Socket::Create(service)),
@@ -109,7 +109,7 @@ private:
     void OnClientTimeout(const boost::system::error_code& e);
 
 private:
-    InitClientSSLContext() {
+    void InitClientSSLContext() {
         auto ca = ResourceManager::GetCertManager().GetCertificate(host_);
         auto dh = ResourceManager::GetCertManager().GetDHParameters();
         client_socket_->SwitchProtocol(kHttps, kServer, ca, dh);

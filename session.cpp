@@ -1,4 +1,6 @@
 #include <boost/lexical_cast.hpp>
+#include "http_request_initial.h"
+#include "http_response_initial.h"
 #include "session.h"
 
 boost::atomic<std::size_t> Session::counter_(0);
@@ -56,7 +58,7 @@ void Session::AsyncWriteSSLReplyToClient() {
 
 void Session::AsyncConnectToServer() {
     // we switch to https mode before we connect to server
-    if(https) {
+    if(https_) {
         server_socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
                 ResourceManager::CertManager::DHParametersPtr>(kHttps);
     }
@@ -177,7 +179,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         request_->AppendObject(object);
         AsyncReadFromClient();
         break;
-    case Decoder::kFinished:
+    case Decoder::kFinished: {
         assert(object != nullptr);
         request_->AppendObject(object);
 
@@ -215,6 +217,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
 
         /// set host_ and port_ if it is not a https request
         if(!https_) {
+            HttpHeaders *headers = request_->RetrieveHeaders();
             if(!headers->find("Host", host_)) {
                 XERROR_WITH_ID << "No host found in header, this should never happen.";
                 // TODO add logic here
@@ -244,7 +247,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             if(end != std::string::npos) {
                 initial->uri().erase(0, end);
             } else {
-                XDEBUG_WITH_ID << "No host end / found, consider as root: " << ri->uri();
+                XDEBUG_WITH_ID << "No host end / found, consider as root: " << initial->uri();
                 initial->uri() = '/';
             }
         }
@@ -259,6 +262,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             AsyncWriteToServer();
         }
         break;
+    }
     default:
         XERROR_WITH_ID << "Invalid result: " << static_cast<int>(result);
         break;

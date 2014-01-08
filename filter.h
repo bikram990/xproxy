@@ -5,6 +5,7 @@
 
 class FilterChain;
 class FilterContext;
+class HttpContainer;
 
 /**
  * @brief The Filter class
