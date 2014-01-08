@@ -2,18 +2,18 @@
 #define FILTER_CHAIN_H
 
 #include <list>
+#include "filter.h"
 
-class Filter;
 class HttpContainer;
 
 class FilterChain {
 public:
     virtual ~FilterChain() {
         for(auto it : request_filters_)
-            delete *it;
+            delete it;
 
         for(auto it : response_filters_)
-            delete *it;
+            delete it;
     }
 
     template<typename Container>
