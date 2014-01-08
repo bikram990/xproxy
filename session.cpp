@@ -1,3 +1,4 @@
+#include <boost/lexical_cast.hpp>
 #include "session.h"
 
 boost::atomic<std::size_t> Session::counter_(0);
@@ -123,14 +124,19 @@ void Session::AsyncWriteToClient() {
     if(client_out_.size() > 0)
         client_out_.consume(client_out_.size());
 
-    for(std::size_t i = 0; i < response_->size(); ++i) {
-        SharedBuffer buffer = response_->RetrieveObject(i)->ByteContent();
-        std::size_t copied = boost::asio::buffer_copy(client_out_.prepare(buffer->size()),
-                                                      boost::asio::buffer(buffer->data(),
-                                                                          buffer->size()));
-        assert(copied == buffer->size());
-        client_out_.commit(copied);
+    /// when we write data to client, we only write the latest object,
+    /// because the response is written to client one object by one object
+    if(response_->size() <= 0) {
+        XDEBUG_WITH_ID << "No content in response, a proxied request?";
+        return;
     }
+
+    SharedBuffer buffer = response_->RetrieveLatest()->ByteContent();
+    std::size_t copied = boost::asio::buffer_copy(client_out_.prepare(buffer->size()),
+                                                  boost::asio::buffer(buffer->data(),
+                                                                      buffer->size()));
+    assert(copied == buffer->size());
+    client_out_.commit(copied);
 
     client_socket_->async_write_some(boost::asio::buffer(client_out_.data(),
                                                          client_out_.size()),
@@ -180,6 +186,17 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         if(initial->method() == "CONNECT") {
             https_ = true;
 
+            /// set host_ and port_
+            std::string::size_type sep = initial->uri().find(':');
+            if(sep != std::string::npos) {
+                port_ = boost::lexical_cast<unsigned short>(initial->uri().substr(sep + 1));
+                host_ = initial->uri().substr(0, sep);
+            } else {
+                port_ = 443;
+                host_ = initial->uri();
+            }
+
+            /// construct the response
             HttpResponseInitial *ri = new HttpResponseInitial;
             ri->SetMajorVersion(1);
             ri->SetMinorVersion(1);
@@ -194,6 +211,42 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
 
             AsyncWriteSSLReplyToClient();
             return;
+        }
+
+        /// set host_ and port_ if it is not a https request
+        if(!https_) {
+            if(!headers->find("Host", host_)) {
+                XERROR_WITH_ID << "No host found in header, this should never happen.";
+                // TODO add logic here
+                return;
+            }
+
+            std::string::size_type sep = host_.find(':');
+            if(sep != std::string::npos) {
+                port_ = boost::lexical_cast<unsigned short>(host_.substr(sep + 1));
+                host_ = host_.substr(0, sep);
+            } else {
+                port_ = 80;
+            }
+        }
+
+        /// canonicalize the URI
+        if(initial->uri()[0] != '/') { // the URI is not canonicalized
+            std::string http("http://");
+            std::string::size_type end = std::string::npos;
+
+            if(initial->uri().compare(0, http.length(), http) != 0) {
+                end = initial->uri().find('/');
+            } else {
+                end = initial->uri().find('/', http.length());
+            }
+
+            if(end != std::string::npos) {
+                initial->uri().erase(0, end);
+            } else {
+                XDEBUG_WITH_ID << "No host end / found, consider as root: " << ri->uri();
+                initial->uri() = '/';
+            }
         }
 
         HttpContainer *response = chain_->FilterRequest(request_);
@@ -284,12 +337,23 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         // TODO add logic here
         break;
     case Decoder::kComplete:
-    case Decoder::kFinished:
-        // TODO fix me: enhance the logic here
         assert(object != nullptr);
         response_->AppendObject(object);
         chain_->FilterResponse(response_);
         AsyncWriteToClient();
+        AsyncReadFromServer();
+        break;
+    case Decoder::kFinished:
+        assert(object != nullptr);
+        finished_ = true;
+        response_->AppendObject(object);
+        chain_->FilterResponse(response_);
+        AsyncWriteToClient();
+
+        server_timer_.expires_from_now(boost::posix_time::seconds(kDefaultServerTimeoutValue));
+        server_timer_.async_wait(boost::bind(&this_type::OnServerTimeout,
+                                             shared_from_this(),
+                                             boost::asio::placeholders::error));
         break;
     default:
         XERROR_WITH_ID << "Invalid result: " << static_cast<int>(result);
@@ -298,10 +362,51 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
 }
 
 void Session::OnClientDataSent(const boost::system::error_code& e) {
+    if(e) {
+        XERROR_WITH_ID << "Error occurred during writing to client socket, message: "
+                       << e.message();
+        // TODO add logic here
+        return;
+    }
+
+    if(!finished_) {
+        XDEBUG_WITH_ID << "There is still data needed by client socket, do nothing.";
+        return;
+    }
+
+    /// we always treat client connection as persistent connection
+    reset();
+    client_timer_.expires_from_now(boost::posix_time::seconds(kDefaultClientTimeoutValue));
+    client_timer_.async_wait(boost::bind(&this_type::OnClientTimeout,
+                                         shared_from_this(),
+                                         boost::asio::placeholders::error));
+
+    start();
 }
 
 void Session::OnServerTimeout(const boost::system::error_code& e) {
+    if(e == boost::asio::error::operation_aborted)
+        XDEBUG_WITH_ID << "The server timeout timer is cancelled.";
+    else if(e)
+        XERROR_WITH_ID << "Error occurred with server timer, message: "
+                       << e.message();
+    else if(server_timer_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
+        XDEBUG_WITH_ID << "Server socket timed out, close it.";
+        server_connected_ = false;
+        server_socket_->close();
+        delete server_socket_;
+        server_socket_ = Socket::Create(service_);
+    }
 }
 
 void Session::OnClientTimeout(const boost::system::error_code& e) {
+    if(e == boost::asio::error::operation_aborted)
+        XDEBUG_WITH_ID << "The client timeout timer is cancelled.";
+    else if(e)
+        XERROR_WITH_ID << "Error occurred with client timer, message: "
+                       << e.message();
+    else if(client_timer_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
+        XDEBUG_WITH_ID << "Client socket timed out, close it.";
+        // TODO add logic here
+    }
 }

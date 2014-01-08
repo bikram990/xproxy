@@ -11,7 +11,8 @@
 #include "resource_manager.h"
 #include "socket.h"
 
-class Session : public boost::enable_shared_from_this<Session>,
+class Session : public Resettable,
+                public boost::enable_shared_from_this<Session>,
                 private boost::noncopyable {
 public:
     typedef Session this_type;
@@ -40,6 +41,28 @@ public:
 
     void start();
 
+    void reset() {
+        request_decoder_->reset();
+        response_decoder_->reset();
+        request_->reset();
+        response_->reset();
+        host_.clear();
+        port_ = 0;
+        /// the following two should not be reset
+        // server_connected_ = false;
+        // https_ = false;
+        finished_ = false;
+
+#define CLEAR_STREAMBUF(buf) if(buf.size() > 0) buf.consume(buf.size())
+
+        CLEAR_STREAMBUF(client_in_);
+        CLEAR_STREAMBUF(client_out_);
+        CLEAR_STREAMBUF(server_in_);
+        CLEAR_STREAMBUF(server_out_);
+
+#undef CLEAR_STREAMBUF
+    }
+
     void AsyncReadFromClient();
     void AsyncWriteSSLReplyToClient();
     void AsyncConnectToServer();
@@ -63,6 +86,8 @@ private:
           service_(service),
           client_socket_(Socket::Create(service)),
           server_socket_(Socket::Create(service)),
+          client_timer_(service),
+          server_timer_(service),
           resolver_(service),
           chain_(new FilterChain),
           request_decoder_(new HttpRequestDecoder),
@@ -70,7 +95,8 @@ private:
           request_(new HttpContainer),
           response_(new HttpContainer),
           server_connected_(false),
-          https_(false) {}
+          https_(false),
+          finished_(false) {}
 
 private:
     void OnClientDataReceived(const boost::system::error_code& e);
@@ -99,6 +125,9 @@ private:
     Socket *client_socket_;
     Socket *server_socket_;
 
+    boost::asio::deadline_timer client_timer_;
+    boost::asio::deadline_timer server_timer_;
+
     boost::asio::ip::tcp::resolver resolver_;
 
     FilterChain *chain_;
@@ -114,6 +143,7 @@ private:
 
     bool server_connected_;
     bool https_;
+    bool finished_;
 
     boost::asio::streambuf client_in_;
     boost::asio::streambuf client_out_;
