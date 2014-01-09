@@ -1,9 +1,7 @@
 #ifndef PROXY_SERVER_H
 #define PROXY_SERVER_H
 
-#include "client_connection_manager.h"
-#include "filter_chain_manager.h"
-#include "server_connection_manager.h"
+#include "session.h"
 #include "singleton.h"
 
 class ProxyServer : private boost::noncopyable {
@@ -11,18 +9,6 @@ class ProxyServer : private boost::noncopyable {
 public:
     static void Start() {
         instance().start();
-    }
-
-    static class ServerConnectionManager& ServerConnectionManager() {
-        return *instance().server_connection_manager_;
-    }
-
-    static class ClientConnectionManager& ClientConnectionManager() {
-        return *instance().client_connection_manager_;
-    }
-
-    static class FilterChainManager& FilterChainManager() {
-        return *instance().chain_manager_;
     }
 
     static boost::asio::io_service& MainService() {
@@ -48,21 +34,6 @@ private:
 
     bool init();
 
-    bool InitServerConnectionManager() {
-        server_connection_manager_.reset(new class ServerConnectionManager(fetch_service_));
-        return true;
-    }
-
-    bool InitClientConnectionManager() {
-        client_connection_manager_.reset(new class ClientConnectionManager());
-        return true;
-    }
-
-    bool InitChainManager() {
-        chain_manager_.reset(new class FilterChainManager());
-        return true;
-    }
-
     void StartAccept();
     void OnConnectionAccepted(const boost::system::error_code& e);
     void OnStopSignalReceived();
@@ -83,12 +54,7 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    // HttpProxySession::Ptr current_session_;
-    boost::shared_ptr<Connection> current_connection_;
-
-    std::unique_ptr<class ServerConnectionManager> server_connection_manager_;
-    std::unique_ptr<class ClientConnectionManager> client_connection_manager_;
-    std::unique_ptr<class FilterChainManager> chain_manager_;
+    boost::shared_ptr<Session> current_session_;
 };
 
 #endif // PROXY_SERVER_H
