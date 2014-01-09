@@ -186,6 +186,18 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         HttpRequestInitial *initial = reinterpret_cast<HttpRequestInitial *>(request_->RetrieveInitial());
         assert(initial != nullptr);
         if(initial->method() == "CONNECT") {
+            /// We do not expect a CONNECT request in a reused connection
+            if(reused_) {
+                if(https_)
+                    XWARN_WITH_ID << "CONNECT request is sent through a persistent https connection ["
+                                  << host_ << ":" << port_ << "], will this happen?";
+                else
+                    XWARN_WITH_ID << "A https CONNECT request is sent through a persistent http connection ["
+                                  << host_ << ":" << port_ << "], will this happen?";
+                // TODO add logic here
+                return;
+            }
+
             https_ = true;
 
             /// set host_ and port_
@@ -215,7 +227,10 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             return;
         }
 
-        /// set host_ and port_ if it is not a https request
+        /// no matter it is a persistent connection or it is the first request
+        /// in the connection, we should set host_ and port_ when it is not a
+        /// https request, the difference is, for a reused connection, we need
+        /// to verify if the new host and port match the existing ones
         if(!https_) {
             HttpHeaders *headers = request_->RetrieveHeaders();
             if(!headers->find("Host", host_)) {
@@ -224,12 +239,26 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
                 return;
             }
 
+            std::string host;
+            unsigned short port;
             std::string::size_type sep = host_.find(':');
             if(sep != std::string::npos) {
-                port_ = boost::lexical_cast<unsigned short>(host_.substr(sep + 1));
-                host_ = host_.substr(0, sep);
+                port = boost::lexical_cast<unsigned short>(host_.substr(sep + 1));
+                host = host_.substr(0, sep);
             } else {
-                port_ = 80;
+                port = 80;
+            }
+
+            if(reused_) {
+                if(host != host_ || port != port_) {
+                    XWARN_WITH_ID << "Host or port mismatch in a persistent connection ["
+                                  << host_ << ":" << port_ << "], will this happen?";
+                    // TODO add logic here
+                    return;
+                }
+            } else {
+                host_ = host;
+                port_ = port;
             }
         }
 
@@ -384,6 +413,8 @@ void Session::OnClientDataSent(const boost::system::error_code& e) {
     client_timer_.async_wait(boost::bind(&this_type::OnClientTimeout,
                                          shared_from_this(),
                                          boost::asio::placeholders::error));
+
+    reused_ = true;
 
     start();
 }

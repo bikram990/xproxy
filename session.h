@@ -46,12 +46,14 @@ public:
         response_decoder_->reset();
         request_->reset();
         response_->reset();
-        host_.clear();
-        port_ = 0;
-        /// the following two should not be reset
+
+        finished_ = false;
+        /// the following should not be reset
+        // host_.clear();
+        // port_ = 0;
         // server_connected_ = false;
         // https_ = false;
-        finished_ = false;
+        // reused_ = false;
 
 #define CLEAR_STREAMBUF(buf) if(buf.size() > 0) buf.consume(buf.size())
 
@@ -98,7 +100,8 @@ private:
           response_(new HttpContainer),
           server_connected_(false),
           https_(false),
-          finished_(false) {}
+          finished_(false),
+          reused_(false) {}
 
 private:
     void OnClientDataReceived(const boost::system::error_code& e);
@@ -146,6 +149,7 @@ private:
     bool server_connected_;
     bool https_;
     bool finished_;
+    bool reused_;
 
     boost::asio::streambuf client_in_;
     boost::asio::streambuf client_out_;
