@@ -71,6 +71,8 @@ public:
     void AsyncWriteToClient();
 
     virtual ~Session() {
+        XDEBUG_WITH_ID << "Destructor called.";
+
         if(client_socket_) delete client_socket_;
         if(server_socket_) delete server_socket_;
         if(chain_) delete chain_;
