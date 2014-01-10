@@ -87,9 +87,9 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
         return;
     }
 
-    XDEBUG << "A new connection is accepted, host: "
-           << current_session_->ClientSocket().remote_endpoint().address()
-           << ", port: " << current_session_->ClientSocket().remote_endpoint().port();
+    XDEBUG << "A new session [id: " << current_session_->id() << "] is established, client address: ["
+           << current_session_->ClientSocket().remote_endpoint().address() << ":"
+           << current_session_->ClientSocket().remote_endpoint().port() << "].";
 
     if(!e)
         current_session_->start();

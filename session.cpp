@@ -181,6 +181,8 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         break;
     case Decoder::kFinished: {
         assert(object != nullptr);
+
+        XDEBUG_WITH_ID << "A complete request is decoded.";
         request_->AppendObject(object);
 
         HttpRequestInitial *initial = reinterpret_cast<HttpRequestInitial *>(request_->RetrieveInitial());
