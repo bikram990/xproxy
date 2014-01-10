@@ -41,6 +41,8 @@ public:
 
     void start();
 
+    std::size_t id() const { return id_; }
+
     void reset() {
         request_decoder_->reset();
         response_decoder_->reset();
