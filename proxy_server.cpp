@@ -93,7 +93,7 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
            << current_session_->ClientSocket().remote_endpoint().port() << "].";
 
     if(!e)
-        current_session_->start();
+        session_manager_->start(current_session_);
 
     StartAccept();
 }
