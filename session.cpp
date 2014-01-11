@@ -246,21 +246,22 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         /// to verify if the new host and port match the existing ones
         if(!https_) {
             HttpHeaders *headers = request_->RetrieveHeaders();
-            if(!headers->find("Host", host_)) {
+
+            assert(headers != nullptr);
+
+            std::string host;
+            unsigned short port = 80;
+            if(!headers->find("Host", host)) {
                 XERROR_WITH_ID << "No host found in header, this should never happen.";
                 // TODO add logic here
                 manager_.stop(shared_from_this());
                 return;
             }
 
-            std::string host;
-            unsigned short port;
-            std::string::size_type sep = host_.find(':');
+            std::string::size_type sep = host.find(':');
             if(sep != std::string::npos) {
-                port = boost::lexical_cast<unsigned short>(host_.substr(sep + 1));
-                host = host_.substr(0, sep);
-            } else {
-                port = 80;
+                port = boost::lexical_cast<unsigned short>(host.substr(sep + 1));
+                host = host.substr(0, sep);
             }
 
             if(reused_) {
