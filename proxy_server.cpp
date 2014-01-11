@@ -76,7 +76,7 @@ void ProxyServer::StartAccept() {
     if(state_ == kStopped)
         return;
 
-    current_session_.reset(Session::create(main_service_));
+    current_session_.reset(Session::create(main_service_, *session_manager_));
     acceptor_.async_accept(current_session_->ClientSocket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));

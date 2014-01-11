@@ -82,6 +82,7 @@ void Session::AsyncConnectToServer() {
         } catch(const boost::system::system_error& e) {
             XERROR_WITH_ID << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
             // TODO add logic here
+            manager_.stop(shared_from_this());
         }
 }
 
@@ -157,12 +158,14 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         XERROR_WITH_ID << "Error occurred during reading from client socket, message: "
                        << e.message();
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
     if(client_in_.size() <= 0) {
         XWARN_WITH_ID << "No data in client socket.";
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
@@ -177,6 +180,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
     case Decoder::kFailure:
         XERROR_WITH_ID << "Failed to decode object, return.";
         // TODO add logic here
+        manager_.stop(shared_from_this());
         break;
     case Decoder::kComplete:
         XDEBUG_WITH_ID << "One object decoded, continue reading...";
@@ -202,6 +206,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
                     XWARN_WITH_ID << "A https CONNECT request is sent through a persistent http connection ["
                                   << host_ << ":" << port_ << "], will this happen?";
                 // TODO add logic here
+                manager_.stop(shared_from_this());
                 return;
             }
 
@@ -243,6 +248,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             if(!headers->find("Host", host_)) {
                 XERROR_WITH_ID << "No host found in header, this should never happen.";
                 // TODO add logic here
+                manager_.stop(shared_from_this());
                 return;
             }
 
@@ -263,6 +269,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
                                   << " mismatch in a persistent connection ["
                                   << host_ << ":" << port_ << "], will this happen?";
                     // TODO add logic here
+                    manager_.stop(shared_from_this());
                     return;
                 }
             } else {
@@ -312,6 +319,7 @@ void Session::OnClientSSLReplySent(const boost::system::error_code& e) {
         XERROR_WITH_ID << "Error occurred during writing SSL OK reply to socket, message: "
                        << e.message();
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
@@ -332,6 +340,7 @@ void Session::OnServerConnected(const boost::system::error_code& e) {
         XERROR_WITH_ID << "Error occurred during connecting to remote peer, message: "
                        << e.message();
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
@@ -345,6 +354,7 @@ void Session::OnServerDataSent(const boost::system::error_code& e) {
         XERROR_WITH_ID << "Error occurred during writing to remote peer, message: "
                        << e.message();
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
@@ -357,12 +367,14 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         XERROR_WITH_ID << "Error occurred during reading from server socket, message: "
                        << e.message();
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
     if(server_in_.size() <= 0) {
         XWARN_WITH_ID << "No data in server socket.";
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
@@ -377,6 +389,7 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
     case Decoder::kFailure:
         XERROR_WITH_ID << "Failed to decode object, return.";
         // TODO add logic here
+        manager_.stop(shared_from_this());
         break;
     case Decoder::kComplete:
         assert(object != nullptr);
@@ -408,6 +421,7 @@ void Session::OnClientDataSent(const boost::system::error_code& e) {
         XERROR_WITH_ID << "Error occurred during writing to client socket, message: "
                        << e.message();
         // TODO add logic here
+        manager_.stop(shared_from_this());
         return;
     }
 
@@ -452,5 +466,6 @@ void Session::OnClientTimeout(const boost::system::error_code& e) {
     else if(client_timer_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
         XDEBUG_WITH_ID << "Client socket timed out, close it.";
         // TODO add logic here
+        manager_.stop(shared_from_this());
     }
 }

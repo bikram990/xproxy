@@ -9,6 +9,7 @@
 #include "http_request_decoder.h"
 #include "http_response_decoder.h"
 #include "resource_manager.h"
+#include "session_manager.h"
 #include "socket.h"
 
 class Session : public Resettable,
@@ -24,9 +25,10 @@ public:
         kDefaultServerTimeoutValue = 15     // 15 seconds
     };
 
-    static Session *create(boost::asio::io_service& service) {
+    static Session *create(boost::asio::io_service& service,
+                           SessionManager& manager) {
         ++counter_;
-        return new Session(service);
+        return new Session(service, manager);
     }
 
     boost::asio::ip::tcp::socket& ClientSocket() const {
@@ -88,8 +90,9 @@ public:
     }
 
 private:
-    Session(boost::asio::io_service& service)
+    Session(boost::asio::io_service& service, SessionManager& manager)
         : id_(counter_),
+          manager_(manager),
           service_(service),
           client_socket_(Socket::Create(service)),
           server_socket_(Socket::Create(service)),
@@ -128,6 +131,8 @@ private:
 
 private:
     std::size_t id_;
+
+    SessionManager& manager_;
 
     boost::asio::io_service& service_;
     Socket *client_socket_;
