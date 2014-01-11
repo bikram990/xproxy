@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "filter.h"
 #include "filter_chain.h"
 #include "log.h"
