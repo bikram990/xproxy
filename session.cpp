@@ -19,6 +19,11 @@ void Session::start() {
                                         boost::asio::placeholders::error));
 }
 
+void Session::stop() {
+    client_socket_->close();
+    server_socket_->close();
+}
+
 void Session::AsyncReadFromClient() {
     if(client_in_.size() > 0) {
         XDEBUG_WITH_ID << "There is still data in client in buffer, skip reading from socket.";

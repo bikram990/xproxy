@@ -40,6 +40,7 @@ public:
     }
 
     void start();
+    void stop();
 
     std::size_t id() const { return id_; }
 
