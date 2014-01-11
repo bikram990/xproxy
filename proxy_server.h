@@ -2,6 +2,7 @@
 #define PROXY_SERVER_H
 
 #include "session.h"
+#include "session_manager.h"
 #include "singleton.h"
 
 class ProxyServer : private boost::noncopyable {
@@ -9,6 +10,10 @@ class ProxyServer : private boost::noncopyable {
 public:
     static void Start() {
         instance().start();
+    }
+
+    static class SessionManager& SessionManager() {
+        return *instance().session_manager_;
     }
 
     static boost::asio::io_service& MainService() {
@@ -55,6 +60,7 @@ private:
     boost::asio::ip::tcp::acceptor acceptor_;
 
     boost::shared_ptr<Session> current_session_;
+    std::unique_ptr<class SessionManager> session_manager_;
 };
 
 #endif // PROXY_SERVER_H

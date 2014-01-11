@@ -17,7 +17,8 @@ ProxyServer::ProxyServer(unsigned short port,
                          int fetch_thread_count)
     : state_(kUninitialized), port_(port),
       main_thread_pool_size_(main_thread_count), fetch_thread_pool_size_(fetch_thread_count),
-      signals_(main_service_), acceptor_(main_service_) {}
+      signals_(main_service_), acceptor_(main_service_),
+      session_manager_(new class SessionManager) {}
 
 void ProxyServer::start() {
     if(state_ == kUninitialized) {
