@@ -72,7 +72,8 @@ void Session::AsyncConnectToServer() {
         boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
         auto endpoint_iterator = resolver_.resolve(query);
 
-        XDEBUG_WITH_ID << "Connecting to remote address: "
+        XDEBUG_WITH_ID << "Connecting to remote, host: " << host_
+                       << ", port: " << port_ << ", resolved address: "
                        << endpoint_iterator->endpoint().address();
 
         server_socket_->async_connect(endpoint_iterator,
