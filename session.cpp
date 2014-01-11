@@ -253,7 +253,9 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
 
             if(reused_) {
                 if(host != host_ || port != port_) {
-                    XWARN_WITH_ID << "Host or port mismatch in a persistent connection ["
+                    XWARN_WITH_ID << "Host or port ["
+                                  << host << ":" << port << "]"
+                                  << " mismatch in a persistent connection ["
                                   << host_ << ":" << port_ << "], will this happen?";
                     // TODO add logic here
                     return;
