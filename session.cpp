@@ -92,6 +92,8 @@ void Session::AsyncWriteToServer() {
     if(!server_connected_) {
         AsyncConnectToServer();
         return;
+    } else {
+        server_timer_.cancel();
     }
 
     if(server_out_.size() > 0)
@@ -157,12 +159,19 @@ void Session::AsyncWriteToClient() {
 
 void Session::OnClientDataReceived(const boost::system::error_code& e) {
     if(e) {
-        XERROR_WITH_ID << "Error occurred during reading from client socket, message: "
-                       << e.message();
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e))
+            XDEBUG_WITH_ID << "Client closed the socket, stop.";
+        else
+            XERROR_WITH_ID << "Error occurred during reading from client socket, message: "
+                           << e.message();
         // TODO add logic here
+        client_timer_.cancel();
+        server_timer_.cancel();
         manager_.stop(shared_from_this());
         return;
     }
+
+    client_timer_.cancel();
 
     if(client_in_.size() <= 0) {
         XWARN_WITH_ID << "No data in client socket.";
@@ -367,11 +376,17 @@ void Session::OnServerDataSent(const boost::system::error_code& e) {
 
 void Session::OnServerDataReceived(const boost::system::error_code& e) {
     if(e) {
-        XERROR_WITH_ID << "Error occurred during reading from server socket, message: "
-                       << e.message();
-        // TODO add logic here
-        manager_.stop(shared_from_this());
-        return;
+        if(e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
+            XDEBUG_WITH_ID << "Server closed the socket, this is not persistent connection.";
+            server_connected_ = false;
+            server_socket_->close();
+        } else {
+            XERROR_WITH_ID << "Error occurred during reading from server socket, message: "
+                           << e.message();
+            // TODO add logic here
+            manager_.stop(shared_from_this());
+            return;
+        }
     }
 
     if(server_in_.size() <= 0) {
@@ -387,6 +402,12 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
     switch(result) {
     case Decoder::kIncomplete:
         XDEBUG_WITH_ID << "Incomplete buffer, continue reading...";
+        if(!server_connected_) {
+            // TODO add logic here
+            XERROR_WITH_ID << "Incorrect state: server socket closed but the response is incomplete.";
+            manager_.stop(shared_from_this());
+            return;
+        }
         AsyncReadFromServer();
         break;
     case Decoder::kFailure:
@@ -399,6 +420,12 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         response_->AppendObject(object);
         chain_->FilterResponse(response_);
         AsyncWriteToClient();
+        if(!server_connected_) {
+            // TODO add logic here
+            XERROR_WITH_ID << "Incorrect state: server socket closed but the response wants more data.";
+            manager_.stop(shared_from_this());
+            return;
+        }
         AsyncReadFromServer();
         break;
     case Decoder::kFinished:
@@ -408,10 +435,12 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         chain_->FilterResponse(response_);
         AsyncWriteToClient();
 
-        server_timer_.expires_from_now(boost::posix_time::seconds(kDefaultServerTimeoutValue));
-        server_timer_.async_wait(boost::bind(&this_type::OnServerTimeout,
-                                             shared_from_this(),
-                                             boost::asio::placeholders::error));
+        if(server_connected_) {
+            server_timer_.expires_from_now(boost::posix_time::seconds(kDefaultServerTimeoutValue));
+            server_timer_.async_wait(boost::bind(&this_type::OnServerTimeout,
+                                                 shared_from_this(),
+                                                 boost::asio::placeholders::error));
+        }
         break;
     default:
         XERROR_WITH_ID << "Invalid result: " << static_cast<int>(result);
