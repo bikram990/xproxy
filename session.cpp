@@ -20,6 +20,7 @@ void Session::start() {
 }
 
 void Session::stop() {
+    XDEBUG_WITH_ID << "Function stop() is called.";
     client_socket_->close();
     server_socket_->close();
 }
@@ -114,7 +115,7 @@ void Session::AsyncWriteToServer() {
 
 void Session::AsyncReadFromServer() {
     if(server_in_.size() > 0) {
-        XDEBUG_WITH_ID << "There is still data in client in buffer, skip reading from socket.";
+        XDEBUG_WITH_ID << "There is still data in server in buffer, skip reading from socket.";
         service_.post(boost::bind(&this_type::OnServerDataReceived,
                                   shared_from_this(),
                                   boost::system::error_code()));
@@ -360,7 +361,7 @@ void Session::OnServerDataSent(const boost::system::error_code& e) {
         return;
     }
 
-    XDEBUG << "Data has been written to remote peer, now start reading...";
+    XDEBUG_WITH_ID << "Data has been written to remote peer, now start reading...";
     AsyncReadFromServer();
 }
 
@@ -427,10 +428,8 @@ void Session::OnClientDataSent(const boost::system::error_code& e) {
         return;
     }
 
-    if(!finished_) {
-        XDEBUG_WITH_ID << "There is still data needed by client socket, do nothing.";
+    if(!finished_)
         return;
-    }
 
     /// we always treat client connection as persistent connection
     reset();
