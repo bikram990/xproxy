@@ -12,6 +12,24 @@
 #include "session_manager.h"
 #include "socket.h"
 
+struct SessionContext {
+    SessionContext() :
+        request(new HttpContainer),
+        response(new HttpContainer),
+        https(false) {}
+
+    ~SessionContext() {
+        delete request;
+        delete response;
+    }
+
+    HttpContainer *request;
+    HttpContainer *response;
+    std::string host;
+    unsigned short port;
+    bool https;
+};
+
 class Session : public Resettable,
                 public boost::enable_shared_from_this<Session>,
                 private boost::noncopyable {
@@ -49,8 +67,8 @@ public:
     void reset() {
         request_decoder_->reset();
         response_decoder_->reset();
-        request_->reset();
-        response_->reset();
+        context_.request->reset();
+        context_.response->reset();
 
         finished_ = false;
         /// the following should not be reset
@@ -85,8 +103,6 @@ public:
         if(chain_) delete chain_;
         if(request_decoder_) delete request_decoder_;
         if(response_decoder_) delete response_decoder_;
-        if(request_) delete request_;
-        if(response_) delete response_;
     }
 
 private:
@@ -102,10 +118,7 @@ private:
           chain_(new FilterChain),
           request_decoder_(new HttpRequestDecoder),
           response_decoder_(new HttpResponseDecoder),
-          request_(new HttpContainer),
-          response_(new HttpContainer),
           server_connected_(false),
-          https_(false),
           finished_(false),
           reused_(false) {}
 
@@ -121,7 +134,7 @@ private:
 
 private:
     void InitClientSSLContext() {
-        auto ca = ResourceManager::GetCertManager().GetCertificate(host_);
+        auto ca = ResourceManager::GetCertManager().GetCertificate(context_.host);
         auto dh = ResourceManager::GetCertManager().GetDHParameters();
         client_socket_->SwitchProtocol(kHttps, kServer, ca, dh);
     }
@@ -148,14 +161,9 @@ private:
     Decoder *request_decoder_;
     Decoder *response_decoder_;
 
-    HttpContainer *request_;
-    HttpContainer *response_;
-
-    std::string host_;
-    unsigned short port_;
+    SessionContext context_;
 
     bool server_connected_;
-    bool https_;
     bool finished_;
     bool reused_;
 

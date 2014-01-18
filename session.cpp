@@ -46,8 +46,8 @@ void Session::AsyncWriteSSLReplyToClient() {
     if(client_out_.size() > 0)
         client_out_.consume(client_out_.size());
 
-    for(std::size_t i = 0; i < response_->size(); ++i) {
-        SharedBuffer buffer = response_->RetrieveObject(i)->ByteContent();
+    for(std::size_t i = 0; i < context_.response->size(); ++i) {
+        SharedBuffer buffer = context_.response->RetrieveObject(i)->ByteContent();
         std::size_t copied = boost::asio::buffer_copy(client_out_.prepare(buffer->size()),
                                                       boost::asio::buffer(buffer->data(),
                                                                           buffer->size()));
@@ -64,17 +64,17 @@ void Session::AsyncWriteSSLReplyToClient() {
 
 void Session::AsyncConnectToServer() {
     // we switch to https mode before we connect to server
-    if(https_) {
+    if(context_.https) {
         server_socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
                 ResourceManager::CertManager::DHParametersPtr>(kHttps);
     }
 
     try {
-        boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
+        boost::asio::ip::tcp::resolver::query query(context_.host, boost::lexical_cast<std::string>(context_.port));
         auto endpoint_iterator = resolver_.resolve(query);
 
-        XDEBUG_WITH_ID << "Connecting to remote, host: " << host_
-                       << ", port: " << port_ << ", resolved address: "
+        XDEBUG_WITH_ID << "Connecting to remote, host: " << context_.host
+                       << ", port: " << context_.port << ", resolved address: "
                        << endpoint_iterator->endpoint().address();
 
         server_socket_->async_connect(endpoint_iterator,
@@ -82,7 +82,7 @@ void Session::AsyncConnectToServer() {
                                                   shared_from_this(),
                                                   boost::asio::placeholders::error));
         } catch(const boost::system::system_error& e) {
-            XERROR_WITH_ID << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
+            XERROR_WITH_ID << "Failed to resolve [" << context_.host << ":" << context_.port << "], error: " << e.what();
             // TODO add logic here
             manager_.stop(shared_from_this());
         }
@@ -99,8 +99,8 @@ void Session::AsyncWriteToServer() {
     if(server_out_.size() > 0)
         server_out_.consume(server_out_.size());
 
-    for(std::size_t i = 0; i < request_->size(); ++i) {
-        SharedBuffer buffer = request_->RetrieveObject(i)->ByteContent();
+    for(std::size_t i = 0; i < context_.request->size(); ++i) {
+        SharedBuffer buffer = context_.request->RetrieveObject(i)->ByteContent();
         std::size_t copied = boost::asio::buffer_copy(server_out_.prepare(buffer->size()),
                                                       boost::asio::buffer(buffer->data(),
                                                                           buffer->size()));
@@ -138,12 +138,12 @@ void Session::AsyncWriteToClient() {
 
     /// when we write data to client, we only write the latest object,
     /// because the response is written to client one object by one object
-    if(response_->size() <= 0) {
+    if(context_.response->size() <= 0) {
         XDEBUG_WITH_ID << "No content in response, a proxied request?";
         return;
     }
 
-    SharedBuffer buffer = response_->RetrieveLatest()->ByteContent();
+    SharedBuffer buffer = context_.response->RetrieveLatest()->ByteContent();
     std::size_t copied = boost::asio::buffer_copy(client_out_.prepare(buffer->size()),
                                                   boost::asio::buffer(buffer->data(),
                                                                       buffer->size()));
@@ -196,41 +196,41 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
     case Decoder::kComplete:
         XDEBUG_WITH_ID << "One object decoded, continue reading...";
         assert(object != nullptr);
-        request_->AppendObject(object);
+        context_.request->AppendObject(object);
         AsyncReadFromClient();
         break;
     case Decoder::kFinished: {
         assert(object != nullptr);
 
         XDEBUG_WITH_ID << "A complete request is decoded.";
-        request_->AppendObject(object);
+        context_.request->AppendObject(object);
 
-        HttpRequestInitial *initial = reinterpret_cast<HttpRequestInitial *>(request_->RetrieveInitial());
+        HttpRequestInitial *initial = reinterpret_cast<HttpRequestInitial *>(context_.request->RetrieveInitial());
         assert(initial != nullptr);
         if(initial->method() == "CONNECT") {
             /// We do not expect a CONNECT request in a reused connection
             if(reused_) {
-                if(https_)
+                if(context_.https)
                     XWARN_WITH_ID << "CONNECT request is sent through a persistent https connection ["
-                                  << host_ << ":" << port_ << "], will this happen?";
+                                  << context_.host << ":" << context_.port << "], will this happen?";
                 else
                     XWARN_WITH_ID << "A https CONNECT request is sent through a persistent http connection ["
-                                  << host_ << ":" << port_ << "], will this happen?";
+                                  << context_.host << ":" << context_.port << "], will this happen?";
                 // TODO add logic here
                 manager_.stop(shared_from_this());
                 return;
             }
 
-            https_ = true;
+            context_.https = true;
 
             /// set host_ and port_
             std::string::size_type sep = initial->uri().find(':');
             if(sep != std::string::npos) {
-                port_ = boost::lexical_cast<unsigned short>(initial->uri().substr(sep + 1));
-                host_ = initial->uri().substr(0, sep);
+                context_.port = boost::lexical_cast<unsigned short>(initial->uri().substr(sep + 1));
+                context_.host = initial->uri().substr(0, sep);
             } else {
-                port_ = 443;
-                host_ = initial->uri();
+                context_.port = 443;
+                context_.host = initial->uri();
             }
 
             /// construct the response
@@ -239,12 +239,12 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             ri->SetMinorVersion(1);
             ri->SetStatusCode(200);
             ri->StatusMessage().append("Connection Established");
-            response_->AppendObject(ri);
+            context_.response->AppendObject(ri);
 
             HttpHeaders *headers = new HttpHeaders;
             headers->PushBack(HttpHeader("Proxy-Connection", "keep-alive"));
             headers->PushBack(HttpHeader("Connection", "keep-alive"));
-            response_->AppendObject(headers);
+            context_.response->AppendObject(headers);
 
             AsyncWriteSSLReplyToClient();
             return;
@@ -254,8 +254,8 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         /// in the connection, we should set host_ and port_ when it is not a
         /// https request, the difference is, for a reused connection, we need
         /// to verify if the new host and port match the existing ones
-        if(!https_) {
-            HttpHeaders *headers = request_->RetrieveHeaders();
+        if(!context_.https) {
+            HttpHeaders *headers = context_.request->RetrieveHeaders();
 
             assert(headers != nullptr);
 
@@ -275,18 +275,18 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             }
 
             if(reused_) {
-                if(host != host_ || port != port_) {
+                if(host != context_.host || port != context_.port) {
                     XWARN_WITH_ID << "Host or port ["
                                   << host << ":" << port << "]"
                                   << " mismatch in a persistent connection ["
-                                  << host_ << ":" << port_ << "], will this happen?";
+                                  << context_.host << ":" << context_.port << "], will this happen?";
                     // TODO add logic here
                     manager_.stop(shared_from_this());
                     return;
                 }
             } else {
-                host_ = host;
-                port_ = port;
+                context_.host = host;
+                context_.port = port;
             }
         }
 
@@ -309,11 +309,11 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             }
         }
 
-        HttpContainer *response = chain_->FilterRequest(request_);
+        HttpContainer *response = chain_->FilterRequest(context_.request);
         if(response) {
             XDEBUG_WITH_ID << "Filters don't want to send this request.";
-            delete response_;
-            response_ = response;
+            delete context_.response;
+            context_.response = response;
             AsyncWriteToClient();
         } else {
             AsyncWriteToServer();
@@ -342,7 +342,7 @@ void Session::OnClientSSLReplySent(const boost::system::error_code& e) {
     request_decoder_->reset();
 
     // also reset the container, to clear previously decoded http object
-    request_->reset();
+    context_.request->reset();
 
     AsyncReadFromClient();
 }
@@ -356,7 +356,7 @@ void Session::OnServerConnected(const boost::system::error_code& e) {
         return;
     }
 
-    XDEBUG_WITH_ID << "Remote peer connected: " << host_ << ":" << port_;
+    XDEBUG_WITH_ID << "Remote peer connected: " << context_.host << ":" << context_.port;
     server_connected_ = true;
     AsyncWriteToServer();
 }
@@ -417,8 +417,8 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         break;
     case Decoder::kComplete:
         assert(object != nullptr);
-        response_->AppendObject(object);
-        chain_->FilterResponse(response_);
+        context_.response->AppendObject(object);
+        chain_->FilterResponse(context_.response);
         AsyncWriteToClient();
         if(!server_connected_) {
             // TODO add logic here
@@ -431,8 +431,8 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
     case Decoder::kFinished:
         assert(object != nullptr);
         finished_ = true;
-        response_->AppendObject(object);
-        chain_->FilterResponse(response_);
+        context_.response->AppendObject(object);
+        chain_->FilterResponse(context_.response);
         AsyncWriteToClient();
 
         if(server_connected_) {
