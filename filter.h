@@ -34,7 +34,11 @@ public:
 
     virtual ~Filter() {}
 
-    virtual FilterResult process(HttpContainer *in, HttpContainer **out = 0) = 0;
+    /// the type here is used to distinguish the in parameter is a request or
+    /// a response
+    virtual FilterResult process(HttpContainer *in,
+                                 FilterType type,
+                                 HttpContainer **out = 0) = 0;
 
     virtual int priority() = 0;
 

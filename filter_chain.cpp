@@ -23,7 +23,7 @@ void FilterChain::RegisterFilter(Filter *filter) {
 HttpContainer *FilterChain::FilterRequest(HttpContainer *container) {
     for(auto it : request_filters_) {
         HttpContainer *out = nullptr;
-        Filter::FilterResult result = it->process(container, &out);
+        Filter::FilterResult result = it->process(container, Filter::kRequest, &out);
         switch(result) {
         case Filter::kSkip:
             XDEBUG << "Filter " << it->name() << " wants to skip.";
@@ -53,7 +53,7 @@ HttpContainer *FilterChain::FilterRequest(HttpContainer *container) {
 
 void FilterChain::FilterResponse(HttpContainer *container) {
     for(auto it : response_filters_) {
-        Filter::FilterResult result = it->process(container);
+        Filter::FilterResult result = it->process(container, Filter::kResponse);
         switch(result) {
         case Filter::kSkip:
         case Filter::kStop:
