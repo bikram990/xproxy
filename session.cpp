@@ -309,11 +309,9 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             }
         }
 
-        HttpContainer *response = chain_->FilterRequest(context_.request);
-        if(response) {
+        Filter::FilterResult result = chain_->FilterRequest(context_);
+        if(result == Filter::kStop) {
             XDEBUG_WITH_ID << "Filters don't want to send this request.";
-            delete context_.response;
-            context_.response = response;
             AsyncWriteToClient();
         } else {
             AsyncWriteToServer();
@@ -418,7 +416,7 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
     case Decoder::kComplete:
         assert(object != nullptr);
         context_.response->AppendObject(object);
-        chain_->FilterResponse(context_.response);
+        chain_->FilterResponse(context_);
         AsyncWriteToClient();
         if(!server_connected_) {
             // TODO add logic here
@@ -432,7 +430,7 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         assert(object != nullptr);
         finished_ = true;
         context_.response->AppendObject(object);
-        chain_->FilterResponse(context_.response);
+        chain_->FilterResponse(context_);
         AsyncWriteToClient();
 
         if(server_connected_) {
