@@ -23,7 +23,7 @@ void FilterChain::RegisterFilter(Filter *filter) {
 
 Filter::FilterResult FilterChain::FilterRequest(SessionContext& context) {
     for(auto it : request_filters_) {
-        Filter::FilterResult result = it->process(context);
+        Filter::FilterResult result = it->process(context, Filter::kRequest);
         if(result == Filter::kSkip || result == Filter::kStop) {
             XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
             return result;
@@ -38,7 +38,7 @@ Filter::FilterResult FilterChain::FilterRequest(SessionContext& context) {
 
 void FilterChain::FilterResponse(SessionContext& context) {
     for(auto it : response_filters_) {
-        Filter::FilterResult result = it->process(context);
+        Filter::FilterResult result = it->process(context, Filter::kResponse);
         if(result == Filter::kSkip || result == Filter::kStop) {
             XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
             return;

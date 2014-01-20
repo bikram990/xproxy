@@ -35,7 +35,7 @@ public:
 
     virtual ~Filter() {}
 
-    virtual FilterResult process(SessionContext& context) = 0;
+    virtual FilterResult process(SessionContext& context, FilterType type) = 0;
 
     virtual int priority() = 0;
 
