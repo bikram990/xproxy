@@ -5,6 +5,7 @@
 #include "filter.h"
 
 class HttpContainer;
+struct SessionContext;
 
 class FilterChain {
 public:
@@ -24,30 +25,9 @@ public:
 
     void RegisterFilter(Filter *filter);
 
-    /**
-     * Filter http request.
-     *
-     * @brief FilterRequest
-     * @param container         the request to be filtered
-     * @return HttpContainer    should be null or a valid http response
-     *
-     * When the return value is not nullptr, it means the request should not be
-     * sent to server, instead, the returned HttpContainer instance should be
-     * written to client socket. Otherwise the request should be sent to server.
-     */
-    HttpContainer *FilterRequest(HttpContainer *container);
+    Filter::FilterResult FilterRequest(SessionContext& context);
 
-    /**
-     * Filter http response.
-     *
-     * @brief FilterResponse
-     * @param container         the response to be filtered
-     *
-     * This is different from FilterResponse(), no matter what the filtering
-     * result is, something should be written to client socket. So, if the
-     * response needs to be modified, just modify the parameter directly.
-     */
-    void FilterResponse(HttpContainer *container);
+    Filter::FilterResult FilterResponse(SessionContext& context);
 
 private:
     void insert(std::list<Filter*> filters, Filter *filter);

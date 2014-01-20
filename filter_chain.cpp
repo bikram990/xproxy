@@ -2,6 +2,7 @@
 #include "filter.h"
 #include "filter_chain.h"
 #include "log.h"
+#include "session.h"
 
 void FilterChain::RegisterFilter(Filter *filter) {
     switch(filter->type()) {
@@ -20,52 +21,34 @@ void FilterChain::RegisterFilter(Filter *filter) {
     }
 }
 
-HttpContainer *FilterChain::FilterRequest(HttpContainer *container) {
+Filter::FilterResult FilterChain::FilterRequest(SessionContext& context) {
     for(auto it : request_filters_) {
-        HttpContainer *out = nullptr;
-        Filter::FilterResult result = it->process(container, Filter::kRequest, &out);
-        switch(result) {
-        case Filter::kSkip:
-            XDEBUG << "Filter " << it->name() << " wants to skip.";
-
-            /// skipping other filters means the request will be sent to server,
-            /// so the return value should be nullptr
-            assert(out == nullptr);
-            return nullptr;
-        case Filter::kStop:
-            XDEBUG << "Filter " << it->name() << " wants to stop.";
-
-            /// stopping means the request will be terminated,
-            /// so the return value should be not null
-            assert(out != nullptr);
-            return out;
-        case Filter::kContinue:
-            XDEBUG << "Filter " << it->name() << " wants to continue.";
-            break;
-        default:
-            break;
+        Filter::FilterResult result = it->process(context);
+        if(result == Filter::kSkip || result == Filter::kStop) {
+            XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
+            return result;
         }
+
+        XDEBUG << "Filter " << it->name() << " wants to continue.";
     }
 
     // if the program goes here, it means all filters are passed
-    return nullptr;
+    return Filter::kContinue;
 }
 
-void FilterChain::FilterResponse(HttpContainer *container) {
+Filter::FilterResult FilterChain::FilterResponse(SessionContext& context) {
     for(auto it : response_filters_) {
-        Filter::FilterResult result = it->process(container, Filter::kResponse);
-        switch(result) {
-        case Filter::kSkip:
-        case Filter::kStop:
-            XDEBUG << "Filter " << it->name() << " wants to skip or stop.";
-            return;
-        case Filter::kContinue:
-            XDEBUG << "Filter " << it->name() << " wants to continue.";
-            break;
-        default:
-            break;
+        Filter::FilterResult result = it->process(context);
+        if(result == Filter::kSkip || result == Filter::kStop) {
+            XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
+            return result;
         }
+
+        XDEBUG << "Filter " << it->name() << " wants to continue.";
     }
+
+    // if the program goes here, it means all filters are passed
+    return Filter::kContinue;
 }
 
 void FilterChain::insert(std::list<Filter *> filters, Filter *filter) {
