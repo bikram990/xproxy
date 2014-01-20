@@ -9,26 +9,9 @@
 #include "http_request_decoder.h"
 #include "http_response_decoder.h"
 #include "resource_manager.h"
+#include "session_context.h"
 #include "session_manager.h"
 #include "socket.h"
-
-struct SessionContext {
-    SessionContext() :
-        request(new HttpContainer),
-        response(new HttpContainer),
-        https(false) {}
-
-    ~SessionContext() {
-        delete request;
-        delete response;
-    }
-
-    HttpContainer *request;
-    HttpContainer *response;
-    std::string host;
-    unsigned short port;
-    bool https;
-};
 
 class Session : public Resettable,
                 public boost::enable_shared_from_this<Session>,
