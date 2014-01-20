@@ -24,7 +24,7 @@ public:
     void FilterResponse(SessionContext& context);
 
 private:
-    void insert(std::list<Filter::Ptr> filters, Filter::Ptr filter);
+    void insert(std::list<Filter::Ptr>& filters, Filter::Ptr filter);
 
 private:
     std::list<Filter::Ptr> request_filters_;
