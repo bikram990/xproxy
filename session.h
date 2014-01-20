@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <boost/atomic.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include "builtin_filters.h"
 #include "filter_chain.h"
 #include "http_container.h"
 #include "http_request_decoder.h"
@@ -103,7 +104,10 @@ private:
           response_decoder_(new HttpResponseDecoder),
           server_connected_(false),
           finished_(false),
-          reused_(false) {}
+          reused_(false) {
+        Filter::Ptr proxy_filter(new ProxyFilter());
+        chain_->RegisterFilter(proxy_filter);
+    }
 
 private:
     void OnClientDataReceived(const boost::system::error_code& e);
