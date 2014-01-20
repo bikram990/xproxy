@@ -36,19 +36,16 @@ Filter::FilterResult FilterChain::FilterRequest(SessionContext& context) {
     return Filter::kContinue;
 }
 
-Filter::FilterResult FilterChain::FilterResponse(SessionContext& context) {
+void FilterChain::FilterResponse(SessionContext& context) {
     for(auto it : response_filters_) {
         Filter::FilterResult result = it->process(context);
         if(result == Filter::kSkip || result == Filter::kStop) {
             XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
-            return result;
+            return;
         }
 
         XDEBUG << "Filter " << it->name() << " wants to continue.";
     }
-
-    // if the program goes here, it means all filters are passed
-    return Filter::kContinue;
 }
 
 void FilterChain::insert(std::list<Filter *> filters, Filter *filter) {

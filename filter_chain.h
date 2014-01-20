@@ -27,7 +27,7 @@ public:
 
     Filter::FilterResult FilterRequest(SessionContext& context);
 
-    Filter::FilterResult FilterResponse(SessionContext& context);
+    void FilterResponse(SessionContext& context);
 
 private:
     void insert(std::list<Filter*> filters, Filter *filter);
