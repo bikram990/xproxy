@@ -9,32 +9,26 @@ struct SessionContext;
 
 class FilterChain {
 public:
-    virtual ~FilterChain() {
-        for(auto it : request_filters_)
-            delete it;
-
-        for(auto it : response_filters_)
-            delete it;
-    }
+    virtual ~FilterChain() {}
 
     template<typename Container>
     void RegisterAll(const Container& filters) {
         std::for_each(filters.begin(), filters.end(),
-                      [this](Filter *filter) { RegisterFilter(filter); });
+                      [this](Filter::Ptr filter) { RegisterFilter(filter); });
     }
 
-    void RegisterFilter(Filter *filter);
+    void RegisterFilter(Filter::Ptr filter);
 
     Filter::FilterResult FilterRequest(SessionContext& context);
 
     void FilterResponse(SessionContext& context);
 
 private:
-    void insert(std::list<Filter*> filters, Filter *filter);
+    void insert(std::list<Filter::Ptr> filters, Filter::Ptr filter);
 
 private:
-    std::list<Filter*> request_filters_;
-    std::list<Filter*> response_filters_;
+    std::list<Filter::Ptr> request_filters_;
+    std::list<Filter::Ptr> response_filters_;
 };
 
 #endif // FILTER_CHAIN_H

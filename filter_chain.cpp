@@ -4,7 +4,7 @@
 #include "log.h"
 #include "session.h"
 
-void FilterChain::RegisterFilter(Filter *filter) {
+void FilterChain::RegisterFilter(Filter::Ptr filter) {
     switch(filter->type()) {
     case Filter::kRequest:
         insert(request_filters_, filter);
@@ -48,7 +48,7 @@ void FilterChain::FilterResponse(SessionContext& context) {
     }
 }
 
-void FilterChain::insert(std::list<Filter *> filters, Filter *filter) {
+void FilterChain::insert(std::list<Filter::Ptr> filters, Filter::Ptr filter) {
     for(auto it = filters.begin(); it != filters.end(); ++it) {
         if((*it)->priority() < filter->priority()) {
             filters.insert(it, filter);

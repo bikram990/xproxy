@@ -1,6 +1,7 @@
 #ifndef FILTER_H
 #define FILTER_H
 
+#include <memory>
 #include <string>
 
 class FilterChain;
@@ -15,6 +16,8 @@ struct SessionContext;
  */
 class Filter {
 public:
+    typedef std::shared_ptr<Filter> Ptr;
+
     enum FilterResult {
         kContinue, // go to next filter
         kSkip,     // skip all left filters
