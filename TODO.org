@@ -13,3 +13,12 @@
 4. some initialization work need to be done when constructing a connection class, try to do in =XXXConnection::create()= method
 
 5. the container =std::vector= in =HttpContainer= is not suitable for modification, change a suitable one
+
+6. update proxy filter logic to correctly handle the following situation:
+
+   1) a request comes, it needs proxy, then a proxy established
+   2) its response is a redirection
+   3) the second request comes from the same socket, but it does not need a proxy
+   4) then it will be sent to proxy server socket
+
+   the opposite situation is also need to considered
