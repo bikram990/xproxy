@@ -1,6 +1,5 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
-#include "client_connection.h"
 #include "common.h"
 #include "log.h"
 #include "proxy_server.h"
@@ -18,7 +17,8 @@ ProxyServer::ProxyServer(unsigned short port,
                          int fetch_thread_count)
     : state_(kUninitialized), port_(port),
       main_thread_pool_size_(main_thread_count), fetch_thread_pool_size_(fetch_thread_count),
-      signals_(main_service_), acceptor_(main_service_) {}
+      signals_(main_service_), acceptor_(main_service_),
+      session_manager_(new class SessionManager) {}
 
 void ProxyServer::start() {
     if(state_ == kUninitialized) {
@@ -58,9 +58,6 @@ void ProxyServer::start() {
 }
 
 bool ProxyServer::init() {
-    if(!InitServerConnectionManager() || !InitClientConnectionManager() || !InitChainManager())
-        return false;
-
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
     // signals_.add(SIGQUIT); // TODO is this needed?
@@ -79,8 +76,8 @@ void ProxyServer::StartAccept() {
     if(state_ == kStopped)
         return;
 
-    current_connection_ = ClientConnection::create(main_service_);
-    acceptor_.async_accept(current_connection_->socket(),
+    current_session_.reset(Session::create(main_service_, *session_manager_));
+    acceptor_.async_accept(current_session_->ClientSocket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));
 }
@@ -91,19 +88,18 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
         return;
     }
 
-    XDEBUG << "A new connection is accepted, host: "
-           << current_connection_->socket().remote_endpoint().address()
-           << ", port: " << current_connection_->socket().remote_endpoint().port();
+    XDEBUG << "A new session [id: " << current_session_->id() << "] is established, client address: ["
+           << current_session_->ClientSocket().remote_endpoint().address() << ":"
+           << current_session_->ClientSocket().remote_endpoint().port() << "].";
 
     if(!e)
-        client_connection_manager_->start(current_connection_);
+        session_manager_->start(current_session_);
 
     StartAccept();
 }
 
 void ProxyServer::OnStopSignalReceived() {
     acceptor_.close();
-    client_connection_manager_->StopAll();
     main_keeper_.reset();
     fetch_keeper_.reset();
 

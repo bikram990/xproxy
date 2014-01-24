@@ -1,10 +1,13 @@
 #ifndef FILTER_H
 #define FILTER_H
 
+#include <memory>
 #include <string>
 
 class FilterChain;
 class FilterContext;
+class HttpContainer;
+struct SessionContext;
 
 /**
  * @brief The Filter class
@@ -13,6 +16,8 @@ class FilterContext;
  */
 class Filter {
 public:
+    typedef std::shared_ptr<Filter> Ptr;
+
     enum FilterResult {
         kContinue, // go to next filter
         kSkip,     // skip all left filters
@@ -33,7 +38,7 @@ public:
 
     virtual ~Filter() {}
 
-    virtual FilterResult process(FilterContext *context) = 0;
+    virtual FilterResult process(SessionContext& context, FilterType type) = 0;
 
     virtual int priority() = 0;
 

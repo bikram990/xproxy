@@ -3,38 +3,32 @@
 
 #include <list>
 #include "filter.h"
-#include "filter_context.h"
-#include "resettable.h"
 
+class HttpContainer;
+struct SessionContext;
 
-class FilterChain : public Resettable {
+class FilterChain {
 public:
-    FilterChain(Filter::FilterType type)
-        : type_(type), context_(new class FilterContext) {}
-
-    virtual ~FilterChain() {
-        if(context_) delete context_;
-    }
+    virtual ~FilterChain() {}
 
     template<typename Container>
     void RegisterAll(const Container& filters) {
         std::for_each(filters.begin(), filters.end(),
-                      [this](Filter *filter) { RegisterFilter(filter); });
+                      [this](Filter::Ptr filter) { RegisterFilter(filter); });
     }
 
-    void RegisterFilter(Filter *filter);
+    void RegisterFilter(Filter::Ptr filter);
 
-    void filter();
+    Filter::FilterResult FilterRequest(SessionContext& context);
 
-    class FilterContext *FilterContext() const { return context_; }
-
-    virtual void reset() { context_->reset(); }
+    void FilterResponse(SessionContext& context);
 
 private:
-    Filter::FilterType type_;
-    std::list<Filter*> filters_;
+    void insert(std::list<Filter::Ptr>& filters, Filter::Ptr filter);
 
-    class FilterContext *context_;
+private:
+    std::list<Filter::Ptr> request_filters_;
+    std::list<Filter::Ptr> response_filters_;
 };
 
 #endif // FILTER_CHAIN_H

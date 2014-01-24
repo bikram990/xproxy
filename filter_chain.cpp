@@ -1,41 +1,60 @@
-#include "connection.h"
+#include <algorithm>
 #include "filter.h"
 #include "filter_chain.h"
-#include "filter_context.h"
 #include "log.h"
+#include "session.h"
 
-void FilterChain::RegisterFilter(Filter *filter) {
-    if(filter->type() != type_ && filter->type() != Filter::kBoth)
-        return;
-
-    for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-        if((*it)->priority() < filter->priority()) { // TODO check if there is bug here
-            filters_.insert(it, filter);
-            return;
-        }
+void FilterChain::RegisterFilter(Filter::Ptr filter) {
+    switch(filter->type()) {
+    case Filter::kRequest:
+        insert(request_filters_, filter);
+        break;
+    case Filter::kResponse:
+        insert(response_filters_, filter);
+        break;
+    case Filter::kBoth:
+        insert(request_filters_, filter);
+        insert(response_filters_, filter);
+        break;
+    default:
+        break;
     }
-
-    filters_.push_back(filter);
 }
 
-void FilterChain::filter() {
-    // TODO enhance the logic here
-    for(auto it = filters_.begin(); it != filters_.end(); ++it) {
-        Filter::FilterResult result = (*it)->process(context_);
-        switch(result) {
-        // for skip and stop, we just return directly
-        case Filter::kSkip:
-        case Filter::kStop:
-            XDEBUG << context_->connection()->identifier()
-                   << " Filter " << (*it)->name() << " wants to stop or skip.";
+Filter::FilterResult FilterChain::FilterRequest(SessionContext& context) {
+    for(auto it : request_filters_) {
+        Filter::FilterResult result = it->process(context, Filter::kRequest);
+        if(result == Filter::kSkip || result == Filter::kStop) {
+            XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
+            return result;
+        }
+
+        XDEBUG << "Filter " << it->name() << " wants to continue.";
+    }
+
+    // if the program goes here, it means all filters are passed
+    return Filter::kContinue;
+}
+
+void FilterChain::FilterResponse(SessionContext& context) {
+    for(auto it : response_filters_) {
+        Filter::FilterResult result = it->process(context, Filter::kResponse);
+        if(result == Filter::kSkip || result == Filter::kStop) {
+            XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
             return;
-        // for continue, we continue the filtering
-        case Filter::kContinue:
-            XDEBUG << context_->connection()->identifier()
-                   << " Filter " << (*it)->name() << " wants to continue.";
-        default:
-            // do nothing here
-            ; // add the comma to pass the compilation
+        }
+
+        XDEBUG << "Filter " << it->name() << " wants to continue.";
+    }
+}
+
+void FilterChain::insert(std::list<Filter::Ptr>& filters, Filter::Ptr filter) {
+    for(auto it = filters.begin(); it != filters.end(); ++it) {
+        if((*it)->priority() < filter->priority()) {
+            filters.insert(it, filter);
+            return;
         }
     }
+
+    filters.push_back(filter);
 }

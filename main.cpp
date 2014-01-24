@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     xproxy::log::SetLogLevel(ResourceManager::GetServerConfig().GetLogLevel());
 
     ResourceManager::GetRuleConfig() << "youtube.com"
+                                     << "ytimg.com"
                                      << "facebook.com"
                                      << "google-analytics.com"
                                      << "twitter.com";
