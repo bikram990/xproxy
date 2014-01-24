@@ -28,17 +28,14 @@ public:
             if(!is_proxied_)
                 return kContinue;
 
-            // 1. reset the request
-            context.request->reset();
-
-            // 2. construct the proxy initial line
+            // 1. construct the proxy initial line
             HttpRequestInitial *initial = new HttpRequestInitial();
             initial->method().append("POST");
             initial->uri().append("/proxy");
             initial->SetMajorVersion(1);
             initial->SetMinorVersion(1);
 
-            // 3. construct the proxy body
+            // 2. construct the proxy body
             temp_buffer_.consume(temp_buffer_.size());
             for(std::size_t i = 0; i < context.request->size(); ++i) {
                 SharedBuffer buffer = context.request->RetrieveObject(i)->ByteContent();
@@ -48,11 +45,12 @@ public:
                 assert(copied == buffer->size());
                 temp_buffer_.commit(copied);
             }
+
             HttpChunk *body = new HttpChunk();
             body->SetLast(true);
             *body << temp_buffer_;
 
-            // 4. construct the proxy header
+            // 3. construct the proxy header
             HttpHeaders *headers = new HttpHeaders();
             headers->PushBack(HttpHeader("Host", ResourceManager::GetServerConfig().GetGAEAppId() + ".appspot.com"));
             headers->PushBack(HttpHeader("Connection", "keep-alive"));
@@ -61,6 +59,8 @@ public:
             if(context.https)
                 headers->PushBack(HttpHeader("XProxy-Schema", "https://"));
 
+            // 4. reset the request and readd it
+            context.request->reset();
             context.request->AppendObject(initial);
             context.request->AppendObject(headers);
             context.request->AppendObject(body);
