@@ -7,6 +7,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     SET(CMAKE_CXX_FLAGS "-std=c++11")
 endif()
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
+    # the follow flag is to fix this issue:
+    #   https://github.com/Homebrew/homebrew/issues/22083
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=256")
+endif()
 
 message(STATUS "release c flags: " ${CMAKE_C_FLAGS_RELEASE})
 message(STATUS "debug c flags: " ${CMAKE_C_FLAGS_DEBUG})
