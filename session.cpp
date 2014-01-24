@@ -314,6 +314,15 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             XDEBUG_WITH_ID << "Filters don't want to send this request.";
             AsyncWriteToClient();
         } else {
+            std::string request;
+            for(std::size_t i = 0; i < context_.request->size(); ++i) {
+                request.append(std::string(context_.request->RetrieveObject(i)->ByteContent()->data(),
+                                           context_.request->RetrieveObject(i)->ByteContent()->size()));
+            }
+            XDEBUG_WITH_ID << "Dump http request object:\n"
+                           << "==================== begin ====================" << '\n'
+                           << request
+                           << '\n' << "===================== end =====================";
             AsyncWriteToServer();
         }
         break;
