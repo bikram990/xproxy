@@ -62,7 +62,10 @@ public:
         // https_ = false;
         // reused_ = false;
 
-#define CLEAR_STREAMBUF(buf) if(buf.size() > 0) buf.consume(buf.size())
+#define CLEAR_STREAMBUF(buf) do { \
+    if(buf.size() > 0) \
+        buf.consume(buf.size()); \
+    } while(0)
 
         CLEAR_STREAMBUF(client_in_);
         CLEAR_STREAMBUF(client_out_);
