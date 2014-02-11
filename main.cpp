@@ -22,11 +22,15 @@ int main(int argc, char* argv[]) {
                                      << "google-analytics.com"
                                      << "twitter.com";
 
-    try {
-        ProxyServer::Start();
-    } catch (std::exception& e) {
-        XERROR << "Exception occurred: " << e.what();
+    for(;;) {
+        try {
+            ProxyServer::Start();
+            break;
+        } catch(std::exception& e) {
+            XERROR << "Exception occurred: " << e.what();
+        }
     }
+
     XINFO << "xProxy is stopped.";
     return 0;
 }
