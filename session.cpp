@@ -196,16 +196,16 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
     case Decoder::kComplete:
         XDEBUG_WITH_ID << "One object decoded, continue reading...";
         assert(object != nullptr);
-        context_.request->AppendObject(object);
+        context_.request->AppendObject(HttpObjectPtr(object));
         AsyncReadFromClient();
         break;
     case Decoder::kFinished: {
         assert(object != nullptr);
 
         XDEBUG_WITH_ID << "A complete request is decoded.";
-        context_.request->AppendObject(object);
+        context_.request->AppendObject(HttpObjectPtr(object));
 
-        HttpRequestInitial *initial = reinterpret_cast<HttpRequestInitial *>(context_.request->RetrieveInitial());
+        HttpRequestInitialPtr initial = std::static_pointer_cast<HttpRequestInitial>(context_.request->RetrieveInitial());
         assert(initial != nullptr);
         if(initial->method() == "CONNECT") {
             /// We do not expect a CONNECT request in a reused connection
@@ -239,12 +239,12 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
             ri->SetMinorVersion(1);
             ri->SetStatusCode(200);
             ri->StatusMessage().append("Connection Established");
-            context_.response->AppendObject(ri);
+            context_.response->AppendObject(HttpResponseInitialPtr(ri));
 
             HttpHeaders *headers = new HttpHeaders;
             headers->PushBack(HttpHeader("Proxy-Connection", "keep-alive"));
             headers->PushBack(HttpHeader("Connection", "keep-alive"));
-            context_.response->AppendObject(headers);
+            context_.response->AppendObject(HttpHeadersPtr(headers));
 
             AsyncWriteSSLReplyToClient();
             return;
@@ -255,7 +255,7 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
         /// https request, the difference is, for a reused connection, we need
         /// to verify if the new host and port match the existing ones
         if(!context_.https) {
-            HttpHeaders *headers = context_.request->RetrieveHeaders();
+            HttpHeadersPtr headers = context_.request->RetrieveHeaders();
 
             assert(headers != nullptr);
 
@@ -424,7 +424,7 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
         break;
     case Decoder::kComplete:
         assert(object != nullptr);
-        context_.response->AppendObject(object);
+        context_.response->AppendObject(HttpObjectPtr(object));
         chain_->FilterResponse(context_);
         AsyncWriteToClient();
         if(!server_connected_) {
@@ -438,7 +438,7 @@ void Session::OnServerDataReceived(const boost::system::error_code& e) {
     case Decoder::kFinished:
         assert(object != nullptr);
         finished_ = true;
-        context_.response->AppendObject(object);
+        context_.response->AppendObject(HttpObjectPtr(object));
         chain_->FilterResponse(context_);
         AsyncWriteToClient();
 

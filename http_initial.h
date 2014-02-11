@@ -40,4 +40,6 @@ protected:
     std::string line_;
 };
 
+typedef std::shared_ptr<HttpInitial> HttpInitialPtr;
+
 #endif // HTTP_INITIAL_H

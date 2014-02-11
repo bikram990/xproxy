@@ -37,4 +37,6 @@ private:
     std::string status_message_;
 };
 
+typedef std::shared_ptr<HttpResponseInitial> HttpResponseInitialPtr;
+
 #endif // HTTP_RESPONSE_INITIAL_H

@@ -61,4 +61,6 @@ private:
     std::vector<HttpHeader> headers_;
 };
 
+typedef std::shared_ptr<HttpHeaders> HttpHeadersPtr;
+
 #endif // HTTP_HEADERS_H

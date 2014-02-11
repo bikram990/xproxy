@@ -37,6 +37,6 @@ protected:
     SharedByteBuffer content_;
 };
 
-typedef boost::shared_ptr<HttpObject> HttpObjectPtr;
+typedef std::shared_ptr<HttpObject> HttpObjectPtr;
 
 #endif // HTTP_OBJECT_H

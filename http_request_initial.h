@@ -39,4 +39,6 @@ private:
     std::string uri_;
 };
 
+typedef std::shared_ptr<HttpRequestInitial> HttpRequestInitialPtr;
+
 #endif // HTTP_REQUEST_INITIAL_H

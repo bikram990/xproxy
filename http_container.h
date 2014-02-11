@@ -8,62 +8,55 @@
 
 class HttpContainer : public Resettable {
 public:
-    virtual ~HttpContainer() {
-        for(auto it = objects_.begin(); it != objects_.end(); ++it)
-            if(*it) delete *it;
-    }
-
     std::size_t size() const {
         return objects_.size();
     }
 
-    void AppendObject(HttpObject *object) {
+    void AppendObject(HttpObjectPtr object) {
         objects_.push_back(object);
     }
 
-    HttpObject *RetrieveObject(std::size_t index) {
+    HttpObjectPtr RetrieveObject(std::size_t index) {
         if(index > size())
-            return nullptr;
+            return HttpObjectPtr();
         return objects_[index];
     }
 
-    HttpInitial *RetrieveInitial() {
+    HttpInitialPtr RetrieveInitial() {
         auto it = std::find_if(objects_.begin(), objects_.end(),
-                               [](HttpObject *object) {
+                               [](HttpObjectPtr object) {
                                    return object->type() == HttpObject::kHttpRequestInitial
                                    || object->type() == HttpObject::kHttpResponseInitial;
                                });
 
         if(it != objects_.end())
-            return reinterpret_cast<HttpInitial*>(*it);
-        return nullptr;
+            return std::static_pointer_cast<HttpInitial>(*it);
+        return HttpInitialPtr();
     }
 
-    HttpHeaders *RetrieveHeaders() {
+    HttpHeadersPtr RetrieveHeaders() {
         auto it = std::find_if(objects_.begin(), objects_.end(),
-                               [](HttpObject *object) {
+                               [](HttpObjectPtr object) {
                                    return object->type() == HttpObject::kHttpHeaders;
                                });
 
         if(it != objects_.end())
-            return reinterpret_cast<HttpHeaders*>(*it);
-        return nullptr;
+            return std::static_pointer_cast<HttpHeaders>(*it);
+        return HttpHeadersPtr();
     }
 
-    HttpObject *RetrieveLatest() {
+    HttpObjectPtr RetrieveLatest() {
         if(size() <= 0)
-            return nullptr;
+            return HttpObjectPtr();
         return objects_[size() - 1];
     }
 
     virtual void reset() {
-        std::for_each(objects_.begin(), objects_.end(),
-                      [](HttpObject* object) { if(object) delete object; });
         objects_.clear();
     }
 
 private:
-    std::vector<HttpObject*> objects_;
+    std::vector<HttpObjectPtr> objects_;
 };
 
 #endif // HTTP_CONTAINER_H

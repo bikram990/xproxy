@@ -1,7 +1,6 @@
 #ifndef HTTP_CHUNK_H
 #define HTTP_CHUNK_H
 
-#include <boost/shared_ptr.hpp>
 #include "http_object.h"
 
 class HttpChunk : public HttpObject {
@@ -28,6 +27,6 @@ private:
     bool last_; // whether this is the last chunk
 };
 
-typedef boost::shared_ptr<HttpChunk> HttpChunkPtr;
+typedef std::shared_ptr<HttpChunk> HttpChunkPtr;
 
 #endif // HTTP_CHUNK_H

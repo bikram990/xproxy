@@ -29,7 +29,7 @@ public:
                 return kContinue;
 
             // 1. construct the proxy initial line
-            HttpRequestInitial *initial = new HttpRequestInitial();
+            HttpRequestInitialPtr initial(new HttpRequestInitial());
             initial->method().append("POST");
             initial->uri().append("/proxy");
             initial->SetMajorVersion(1);
@@ -46,12 +46,12 @@ public:
                 temp_buffer_.commit(copied);
             }
 
-            HttpChunk *body = new HttpChunk();
+            HttpChunkPtr body(new HttpChunk());
             body->SetLast(true);
             *body << temp_buffer_;
 
             // 3. construct the proxy header
-            HttpHeaders *headers = new HttpHeaders();
+            HttpHeadersPtr headers(new HttpHeaders());
             headers->PushBack(HttpHeader("Host", ResourceManager::GetServerConfig().GetGAEAppId() + ".appspot.com"));
             headers->PushBack(HttpHeader("Connection", "keep-alive"));
             headers->PushBack(HttpHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0"));
