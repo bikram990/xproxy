@@ -8,7 +8,7 @@ template<class R>
 class Singleton : private boost::noncopyable {
 public:
     Singleton() : handle_(NULL) {}
-    ~Singleton() { CLEAN_MEMBER(handle_); }
+    ~Singleton() { delete handle_; }
 
     R& get() {
         if(!handle_) {
