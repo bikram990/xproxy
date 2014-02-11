@@ -12,12 +12,10 @@ ProxyServer& ProxyServer::instance() {
     return server_.get();
 }
 
-ProxyServer::ProxyServer(unsigned short port,
-                         int main_thread_count,
-                         int fetch_thread_count)
+ProxyServer::ProxyServer(unsigned short port, int thread_count)
     : state_(kUninitialized), port_(port),
-      main_thread_pool_size_(main_thread_count), fetch_thread_pool_size_(fetch_thread_count),
-      signals_(main_service_), acceptor_(main_service_),
+      thread_pool_size_(thread_count),
+      signals_(service_), acceptor_(service_),
       session_manager_(new class SessionManager) {}
 
 void ProxyServer::start() {
@@ -33,27 +31,18 @@ void ProxyServer::start() {
 
     StartAccept();
 
-    main_keeper_.reset(new boost::asio::io_service::work(main_service_));
-    fetch_keeper_.reset(new boost::asio::io_service::work(fetch_service_));
+    service_keeper_.reset(new boost::asio::io_service::work(service_));
 
-    std::vector<boost::shared_ptr<boost::thread> > main_threads;
-    std::vector<boost::shared_ptr<boost::thread> > fetch_threads;
+    std::vector<boost::shared_ptr<boost::thread>> threads;
 
-    for(int i = 0; i < main_thread_pool_size_; ++i)
-        main_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&boost::asio::io_service::run, &main_service_))));
-
-    for(int i = 0; i < fetch_thread_pool_size_; ++i)
-        fetch_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&boost::asio::io_service::run, &fetch_service_))));
+    for(int i = 0; i < thread_pool_size_; ++i)
+        threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&boost::asio::io_service::run, &service_))));
 
     state_ = kRunning;
     XINFO << "Proxy is started.";
 
-    for(std::vector<boost::shared_ptr<boost::thread> >::iterator it = fetch_threads.begin();
-        it != fetch_threads.end(); it++)
-        (*it)->join();
-
-    for(std::vector<boost::shared_ptr<boost::thread> >::iterator it = main_threads.begin();
-        it != main_threads.end(); it++)
+    for(std::vector<boost::shared_ptr<boost::thread> >::iterator it = threads.begin();
+        it != threads.end(); it++)
         (*it)->join();
 }
 
@@ -76,7 +65,7 @@ void ProxyServer::StartAccept() {
     if(state_ == kStopped)
         return;
 
-    current_session_.reset(Session::create(main_service_, *session_manager_));
+    current_session_.reset(Session::create(service_, *session_manager_));
     acceptor_.async_accept(current_session_->ClientSocket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));
@@ -100,8 +89,7 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
 
 void ProxyServer::OnStopSignalReceived() {
     acceptor_.close();
-    main_keeper_.reset();
-    fetch_keeper_.reset();
+    service_keeper_.reset();
 
     state_ = kStopped;
 }

@@ -16,12 +16,8 @@ public:
         return *instance().session_manager_;
     }
 
-    static boost::asio::io_service& MainService() {
-        return instance().main_service_;
-    }
-
-    static boost::asio::io_service& FetchService() {
-        return instance().fetch_service_;
+    static boost::asio::io_service& service() {
+        return instance().service_;
     }
 
 private:
@@ -31,9 +27,7 @@ private:
 
     static ProxyServer& instance();
 
-    ProxyServer(unsigned short port = 7077,
-                int main_thread_count = 2,
-                int fetch_thread_count = 10);
+    ProxyServer(unsigned short port = 7077, int thread_count = 5);
 
     void start();
 
@@ -47,14 +41,11 @@ private:
 
     unsigned short port_;
 
-    int main_thread_pool_size_;
-    int fetch_thread_pool_size_;
+    int thread_pool_size_;
 
-    boost::asio::io_service main_service_;  // communicate with browser
-    boost::asio::io_service fetch_service_; // communicate with remote server
+    boost::asio::io_service service_;
 
-    std::unique_ptr<boost::asio::io_service::work> main_keeper_;  // keep main service running
-    std::unique_ptr<boost::asio::io_service::work> fetch_keeper_; // keep fetch service running
+    std::unique_ptr<boost::asio::io_service::work> service_keeper_;  // keep service running
 
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
