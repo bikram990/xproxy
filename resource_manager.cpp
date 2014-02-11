@@ -3,8 +3,7 @@
 #include "resource_manager.h"
 
 const std::string ResourceManager::ServerConfig::kConfPortKey("basic.port");
-const std::string ResourceManager::ServerConfig::kConfMainThreadCountKey("basic.main_thread_count");
-const std::string ResourceManager::ServerConfig::kConfFetchThreadCountKey("basic.fetch_thread_count");
+const std::string ResourceManager::ServerConfig::kConfThreadCountKey("basic.thread_count");
 const std::string ResourceManager::ServerConfig::kConfLogLevel("basic.log_level");
 const std::string ResourceManager::ServerConfig::kConfGAEAppIdKey("proxy_gae.app_id");
 const std::string ResourceManager::ServerConfig::kConfGAEDomainKey("proxy_gae.domain");

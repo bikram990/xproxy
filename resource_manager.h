@@ -48,8 +48,7 @@ class ResourceManager::ServerConfig : private boost::noncopyable {
     friend class ResourceManager;
 public:
     const static std::string kConfPortKey;
-    const static std::string kConfMainThreadCountKey;
-    const static std::string kConfFetchThreadCountKey;
+    const static std::string kConfThreadCountKey;
     const static std::string kConfLogLevel;
     const static std::string kConfGAEAppIdKey;
     const static std::string kConfGAEDomainKey;
@@ -58,8 +57,7 @@ public:
     bool LoadConfig(const std::string& conf_file);
 
     unsigned short GetProxyPort(unsigned short default_value = 7077);
-    int GetMainThreadCount(int default_value = 2);
-    int GetFetchThreadCount(int default_value = 10);
+    int GetThreadCount(int default_value = 5);
     std::string GetLogLevel(std::string default_value = "info");
     const std::string GetGAEAppId();
     const std::string GetGAEServerDomain(const std::string& default_value = "google.com.hk");
@@ -196,14 +194,9 @@ inline unsigned short ResourceManager::ServerConfig::GetProxyPort(unsigned short
     return GetConfig(kConfPortKey, result) ? result : default_value;
 }
 
-inline int ResourceManager::ServerConfig::GetMainThreadCount(int default_value) {
+inline int ResourceManager::ServerConfig::GetThreadCount(int default_value) {
     int result;
-    return GetConfig(kConfMainThreadCountKey, result) ? result : default_value;
-}
-
-inline int ResourceManager::ServerConfig::GetFetchThreadCount(int default_value) {
-    int result;
-    return GetConfig(kConfFetchThreadCountKey, result) ? result : default_value;
+    return GetConfig(kConfThreadCountKey, result) ? result : default_value;
 }
 
 inline std::string ResourceManager::ServerConfig::GetLogLevel(std::string default_value) {
