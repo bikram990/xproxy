@@ -38,7 +38,7 @@ public:
             // 2. construct the proxy body
             temp_buffer_.consume(temp_buffer_.size());
             for(std::size_t i = 0; i < context.request->size(); ++i) {
-                SharedBuffer buffer = context.request->RetrieveObject(i)->ByteContent();
+                SharedByteBuffer buffer = context.request->RetrieveObject(i)->ByteContent();
                 std::size_t copied = boost::asio::buffer_copy(temp_buffer_.prepare(buffer->size()),
                                                               boost::asio::buffer(buffer->data(),
                                                                                   buffer->size()));

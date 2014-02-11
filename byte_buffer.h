@@ -108,6 +108,6 @@ private:
     size_type capacity_;
 };
 
-typedef boost::shared_ptr<ByteBuffer> SharedBuffer;
+typedef boost::shared_ptr<ByteBuffer> SharedByteBuffer;
 
 #endif // BYTE_BUFFER_H

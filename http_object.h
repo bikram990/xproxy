@@ -12,12 +12,12 @@ public:
 
     HttpObject(Type type = kHttpObject) : type_(type), modified_(true), content_(new ByteBuffer) {}
 
-    HttpObject(SharedBuffer buffer, Type type = kHttpObject)
+    HttpObject(SharedByteBuffer buffer, Type type = kHttpObject)
         : type_(type), modified_(true), content_(buffer) {}
 
     virtual ~HttpObject() {}
 
-    virtual SharedBuffer ByteContent() {
+    virtual SharedByteBuffer ByteContent() {
         if(!modified_)
             return content_;
 
@@ -34,7 +34,7 @@ protected:
 
     Type type_;
     bool modified_;
-    SharedBuffer content_;
+    SharedByteBuffer content_;
 };
 
 typedef boost::shared_ptr<HttpObject> HttpObjectPtr;

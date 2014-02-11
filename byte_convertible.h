@@ -12,7 +12,7 @@ class ByteConvertible {
 public:
     virtual ~ByteConvertible() {}
 
-    virtual SharedBuffer ByteContent() = 0;
+    virtual SharedByteBuffer ByteContent() = 0;
 };
 
 #endif // BYTE_CONVERTIBLE_H

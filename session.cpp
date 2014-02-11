@@ -47,7 +47,7 @@ void Session::AsyncWriteSSLReplyToClient() {
         client_out_.consume(client_out_.size());
 
     for(std::size_t i = 0; i < context_.response->size(); ++i) {
-        SharedBuffer buffer = context_.response->RetrieveObject(i)->ByteContent();
+        SharedByteBuffer buffer = context_.response->RetrieveObject(i)->ByteContent();
         std::size_t copied = boost::asio::buffer_copy(client_out_.prepare(buffer->size()),
                                                       boost::asio::buffer(buffer->data(),
                                                                           buffer->size()));
@@ -100,7 +100,7 @@ void Session::AsyncWriteToServer() {
         server_out_.consume(server_out_.size());
 
     for(std::size_t i = 0; i < context_.request->size(); ++i) {
-        SharedBuffer buffer = context_.request->RetrieveObject(i)->ByteContent();
+        SharedByteBuffer buffer = context_.request->RetrieveObject(i)->ByteContent();
         std::size_t copied = boost::asio::buffer_copy(server_out_.prepare(buffer->size()),
                                                       boost::asio::buffer(buffer->data(),
                                                                           buffer->size()));
@@ -143,7 +143,7 @@ void Session::AsyncWriteToClient() {
         return;
     }
 
-    SharedBuffer buffer = context_.response->RetrieveLatest()->ByteContent();
+    SharedByteBuffer buffer = context_.response->RetrieveLatest()->ByteContent();
     std::size_t copied = boost::asio::buffer_copy(client_out_.prepare(buffer->size()),
                                                   boost::asio::buffer(buffer->data(),
                                                                       buffer->size()));

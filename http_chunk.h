@@ -8,7 +8,7 @@ class HttpChunk : public HttpObject {
 public:
     HttpChunk() : HttpObject(kHttpChunk), last_(false) {}
 
-    HttpChunk(SharedBuffer buffer) : HttpObject(buffer), last_(false) {}
+    HttpChunk(SharedByteBuffer buffer) : HttpObject(buffer), last_(false) {}
 
     virtual ~HttpChunk() {}
 
