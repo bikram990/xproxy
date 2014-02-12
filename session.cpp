@@ -446,6 +446,11 @@ void Session::OnServerConnected(const boost::system::error_code& e) {
 }
 
 void Session::OnServerDataSent(const boost::system::error_code& e) {
+    if(server_.state() == ProxyServer::kStopped) {
+        XDEBUG_WITH_ID << "xProxy server is stopped, abort writing to server.";
+        return;
+    }
+
     if(e) {
         XERROR_WITH_ID << "Error occurred during writing to remote peer, message: "
                        << e.message();
