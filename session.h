@@ -14,6 +14,8 @@
 #include "session_manager.h"
 #include "socket.h"
 
+class ProxyServer;
+
 class Session : public Resettable,
                 public boost::enable_shared_from_this<Session>,
                 private boost::noncopyable {
@@ -27,10 +29,9 @@ public:
         kDefaultServerTimeoutValue = 15     // 15 seconds
     };
 
-    static Session *create(boost::asio::io_service& service,
-                           SessionManager& manager) {
+    static Session *create(ProxyServer& server) {
         ++counter_;
-        return new Session(service, manager);
+        return new Session(server);
     }
 
     boost::asio::ip::tcp::socket& ClientSocket() const {
@@ -57,36 +58,10 @@ public:
     void AsyncReadFromServer();
     void AsyncWriteToClient();
 
-    virtual ~Session() {
-        XDEBUG_WITH_ID << "Destructor called.";
-
-        if(client_socket_) delete client_socket_;
-        if(server_socket_) delete server_socket_;
-        if(chain_) delete chain_;
-        if(request_decoder_) delete request_decoder_;
-        if(response_decoder_) delete response_decoder_;
-    }
+    virtual ~Session();
 
 private:
-    Session(boost::asio::io_service& service, SessionManager& manager)
-        : id_(counter_),
-          manager_(manager),
-          service_(service),
-          client_socket_(Socket::Create(service)),
-          server_socket_(Socket::Create(service)),
-          client_timer_(service),
-          server_timer_(service),
-          resolver_(service),
-          chain_(new FilterChain),
-          request_decoder_(new HttpRequestDecoder),
-          response_decoder_(new HttpResponseDecoder),
-          server_connected_(false),
-          finished_(false),
-          reused_(false),
-          client_timer_triggered_(false) {
-        Filter::Ptr proxy_filter(new ProxyFilter());
-        chain_->RegisterFilter(proxy_filter);
-    }
+    Session(ProxyServer& server);
 
 private:
     void OnClientDataReceived(const boost::system::error_code& e);
@@ -106,6 +81,8 @@ private:
 
 private:
     std::size_t id_;
+
+    ProxyServer& server_;
 
     SessionManager& manager_;
 

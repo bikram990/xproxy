@@ -1,9 +1,41 @@
 #include <boost/lexical_cast.hpp>
 #include "http_request_initial.h"
 #include "http_response_initial.h"
+#include "proxy_server.h"
 #include "session.h"
 
 boost::atomic<std::size_t> Session::counter_(0);
+
+Session::Session(ProxyServer &server)
+    : id_(counter_),
+      server_(server),
+      manager_(server.SessionManager()),
+      service_(server.service()),
+      client_socket_(Socket::Create(server.service())),
+      server_socket_(Socket::Create(server.service())),
+      client_timer_(server.service()),
+      server_timer_(server.service()),
+      resolver_(server.service()),
+      chain_(new FilterChain),
+      request_decoder_(new HttpRequestDecoder),
+      response_decoder_(new HttpResponseDecoder),
+      server_connected_(false),
+      finished_(false),
+      reused_(false),
+      client_timer_triggered_(false) {
+    Filter::Ptr proxy_filter(new ProxyFilter());
+    chain_->RegisterFilter(proxy_filter);
+}
+
+Session::~Session() {
+    XDEBUG_WITH_ID << "Destructor called.";
+
+    if(client_socket_) delete client_socket_;
+    if(server_socket_) delete server_socket_;
+    if(chain_) delete chain_;
+    if(request_decoder_) delete request_decoder_;
+    if(response_decoder_) delete response_decoder_;
+}
 
 void Session::start() {
     if(client_in_.size() > 0) {
@@ -192,6 +224,14 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
     if(client_timer_triggered_) {
         XDEBUG_WITH_ID << "Client socket timed out, abort reading.";
         client_timer_triggered_ = false;
+        return;
+    }
+
+    /// when we use Ctrl-C to stop the program, this callback will be called
+    /// with an "operation_aborted" error, so we check the state here to
+    /// distinguish normal stop from real error
+    if(server_.state() == ProxyServer::kStopped) {
+        XDEBUG_WITH_ID << "xProxy server is stopped, abort reading.";
         return;
     }
 

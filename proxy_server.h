@@ -8,6 +8,10 @@
 class ProxyServer : private boost::noncopyable {
     friend class Singleton<ProxyServer>;
 public:
+    enum State {
+        kUninitialized, kInitialized, kRunning, kStopped
+    };
+
     static void Start() {
         instance().start();
     }
@@ -20,10 +24,9 @@ public:
         return instance().service_;
     }
 
+    State state() const { return state_; }
+
 private:
-    enum State {
-        kUninitialized, kInitialized, kRunning, kStopped
-    };
 
     static ProxyServer& instance();
 
