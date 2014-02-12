@@ -73,7 +73,6 @@ void ProxyServer::StartAccept() {
 
 void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
     if(state_ == kStopped) {
-        XDEBUG << "xProxy server is stopping...";
         return;
     }
 
@@ -92,6 +91,8 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
 }
 
 void ProxyServer::OnStopSignalReceived() {
+    XINFO << "xProxy server is stopping...";
+
     state_ = kStopped;
 
     acceptor_.close();
