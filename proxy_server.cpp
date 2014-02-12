@@ -96,4 +96,5 @@ void ProxyServer::OnStopSignalReceived() {
 
     acceptor_.close();
     service_keeper_.reset();
+    session_manager_->StopAll();
 }
