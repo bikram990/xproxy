@@ -82,7 +82,8 @@ private:
           response_decoder_(new HttpResponseDecoder),
           server_connected_(false),
           finished_(false),
-          reused_(false) {
+          reused_(false),
+          client_timer_triggered_(false) {
         Filter::Ptr proxy_filter(new ProxyFilter());
         chain_->RegisterFilter(proxy_filter);
     }
@@ -127,6 +128,8 @@ private:
     bool server_connected_;
     bool finished_;
     bool reused_;
+
+    bool client_timer_triggered_;
 
     boost::asio::streambuf client_in_;
     boost::asio::streambuf client_out_;
