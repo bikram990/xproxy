@@ -66,6 +66,15 @@ else()
     message(FATAL_ERROR "OpenSSL is not found.")
 endif()
 
+if(WIN32)
+    set(LOG4CPP_ROOT_DIR "D:/SDTs/log4cpp")
+    set(LOG4CPP_INCLUDE_DIR "${LOG4CPP_ROOT_DIR}/include")
+    set(LOG4CPP_LIBRARIES "${LOG4CPP_ROOT_DIR}/lib/log4cpp.lib")
+
+    include_directories(${LOG4CPP_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${LOG4CPP_LIBRARIES})
+endif()
+
 # copy configuration file
 configure_file(xproxy.conf xproxy.conf COPYONLY)
 
