@@ -231,7 +231,9 @@ void Session::OnClientDataReceived(const boost::system::error_code& e) {
     /// with an "operation_aborted" error, so we check the state here to
     /// distinguish normal stop from real error
     if(server_.state() == ProxyServer::kStopped) {
-        XDEBUG_WITH_ID << "xProxy server is stopped, abort reading.";
+        XDEBUG_WITH_ID << "xProxy server is stopping, abort reading from client.";
+        client_timer_.cancel();
+        server_timer_.cancel();
         return;
     }
 
@@ -447,7 +449,9 @@ void Session::OnServerConnected(const boost::system::error_code& e) {
 
 void Session::OnServerDataSent(const boost::system::error_code& e) {
     if(server_.state() == ProxyServer::kStopped) {
-        XDEBUG_WITH_ID << "xProxy server is stopped, abort writing to server.";
+        XDEBUG_WITH_ID << "xProxy server is stopping, abort writing to server.";
+        client_timer_.cancel();
+        server_timer_.cancel();
         return;
     }
 
@@ -464,6 +468,13 @@ void Session::OnServerDataSent(const boost::system::error_code& e) {
 }
 
 void Session::OnServerDataReceived(const boost::system::error_code& e) {
+    if(server_.state() == ProxyServer::kStopped) {
+        XDEBUG_WITH_ID << "xProxy server is stopping, abort reading from server.";
+        client_timer_.cancel();
+        server_timer_.cancel();
+        return;
+    }
+
     if(e) {
         if(e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_WITH_ID << "Server closed the socket, this is not persistent connection.";
