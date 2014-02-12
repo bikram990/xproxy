@@ -25,6 +25,33 @@ void Session::stop() {
     server_socket_->close();
 }
 
+void Session::reset() {
+    request_decoder_->reset();
+    response_decoder_->reset();
+    context_.request->reset();
+    context_.response->reset();
+
+    finished_ = false;
+    /// the following should not be reset
+    // host_.clear();
+    // port_ = 0;
+    // server_connected_ = false;
+    // https_ = false;
+    // reused_ = false;
+
+#define CLEAR_STREAMBUF(buf) do { \
+    if(buf.size() > 0) \
+    buf.consume(buf.size()); \
+} while(0)
+
+    CLEAR_STREAMBUF(client_in_);
+    CLEAR_STREAMBUF(client_out_);
+    CLEAR_STREAMBUF(server_in_);
+    CLEAR_STREAMBUF(server_out_);
+
+#undef CLEAR_STREAMBUF
+}
+
 void Session::AsyncReadFromClient() {
     if(client_in_.size() > 0) {
         XDEBUG_WITH_ID << "There is still data in client in buffer, skip reading from socket.";
@@ -505,4 +532,10 @@ void Session::OnClientTimeout(const boost::system::error_code& e) {
         // TODO add logic here
         manager_.stop(shared_from_this());
     }
+}
+
+void Session::InitClientSSLContext() {
+    auto ca = ResourceManager::GetCertManager().GetCertificate(context_.host);
+    auto dh = ResourceManager::GetCertManager().GetDHParameters();
+    client_socket_->SwitchProtocol(kHttps, kServer, ca, dh);
 }
