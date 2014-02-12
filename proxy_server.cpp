@@ -72,8 +72,13 @@ void ProxyServer::StartAccept() {
 }
 
 void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
-    if(!acceptor_.is_open()) {
-        XWARN << "Acceptor is not open, error message: " << e.message();
+    if(state_ == kStopped) {
+        XDEBUG << "xProxy server is stopping...";
+        return;
+    }
+
+    if(e) {
+        XERROR << "Error occurred during accept connection, message: " << e.message();
         return;
     }
 
@@ -81,15 +86,14 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
            << current_session_->ClientSocket().remote_endpoint().address() << ":"
            << current_session_->ClientSocket().remote_endpoint().port() << "].";
 
-    if(!e)
-        session_manager_->start(current_session_);
+    session_manager_->start(current_session_);
 
     StartAccept();
 }
 
 void ProxyServer::OnStopSignalReceived() {
+    state_ = kStopped;
+
     acceptor_.close();
     service_keeper_.reset();
-
-    state_ = kStopped;
 }
