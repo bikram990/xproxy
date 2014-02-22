@@ -19,6 +19,7 @@ Session::Session(ProxyServer &server)
       chain_(new FilterChain),
       request_decoder_(new HttpRequestDecoder),
       response_decoder_(new HttpResponseDecoder),
+      context_(id_),
       server_connected_(false),
       finished_(false),
       reused_(false),

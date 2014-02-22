@@ -25,11 +25,11 @@ Filter::FilterResult FilterChain::FilterRequest(SessionContext& context) {
     for(auto it : request_filters_) {
         Filter::FilterResult result = it->process(context, Filter::kRequest);
         if(result == Filter::kSkip || result == Filter::kStop) {
-            XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
+            XDEBUG << "[id: " << context.id << "] Filter " << it->name() << " wants to stop or skip.";
             return result;
         }
 
-        XDEBUG << "Filter " << it->name() << " wants to continue.";
+        XDEBUG << "[id: " << context.id << "] Filter " << it->name() << " wants to continue.";
     }
 
     // if the program goes here, it means all filters are passed
@@ -40,11 +40,11 @@ void FilterChain::FilterResponse(SessionContext& context) {
     for(auto it : response_filters_) {
         Filter::FilterResult result = it->process(context, Filter::kResponse);
         if(result == Filter::kSkip || result == Filter::kStop) {
-            XDEBUG << "Filter " << it->name() << " wants to stop or skip.";
+            XDEBUG << "[id: " << context.id << "] Filter " << it->name() << " wants to stop or skip.";
             return;
         }
 
-        XDEBUG << "Filter " << it->name() << " wants to continue.";
+        XDEBUG << "[id: " << context.id << "] Filter " << it->name() << " wants to continue.";
     }
 }
 
