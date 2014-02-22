@@ -70,10 +70,13 @@ if(WIN32)
     set(LOG4CPP_ROOT_DIR "D:/SDTs/log4cpp")
     set(LOG4CPP_INCLUDE_DIR "${LOG4CPP_ROOT_DIR}/include")
     set(LOG4CPP_LIBRARIES "${LOG4CPP_ROOT_DIR}/lib/log4cpp.lib")
-
-    include_directories(${LOG4CPP_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} ${LOG4CPP_LIBRARIES})
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(LOG4CPP_INCLUDE_DIR "/usr/local/include")
+    set(LOG4CPP_LIBRARIES "/usr/local/lib/log4cpp.dylib")
 endif()
+
+include_directories(${LOG4CPP_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} ${LOG4CPP_LIBRARIES})
 
 # copy configuration file
 configure_file(xproxy.conf xproxy.conf COPYONLY)
