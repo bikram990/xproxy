@@ -35,12 +35,12 @@ public:
     }
 
     boost::asio::ip::tcp::socket& ClientSocket() const {
-        assert(client_socket_ != nullptr);
+        assert(client_socket_);
         return client_socket_->socket();
     }
 
     boost::asio::ip::tcp::socket& ServerSocket() const {
-        assert(server_socket_ != nullptr);
+        assert(server_socket_);
         return server_socket_->socket();
     }
 
@@ -87,18 +87,18 @@ private:
     SessionManager& manager_;
 
     boost::asio::io_service& service_;
-    Socket *client_socket_;
-    Socket *server_socket_;
+    std::unique_ptr<Socket> client_socket_;
+    std::unique_ptr<Socket> server_socket_;
 
     boost::asio::deadline_timer client_timer_;
     boost::asio::deadline_timer server_timer_;
 
     boost::asio::ip::tcp::resolver resolver_;
 
-    FilterChain *chain_;
+    std::unique_ptr<FilterChain> chain_;
 
-    Decoder *request_decoder_;
-    Decoder *response_decoder_;
+    std::unique_ptr<Decoder> request_decoder_;
+    std::unique_ptr<Decoder> response_decoder_;
 
     SessionContext context_;
 

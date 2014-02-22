@@ -29,12 +29,6 @@ Session::Session(ProxyServer &server)
 
 Session::~Session() {
     XDEBUG_WITH_ID << "Destructor called.";
-
-    if(client_socket_) delete client_socket_;
-    if(server_socket_) delete server_socket_;
-    if(chain_) delete chain_;
-    if(request_decoder_) delete request_decoder_;
-    if(response_decoder_) delete response_decoder_;
 }
 
 void Session::start() {
@@ -582,8 +576,7 @@ void Session::OnServerTimeout(const boost::system::error_code& e) {
         XDEBUG_WITH_ID << "Server socket timed out, close it.";
         server_connected_ = false;
         server_socket_->close();
-        delete server_socket_;
-        server_socket_ = Socket::Create(service_);
+        server_socket_.reset(Socket::Create(service_));
     }
 }
 
