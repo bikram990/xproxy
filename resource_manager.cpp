@@ -1,3 +1,4 @@
+#include <boost/make_shared.hpp>
 #include <boost/date_time.hpp>
 #include <openssl/pem.h>
 #include "resource_manager.h"
@@ -19,13 +20,9 @@ ResourceManager& ResourceManager::instance() {
 ResourceManager::ResourceManager()
     : server_config_(new ServerConfig()),
       rule_config_(new RuleConfig()),
-      cert_manager_(new CertManager()) {
-    TRACE_THIS_PTR;
-}
+      cert_manager_(new CertManager()) {}
 
-ResourceManager::~ResourceManager() {
-    TRACE_THIS_PTR;
-}
+ResourceManager::~ResourceManager() {}
 
 ResourceManager::CertManager::CAPtr ResourceManager::CertManager::GetCertificate(const std::string& host) {
     std::string common_name = GetCommonName(host);
