@@ -72,9 +72,10 @@ if(WIN32)
     set(LOG4CPP_LIBRARIES "${LOG4CPP_ROOT_DIR}/lib/log4cpp.lib")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(LOG4CPP_INCLUDE_DIR "/usr/local/include")
-    set(LOG4CPP_LIBRARIES "/usr/local/lib/log4cpp.dylib")
+    set(LOG4CPP_LIBRARIES "/usr/local/lib/liblog4cpp.dylib")
 endif()
 
+message(STATUS "log4cpp is found at: " ${LOG4CPP_INCLUDE_DIR} ", lib: " ${LOG4CPP_LIBRARIES})
 include_directories(${LOG4CPP_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} ${LOG4CPP_LIBRARIES})
 
