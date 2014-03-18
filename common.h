@@ -4,6 +4,13 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
+
+#define DEFAULT_CTOR_AND_DTOR(T) T() = default; \
+    virtual ~T() = default
+
+#define DISABLE_COPY_AND_ASSIGNMENT(T) T(const T&) = delete; \
+    T& operator=(const T&) = delete
+
 /*
  * Short read error in SSL mode.
  *
