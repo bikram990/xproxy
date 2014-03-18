@@ -2,8 +2,9 @@
 #define SERVER_CONNECTION_H
 
 #include "connection.h"
+#include "counter.h"
 
-class ServerConnection : public Connection {
+class ServerConnection : public Connection, public Counter<ServerConnection> {
 public:
     ServerConnection();
 };

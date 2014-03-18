@@ -2,8 +2,9 @@
 #define CLIENT_CONNECTION_H
 
 #include "connection.h"
+#include "counter.h"
 
-class ClientConnection : public Connection {
+class ClientConnection : public Connection, public Counter<ClientConnection> {
 public:
     ClientConnection();
 };
