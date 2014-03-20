@@ -21,10 +21,10 @@ void InitLogging(const std::string& conf_file = "xproxy.conf");
 #define XERROR xproxy::log::logger << log4cpp::Priority::ERROR << META_INFO
 #define XFATAL xproxy::log::logger << log4cpp::Priority::FATAL << META_INFO
 
-#define XDEBUG_WITH_ID xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO << "[id: " << id_ << "] "
-#define XINFO_WITH_ID  xproxy::log::logger << log4cpp::Priority::INFO  << META_INFO << "[id: " << id_ << "] "
-#define XWARN_WITH_ID  xproxy::log::logger << log4cpp::Priority::WARN  << META_INFO << "[id: " << id_ << "] "
-#define XERROR_WITH_ID xproxy::log::logger << log4cpp::Priority::ERROR << META_INFO << "[id: " << id_ << "] "
-#define XFATAL_WITH_ID xproxy::log::logger << log4cpp::Priority::FATAL << META_INFO << "[id: " << id_ << "] "
+#define XDEBUG_WITH_ID xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO << "[id: " << id() << "] "
+#define XINFO_WITH_ID  xproxy::log::logger << log4cpp::Priority::INFO  << META_INFO << "[id: " << id() << "] "
+#define XWARN_WITH_ID  xproxy::log::logger << log4cpp::Priority::WARN  << META_INFO << "[id: " << id() << "] "
+#define XERROR_WITH_ID xproxy::log::logger << log4cpp::Priority::ERROR << META_INFO << "[id: " << id() << "] "
+#define XFATAL_WITH_ID xproxy::log::logger << log4cpp::Priority::FATAL << META_INFO << "[id: " << id() << "] "
 
 #endif // LOG_H
