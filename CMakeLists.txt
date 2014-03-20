@@ -22,6 +22,10 @@ message(STATUS "current build type: " ${CMAKE_BUILD_TYPE})
 message(STATUS "c flags: " ${CMAKE_C_FLAGS})
 message(STATUS "cxx flags: " ${CMAKE_CXX_FLAGS})
 
+
+# for http-parser submodule
+include_directories("./libs/http-parser")
+
 # for boost library
 if(WIN32)
     set(BOOST_ROOT "D:/SDTs/Boost")
