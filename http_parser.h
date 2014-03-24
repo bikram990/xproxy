@@ -5,6 +5,9 @@
 #include "libs/http-parser/http_parser.h"
 
 class HttpParser {
+public:
+    bool consume(boost::asio::streambuf& buffer);
+
 protected:
     HttpParser(http_parser_type type);
     virtual ~HttpParser();
