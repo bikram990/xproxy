@@ -2,8 +2,8 @@
 #define HTTP_HEADERS_H
 
 #include <vector>
-#include <boost/bind.hpp>
-#include "http_object.h"
+#include "common.h"
+#include "serializable.h"
 
 struct HttpHeader {
     std::string name;
@@ -14,50 +14,30 @@ struct HttpHeader {
         : name(name), value(value) {}
 };
 
-class HttpHeaders : public HttpObject {
+class HttpHeaders : public Serializable {
 public:
-    HttpHeaders() : HttpObject(kHttpHeaders) {}
-
-    virtual ~HttpHeaders() {}
+    DEFAULT_CTOR_AND_DTOR(HttpHeaders);
 
     bool empty() const { return headers_.empty(); }
 
-    void PushBack(HttpHeader&& header) {
-        headers_.push_back(header);
-        modified_ = true;
-    }
+    void PushBack(HttpHeader&& header);
 
-    HttpHeader& back() {
-        modified_ = true;   // we should assume the header will be modified here
-        return headers_.back();
-    }
+    HttpHeader& back();
 
-    const HttpHeader& back() const {
-        return headers_.back();
-    }
+    const HttpHeader& back() const;
 
-    bool find(const std::string& name, std::string& value) {
-        auto it = std::find_if(headers_.begin(), headers_.end(),
-                               boost::bind(&HttpHeaders::match, this, name, _1));
-        if(it == headers_.end())
-            return false;
-        value = it->value;
-        return true;
-    }
+    void reset();
+
+    bool find(const std::string& name, std::string& value);
+
+    virtual bool serialize(boost::asio::streambuf& out_buffer);
 
 private:
-    virtual void UpdateByteBuffer() {
-        content_->reset();
-        for(auto it = headers_.begin(); it != headers_.end(); ++it)
-            *content_ << it->name << ": " << it->value << "\r\n";
+    DISABLE_COPY_AND_ASSIGNMENT(HttpHeaders);
 
-        *content_ << "\r\n";
-    }
+    bool match(const std::string& desired, const HttpHeader& actual);
 
-    bool match(const std::string& desired, const HttpHeader& actual) {
-        return desired == actual.name;
-    }
-
+private:
     std::vector<HttpHeader> headers_;
 };
 
