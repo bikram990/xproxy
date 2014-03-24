@@ -1,7 +1,7 @@
 #ifndef SERIALIZABLE_H
 #define SERIALIZABLE_H
 
-#include "boost/asio.hpp"
+#include <boost/asio.hpp>
 
 class Serializable {
 public:
