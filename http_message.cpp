@@ -7,6 +7,7 @@ HttpMessage::HttpMessage(http_parser_type type)
 HttpMessage::~HttpMessage() {}
 
 void HttpMessage::reset() {
+    http_parser_init(&parser_, static_cast<http_parser_type>(parser_.type));
     completed_ = false;
     current_header_field_.clear();
     current_header_value_.clear();
