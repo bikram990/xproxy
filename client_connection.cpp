@@ -10,7 +10,7 @@ void ClientConnection::InitMessage() {
     message_.reset(new HttpRequest);
 }
 
-void Connection::OnRead(const boost::system::error_code& e) {
+void ClientConnection::OnRead(const boost::system::error_code& e) {
     if (timer_triggered_) {
         XDEBUG_WITH_ID << "Client socket timed out, abort reading.";
         timer_triggered_ = false;
