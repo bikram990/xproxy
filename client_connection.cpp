@@ -66,3 +66,16 @@ void ClientConnection::OnWritten(const boost::system::error_code& e) {
 
     read();
 }
+
+void ClientConnection::OnTimeout(const boost::system::error_code& e) {
+    if (e == boost::asio::error::operation_aborted)
+        XDEBUG_WITH_ID << "The client timeout timer is cancelled.";
+    else if (e)
+        XERROR_WITH_ID << "Error occurred with client timer, message: "
+                       << e.message();
+    else if (timer_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
+        XDEBUG_WITH_ID << "Client socket timed out, close it.";
+        timer_triggered_ = true;
+        // TODO add logic here
+    }
+}

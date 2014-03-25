@@ -14,6 +14,8 @@ public:
     virtual void OnRead(const boost::system::error_code& e);
 
     virtual void OnWritten(const boost::system::error_code& e);
+
+    virtual void OnTimeout(const boost::system::error_code& e);
 };
 
 #endif // CLIENT_CONNECTION_H
