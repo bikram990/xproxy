@@ -20,8 +20,10 @@ HttpParser::HttpParser(http_parser_type type) {
 HttpParser::~HttpParser() {}
 
 bool HttpParser::consume(boost::asio::streambuf& buffer) {
+    std::size_t orig_size = buffer.size();
     std::size_t consumed = http_parser_execute(&parser_, &settings_, buffer.data(), buffer.size());
-    if (consumed != buffer.size()) {
+    buffer.consume(consumed);
+    if (consumed != orig_size) {
         if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {
             XERROR << "Error occurred during message parsing, error code: "
                    << parser_.http_errno << ", message: "
