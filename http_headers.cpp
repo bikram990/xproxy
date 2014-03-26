@@ -19,7 +19,7 @@ void HttpHeaders::reset() {
     headers_.clear();
 }
 
-bool HttpHeaders::find(const std::string& name, std::string& value) {
+bool HttpHeaders::find(const std::string& name, std::string& value) const {
     auto it = std::find_if(headers_.begin(), headers_.end(),
                            boost::bind(&HttpHeaders::match, this, name, _1));
     if(it == headers_.end())
@@ -38,6 +38,6 @@ bool HttpHeaders::serialize(boost::asio::streambuf& out_buffer) {
     return true;
 }
 
-bool HttpHeaders::match(const std::string& desired, const HttpHeader& actual) {
+bool HttpHeaders::match(const std::string& desired, const HttpHeader& actual) const {
     return desired == actual.name;
 }

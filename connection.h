@@ -23,6 +23,8 @@ protected:
                std::size_t buffer_size = 8192); // TODO
     virtual ~Connection();
 
+    virtual void connect() = 0;
+
     virtual void OnRead(const boost::system::error_code& e) = 0;
     virtual void OnWritten(const boost::system::error_code& e) = 0;
     virtual void OnTimeout(const boost::system::error_code& e) = 0;

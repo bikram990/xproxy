@@ -36,6 +36,8 @@ public:
 
     int MinorVersion() const { return parser_.http_minor; }
 
+    const HttpHeaders& headers() const { return headers_; }
+
 protected:
     HttpMessage(http_parser_type type);
     virtual ~HttpMessage();

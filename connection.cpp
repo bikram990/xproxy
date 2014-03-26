@@ -18,8 +18,10 @@ Connection::Connection(std::shared_ptr<Session> session,
 Connection::~Connection() {}
 
 void Connection::read() {
-    if (!connected_)
+    if (!connected_) {
+        connect();
         return;
+    }
 
     buffer_in_.prepare(buffer_size_);
     boost::asio::async_read(*socket_, buffer_in_,
@@ -28,8 +30,10 @@ void Connection::read() {
 }
 
 void Connection::write() {
-    if (!connected_)
+    if (!connected_) {
+        connect();
         return;
+    }
 
     socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
                                                   buffer_out_.size()),

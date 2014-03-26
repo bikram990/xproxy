@@ -28,14 +28,14 @@ public:
 
     void reset();
 
-    bool find(const std::string& name, std::string& value);
+    bool find(const std::string& name, std::string& value) const;
 
     virtual bool serialize(boost::asio::streambuf& out_buffer);
 
 private:
     DISABLE_COPY_AND_ASSIGNMENT(HttpHeaders);
 
-    bool match(const std::string& desired, const HttpHeader& actual);
+    bool match(const std::string& desired, const HttpHeader& actual) const;
 
 private:
     std::vector<HttpHeader> headers_;
