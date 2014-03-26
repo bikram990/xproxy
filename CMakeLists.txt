@@ -24,7 +24,11 @@ message(STATUS "cxx flags: " ${CMAKE_CXX_FLAGS})
 
 
 # for http-parser submodule
-include_directories("./libs/http-parser")
+set(http-parser_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/http-parser)
+include_directories(${http-parser_DIR})
+file(GLOB http-parser_SOURCE ${http-parser_DIR}/http_parser.c)
+add_library(http-parser STATIC ${http-parser_SOURCE})
+target_link_libraries(${PROJECT_NAME} http-parser)
 
 # for boost library
 if(WIN32)
