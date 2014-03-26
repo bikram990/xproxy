@@ -16,6 +16,10 @@ public:
     virtual void OnWritten(const boost::system::error_code& e);
 
     virtual void OnTimeout(const boost::system::error_code& e);
+
+    virtual void NewDataCallback(std::shared_ptr<Session> session);
+
+    virtual void CompleteCallback(std::shared_ptr<Session> session);
 };
 
 #endif // SERVER_CONNECTION_H

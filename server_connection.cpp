@@ -1,6 +1,7 @@
 #include "http_response.h"
 #include "log.h"
 #include "server_connection.h"
+#include "session.h"
 
 ServerConnection::ServerConnection() {}
 
@@ -78,4 +79,12 @@ void ServerConnection::OnTimeout(const boost::system::error_code& e) {
         socket_->close();
         socket_.reset(Socket::Create(service_));
     }
+}
+
+void ServerConnection::NewDataCallback(std::shared_ptr<Session> session) {
+    service_.post(std::bind(&Session::OnResponse, session, message_));
+}
+
+void ServerConnection::CompleteCallback(std::shared_ptr<Session> session) {
+    service_.post(std::bind(&Session::OnResponseComplete, session, message_));
 }
