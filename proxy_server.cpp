@@ -67,6 +67,7 @@ void ProxyServer::StartAccept() {
         return;
 
     current_session_.reset(new Session(*this));
+    current_session_->init();
     acceptor_.async_accept(current_session_->ClientConnection()->socket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));

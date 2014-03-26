@@ -11,14 +11,14 @@ class Session;
 class SessionManager : private boost::noncopyable {
     friend class ProxyServer;
 public:
-    void start(boost::shared_ptr<Session> session);
-    void stop(boost::shared_ptr<Session> session);
+    void start(std::shared_ptr<Session> session);
+    void stop(std::shared_ptr<Session> session);
     void StopAll();
 
 private:
     SessionManager() {}
 
-    std::set<boost::shared_ptr<Session>> sessions_;
+    std::set<std::shared_ptr<Session>> sessions_;
 };
 
 #endif // SESSION_MANAGER_H

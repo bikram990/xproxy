@@ -53,7 +53,7 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    boost::shared_ptr<Session> current_session_;
+    std::shared_ptr<Session> current_session_;
     std::unique_ptr<class SessionManager> session_manager_;
 };
 

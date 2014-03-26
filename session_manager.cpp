@@ -1,12 +1,12 @@
 #include "session.h"
 #include "session_manager.h"
 
-void SessionManager::start(boost::shared_ptr<Session> session) {
+void SessionManager::start(std::shared_ptr<Session> session) {
     sessions_.insert(session);
     session->start();
 }
 
-void SessionManager::stop(boost::shared_ptr<Session> session) {
+void SessionManager::stop(std::shared_ptr<Session> session) {
     sessions_.erase(session);
     session->stop();
 }
