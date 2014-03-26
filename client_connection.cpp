@@ -1,8 +1,10 @@
 #include "client_connection.h"
 #include "http_request.h"
 #include "log.h"
+#include "session.h"
 
-ClientConnection::ClientConnection() {}
+ClientConnection::ClientConnection(std::shared_ptr<Session> session)
+    : Connection(session, 60, 2048) {} // TODO
 
 ClientConnection::~ClientConnection() {}
 
@@ -54,9 +56,6 @@ void ClientConnection::OnWritten(const boost::system::error_code& e) {
         return;
     }
 
-    if(!finished_)
-        return;
-
     /// we always treat client connection as persistent connection
     reset();
     timer_.expires_from_now(timeout_);
@@ -78,4 +77,12 @@ void ClientConnection::OnTimeout(const boost::system::error_code& e) {
         timer_triggered_ = true;
         // TODO add logic here
     }
+}
+
+void ClientConnection::NewDataCallback(std::shared_ptr<Session>) {
+    // do nothing
+}
+
+void ClientConnection::CompleteCallback(std::shared_ptr<Session> session) {
+    service_.post(std::bind(&Session::OnRequestComplete, session, message_));
 }

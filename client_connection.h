@@ -6,7 +6,7 @@
 
 class ClientConnection : public Connection, public Counter<ClientConnection> {
 public:
-    ClientConnection();
+    ClientConnection(std::shared_ptr<Session> session);
     virtual ~ClientConnection();
 
     virtual void InitMessage();
@@ -16,6 +16,10 @@ public:
     virtual void OnWritten(const boost::system::error_code& e);
 
     virtual void OnTimeout(const boost::system::error_code& e);
+
+    virtual void NewDataCallback(std::shared_ptr<Session> session);
+
+    virtual void CompleteCallback(std::shared_ptr<Session> session);
 };
 
 #endif // CLIENT_CONNECTION_H
