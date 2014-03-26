@@ -45,6 +45,9 @@ void Connection::ConstructMessage() {
         return;
     }
 
+    XDEBUG << "Now start to construct the message..., content:\n"
+           << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()), buffer_in_.size());
+
     if (!message_->consume(buffer_in_)) {
         //XERROR_WITH_ID << "Parse failed.";
         return;

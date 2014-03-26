@@ -6,11 +6,13 @@
 ClientConnection::ClientConnection(std::shared_ptr<Session> session)
     : Connection(session, 60, 2048) { // TODO
     message_.reset(new HttpRequest);
+    connected_ = true;
 }
 
 ClientConnection::~ClientConnection() {}
 
 void ClientConnection::OnRead(const boost::system::error_code& e) {
+    XDEBUG_WITH_ID << "OnRead callback is called.";
     if (timer_triggered_) {
         XDEBUG_WITH_ID << "Client socket timed out, abort reading.";
         timer_triggered_ = false;
@@ -82,5 +84,6 @@ void ClientConnection::NewDataCallback(std::shared_ptr<Session>) {
 }
 
 void ClientConnection::CompleteCallback(std::shared_ptr<Session> session) {
+    XDEBUG_WITH_ID << "A request is completed.";
     service_.post(std::bind(&Session::OnRequestComplete, session, message_));
 }
