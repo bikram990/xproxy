@@ -1,7 +1,7 @@
 #ifndef SINGLETON_H
 #define SINGLETON_H
 
-#include <boost/thread.hpp>
+#include <thread>
 #include "common.h"
 
 template<class R>
@@ -12,7 +12,7 @@ public:
 
     R& get() {
         if(!handle_) {
-            boost::lock_guard<boost::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             if(!handle_)
                 handle_ = new R;
         }
@@ -20,7 +20,7 @@ public:
     }
 
 private:
-    boost::mutex mutex_;
+    std::mutex mutex_;
     R *handle_;
 };
 
