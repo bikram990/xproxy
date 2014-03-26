@@ -13,8 +13,6 @@ public:
     virtual void read();
     virtual void write();
 
-    void init();
-
     boost::asio::streambuf& OutBuffer() { return buffer_out_; }
 
     socket_type& socket() { return socket_->socket(); }
@@ -29,7 +27,6 @@ protected:
     virtual void OnWritten(const boost::system::error_code& e) = 0;
     virtual void OnTimeout(const boost::system::error_code& e) = 0;
 
-    virtual void InitMessage() = 0;
     virtual void ConstructMessage();
 
     void reset();

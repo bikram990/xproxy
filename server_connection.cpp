@@ -4,13 +4,11 @@
 #include "session.h"
 
 ServerConnection::ServerConnection(std::shared_ptr<Session> session)
-    : Connection(session, 15){} // TODO
-
-ServerConnection::~ServerConnection() {}
-
-void ServerConnection::InitMessage() {
+    : Connection(session, 15) { // TODO
     message_.reset(new HttpResponse);
 }
+
+ServerConnection::~ServerConnection() {}
 
 void ServerConnection::OnRead(const boost::system::error_code& e) {
     if (timer_triggered_) {

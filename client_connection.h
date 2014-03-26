@@ -9,8 +9,6 @@ public:
     ClientConnection(std::shared_ptr<Session> session);
     virtual ~ClientConnection();
 
-    virtual void InitMessage();
-
     virtual void OnRead(const boost::system::error_code& e);
 
     virtual void OnWritten(const boost::system::error_code& e);

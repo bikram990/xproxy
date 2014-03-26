@@ -36,10 +36,6 @@ void Connection::write() {
                               std::bind(&Connection::OnWritten, this, std::placeholders::_1));
 }
 
-void Connection::init() {
-    InitMessage();
-}
-
 void Connection::ConstructMessage() {
     if (buffer_in_.size() <= 0)
         return;
