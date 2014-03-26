@@ -10,17 +10,15 @@ class Session;
 
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
-    typedef std::function<void(std::shared_ptr<HttpMessage>)> notify_callback;
-
     virtual void read();
     virtual void write();
 
     void init();
 
+    boost::asio::streambuf& OutBuffer() { return buffer_out_; }
+
 protected:
     Connection(std::shared_ptr<Session> session,
-               notify_callback&& complete_callback,
-               notify_callback&& new_data_callback = notify_callback(),
                long timeout = 30,
                std::size_t buffer_size = 8192); // TODO
     virtual ~Connection();
@@ -33,6 +31,9 @@ protected:
     virtual void ConstructMessage();
 
     void reset();
+
+    virtual void NewDataCallback(std::shared_ptr<Session> session) = 0;
+    virtual void CompleteCallback(std::shared_ptr<Session> session) = 0;
 
 protected:
     std::weak_ptr<Session> session_;
@@ -51,9 +52,6 @@ protected:
     boost::asio::streambuf buffer_out_;
 
     std::shared_ptr<HttpMessage> message_;
-
-    notify_callback new_data_callback_; // when new data come
-    notify_callback complete_callback_; // when message is completed
 
 private:
     DISABLE_COPY_AND_ASSIGNMENT(Connection);

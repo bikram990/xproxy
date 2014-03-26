@@ -4,8 +4,6 @@
 #include "session.h"
 
 Connection::Connection(std::shared_ptr<Session> session,
-                       notify_callback&& complete_callback,
-                       notify_callback&& new_data_callback,
                        long timeout,
                        std::size_t buffer_size)
     : session_(session),
@@ -15,9 +13,7 @@ Connection::Connection(std::shared_ptr<Session> session,
       timer_triggered_(false),
       socket_(Socket::Create(session->service())),
       connected_(false),
-      buffer_size_(buffer_size),
-      new_data_callback_(std::forward(new_data_callback)),
-      complete_callback_(std::forward(complete_callback)) {}
+      buffer_size_(buffer_size){}
 
 Connection::~Connection() {}
 
@@ -49,17 +45,19 @@ void Connection::ConstructMessage() {
         return;
 
     if (message_->completed()) {
-        XERROR_WITH_ID << "Message has been completed.";
+        //XERROR_WITH_ID << "Message has been completed.";
         return;
     }
 
     if (!message_->consume(buffer_in_)) {
-        XERROR_WITH_ID << "Parse failed.";
+        //XERROR_WITH_ID << "Parse failed.";
         return;
     }
 
-    if (new_data_callback_)
-        service_.post(std::bind(new_data_callback_, message_));
+    std::shared_ptr<Session> s(session_.lock());
+
+    if (s)
+        NewDataCallback(s);
 
     // TODO should we check if buffer_in_ is empty here?
 
@@ -68,8 +66,8 @@ void Connection::ConstructMessage() {
         return;
     }
 
-    if (complete_callback_)
-        service_.post(std::bind(complete_callback_, message_));
+    if (s)
+        CompleteCallback(s);
 }
 
 void Connection::reset() {
