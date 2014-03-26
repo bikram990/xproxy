@@ -18,7 +18,7 @@ public:
     virtual int OnUrl(const char *at, std::size_t length);
 
     // this method should be overridden in HttpResponse
-    virtual int OnStatus();
+    virtual int OnStatus(const char *at, std::size_t length);
 
     virtual int OnHeaderField(const char *at, std::size_t length);
 

@@ -1,5 +1,6 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
+#include "client_connection.h"
 #include "common.h"
 #include "log.h"
 #include "proxy_server.h"
@@ -65,8 +66,8 @@ void ProxyServer::StartAccept() {
     if(state_ == kStopped)
         return;
 
-    current_session_.reset(Session::create(*this));
-    acceptor_.async_accept(current_session_->ClientSocket(),
+    current_session_.reset(new Session(*this));
+    acceptor_.async_accept(current_session_->ClientConnection()->socket(),
                            boost::bind(&ProxyServer::OnConnectionAccepted, this,
                                        boost::asio::placeholders::error));
 }
@@ -82,8 +83,8 @@ void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
     }
 
     XDEBUG << "A new session [id: " << current_session_->id() << "] is established, client address: ["
-           << current_session_->ClientSocket().remote_endpoint().address() << ":"
-           << current_session_->ClientSocket().remote_endpoint().port() << "].";
+           << current_session_->ClientConnection()->socket().remote_endpoint().address() << ":"
+           << current_session_->ClientConnection()->socket().remote_endpoint().port() << "].";
 
     session_manager_->start(current_session_);
 

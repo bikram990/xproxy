@@ -20,12 +20,13 @@ bool HttpRequest::serialize(boost::asio::streambuf& out_buffer) {
     }
     headers_.serialize(out_buffer);
     boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
-                             body_);
+                             boost::asio::buffer(body_.data(), body_.size()));
+    return true;
 }
 
-int HttpRequest::OnUrl(const char *at, std::size_t length) {
-    method_ = http_method_str(parser_.method);
+int HttpRequest::Url(const char *at, std::size_t length) {
+    method_ = http_method_str(static_cast<http_method>(parser_.method));
     // TODO can this pass compilation?
-    url_ = std::forward(std::string(at, length));
+    url_ = std::move(std::string(at, length));
     return 0;
 }

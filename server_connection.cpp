@@ -3,7 +3,8 @@
 #include "server_connection.h"
 #include "session.h"
 
-ServerConnection::ServerConnection() {}
+ServerConnection::ServerConnection(std::shared_ptr<Session> session)
+    : Connection(session, 15){} // TODO
 
 ServerConnection::~ServerConnection() {}
 

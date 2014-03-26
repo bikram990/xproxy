@@ -25,7 +25,7 @@ int HttpMessage::OnUrl(const char *at, std::size_t length) {
     return 0;
 }
 
-int HttpMessage::OnStatus() {
+int HttpMessage::OnStatus(const char *at, std::size_t length) {
     return 0;
 }
 

@@ -6,7 +6,7 @@
 
 class ServerConnection : public Connection, public Counter<ServerConnection> {
 public:
-    ServerConnection();
+    ServerConnection(std::shared_ptr<Session> session);
     virtual ~ServerConnection();
 
     virtual void InitMessage();

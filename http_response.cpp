@@ -21,10 +21,11 @@ bool HttpResponse::serialize(boost::asio::streambuf& out_buffer) {
     }
     headers_.serialize(out_buffer);
     boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
-                             body_);
+                             boost::asio::buffer(body_.data(), body_.size()));
+    return true;
 }
 
-int HttpResponse::OnStatus(const char *at, std::size_t length) {
+int HttpResponse::Status(const char *at, std::size_t length) {
     status_code_ = parser_.status_code;
     status_message_ = std::string(at, length);
     return 0;

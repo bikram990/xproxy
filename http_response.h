@@ -12,7 +12,7 @@ public:
 
     virtual bool serialize(boost::asio::streambuf& out_buffer);
 
-    virtual int OnStatus(const char *at, std::size_t length);
+    virtual int Status(const char *at, std::size_t length);
 
 private:
     unsigned int status_code_;

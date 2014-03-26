@@ -3,11 +3,11 @@
 
 void HttpHeaders::PushBack(HttpHeader&& header) {
     headers_.push_back(header);
-    modified_ = true;
+    //modified_ = true;
 }
 
 HttpHeader& HttpHeaders::back() {
-    modified_ = true;   // we should assume the header will be modified here
+    //modified_ = true;   // we should assume the header will be modified here
     return headers_.back();
 }
 
@@ -34,6 +34,8 @@ bool HttpHeaders::serialize(boost::asio::streambuf& out_buffer) {
         out << it->name << ": " << it->value << "\r\n";
     }
     out << "\r\n";
+
+    return true;
 }
 
 bool HttpHeaders::match(const std::string& desired, const HttpHeader& actual) {

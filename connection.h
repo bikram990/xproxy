@@ -17,6 +17,8 @@ public:
 
     boost::asio::streambuf& OutBuffer() { return buffer_out_; }
 
+    socket_type& socket() { return socket_->socket(); }
+
 protected:
     Connection(std::shared_ptr<Session> session,
                long timeout = 30,
