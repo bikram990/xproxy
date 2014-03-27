@@ -78,7 +78,7 @@ int HttpMessage::HeaderFieldCallback(http_parser *parser, const char *at, std::s
     assert(m);
 
     if (!m->current_header_value_.empty()) {
-        m->headers_.PushBack(HttpHeader(m->current_header_field_, m->current_header_value_));
+        m->headers_.add(HttpHeader(m->current_header_field_, m->current_header_value_));
         m->current_header_field_.clear();
         m->current_header_value_.clear();
     }
@@ -99,7 +99,7 @@ int HttpMessage::HeadersCompleteCallback(http_parser *parser) {
     assert(m);
 
     if (!m->current_header_value_.empty()) {
-        m->headers_.PushBack(HttpHeader(m->current_header_field_, m->current_header_value_));
+        m->headers_.add(HttpHeader(m->current_header_field_, m->current_header_value_));
         m->current_header_field_.clear();
         m->current_header_value_.clear();
     }
