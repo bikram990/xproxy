@@ -6,7 +6,7 @@
 class HttpRequest : public HttpMessage {
 public:
     HttpRequest();
-    virtual ~HttpRequest();
+    virtual ~HttpRequest() = default;
 
     virtual void reset();
 

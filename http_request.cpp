@@ -2,8 +2,6 @@
 
 HttpRequest::HttpRequest() : HttpMessage(HTTP_REQUEST) {}
 
-HttpRequest::~HttpRequest() {}
-
 void HttpRequest::reset() {
     HttpMessage::reset();
     method_.clear();
@@ -11,21 +9,25 @@ void HttpRequest::reset() {
 }
 
 bool HttpRequest::serialize(boost::asio::streambuf& out_buffer) {
-    // TODO handle the condition that the message is incomplete
-    {
-        std::ostream out(&out_buffer);
-        out << method_ << ' ' << url_ << " HTTP/"
-            << MajorVersion() << '.' << MinorVersion()
-            << "\r\n";
-    }
+    // for request, we only allow serialize when it is completed
+    if (!MessageCompleted())
+        return false;
+
+    std::ostream out(&out_buffer);
+    out << method_ << ' ' << url_ << " HTTP/"
+        << MajorVersion() << '.' << MinorVersion()
+        << "\r\n";
+
     headers_.serialize(out_buffer);
-    boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
-                             boost::asio::buffer(body_.data(), body_.size()));
+
+    if (body_.size() > 0)
+        boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
+                                 boost::asio::buffer(body_.data(), body_.size()));
     return true;
 }
 
 int HttpRequest::OnUrl(const char *at, std::size_t length) {
-    method_ = http_method_str(static_cast<http_method>(parser_.method));
+    method_ = ::http_method_str(static_cast<http_method>(parser_.method));
     // TODO can this pass compilation?
     url_ = std::move(std::string(at, length));
     return 0;
