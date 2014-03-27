@@ -4,33 +4,18 @@
 #include "common.h"
 #include "http_headers.h"
 #include "http_parser.h"
-#include "serializable.h"
 
-class HttpMessage : public Serializable, public HttpParser {
+class HttpMessage {
 public:
+    bool consume(boost::asio::streambuf& buffer);
+
     virtual bool serialize(boost::asio::streambuf& out_buffer) = 0;
 
     virtual void reset();
 
-    virtual int OnMessageBegin();
+    bool HeaderCompleted() const { return header_completed_; }
 
-    // this method should be overridden in HttpRequest
-    virtual int OnUrl(const char *at, std::size_t length);
-
-    // this method should be overridden in HttpResponse
-    virtual int OnStatus(const char *at, std::size_t length);
-
-    virtual int OnHeaderField(const char *at, std::size_t length);
-
-    virtual int OnHeaderValue(const char *at, std::size_t length);
-
-    virtual int OnHeadersComplete();
-
-    virtual int OnBody(const char *at, std::size_t length);
-
-    virtual int OnMessageComplete();
-
-    bool completed() const { return completed_; }
+    bool MessageCompleted() const { return message_completed_; }
 
     int MajorVersion() const { return parser_.http_major; }
 
@@ -38,17 +23,39 @@ public:
 
     const HttpHeaders& headers() const { return headers_; }
 
-protected:
-    HttpMessage(http_parser_type type);
-    virtual ~HttpMessage();
+private:
+    static int MessageBeginCallback(http_parser *parser);
+    static int UrlCallback(http_parser *parser, const char *at, std::size_t length);
+    static int StatusCallback(http_parser *parser, const char *at, std::size_t length);
+    static int HeaderFieldCallback(http_parser *parser, const char *at, std::size_t length);
+    static int HeaderValueCallback(http_parser *parser, const char *at, std::size_t length);
+    static int HeadersCompleteCallback(http_parser *parser);
+    static int BodyCallback(http_parser *parser, const char *at, std::size_t length);
+    static int MessageCompleteCallback(http_parser *parser);
 
 protected:
-    bool completed_;
+    HttpMessage(http_parser_type type);
+    virtual ~HttpMessage() = default;
+
+    // this method should be overridden in HttpRequest
+    virtual int OnUrl(const char *at, std::size_t length) { return 0; }
+
+    // this method should be overridden in HttpResponse
+    virtual int OnStatus(const char *at, std::size_t length) { return 0; }
+
+protected:
+    http_parser parser_;
+
+    bool header_completed_;
+    bool message_completed_;
     std::string current_header_field_; // store temp header name/value during parsing
     std::string current_header_value_;
 
     HttpHeaders headers_;
     boost::asio::streambuf body_;
+
+private:
+    static http_parser_settings settings_;
 
 private:
     DISABLE_COPY_AND_ASSIGNMENT(HttpMessage);

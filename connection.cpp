@@ -48,7 +48,7 @@ void Connection::ConstructMessage() {
     if (buffer_in_.size() <= 0)
         return;
 
-    if (message_->completed()) {
+    if (message_->MessageCompleted()) {
         //XERROR_WITH_ID << "Message has been completed.";
         return;
     }
@@ -68,7 +68,7 @@ void Connection::ConstructMessage() {
 
     // TODO should we check if buffer_in_ is empty here?
 
-    if (!message_->completed()) {
+    if (!message_->MessageCompleted()) {
         read();
         return;
     }
