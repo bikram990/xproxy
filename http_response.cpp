@@ -25,7 +25,7 @@ bool HttpResponse::serialize(boost::asio::streambuf& out_buffer) {
     return true;
 }
 
-int HttpResponse::Status(const char *at, std::size_t length) {
+int HttpResponse::OnStatus(const char *at, std::size_t length) {
     status_code_ = parser_.status_code;
     status_message_ = std::string(at, length);
     return 0;

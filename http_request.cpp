@@ -14,7 +14,7 @@ bool HttpRequest::serialize(boost::asio::streambuf& out_buffer) {
     // TODO handle the condition that the message is incomplete
     {
         std::ostream out(&out_buffer);
-        out << method_ << ' ' << url_ << "HTTP/"
+        out << method_ << ' ' << url_ << " HTTP/"
             << MajorVersion() << '.' << MinorVersion()
             << "\r\n";
     }
@@ -24,7 +24,7 @@ bool HttpRequest::serialize(boost::asio::streambuf& out_buffer) {
     return true;
 }
 
-int HttpRequest::Url(const char *at, std::size_t length) {
+int HttpRequest::OnUrl(const char *at, std::size_t length) {
     method_ = http_method_str(static_cast<http_method>(parser_.method));
     // TODO can this pass compilation?
     url_ = std::move(std::string(at, length));

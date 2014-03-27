@@ -35,6 +35,10 @@ void Connection::write() {
         return;
     }
 
+    XDEBUG << "content to be written:\n"
+           << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
+                          buffer_out_.size());
+
     socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
                                                   buffer_out_.size()),
                               std::bind(&Connection::OnWritten, this, std::placeholders::_1));

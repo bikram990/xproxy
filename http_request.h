@@ -12,7 +12,7 @@ public:
 
     virtual bool serialize(boost::asio::streambuf& out_buffer);
 
-    virtual int Url(const char *at, std::size_t length);
+    virtual int OnUrl(const char *at, std::size_t length);
 
 private:
     std::string method_;
