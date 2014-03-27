@@ -1,6 +1,7 @@
 #ifndef SINGLETON_H
 #define SINGLETON_H
 
+#include <mutex>
 #include <thread>
 #include "common.h"
 
