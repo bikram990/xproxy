@@ -21,7 +21,7 @@ protected:
     Connection(std::shared_ptr<Session> session,
                long timeout = 30,
                std::size_t buffer_size = 8192); // TODO
-    virtual ~Connection();
+    virtual ~Connection() = default;
 
     virtual void connect() = 0;
 

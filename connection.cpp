@@ -15,8 +15,6 @@ Connection::Connection(std::shared_ptr<Session> session,
       connected_(false),
       buffer_size_(buffer_size){}
 
-Connection::~Connection() {}
-
 void Connection::read() {
     if (!connected_) {
         connect();
@@ -26,7 +24,9 @@ void Connection::read() {
     buffer_in_.prepare(buffer_size_);
     boost::asio::async_read(*socket_, buffer_in_,
                             boost::asio::transfer_at_least(1),
-                            std::bind(&Connection::OnRead, this, std::placeholders::_1));
+                            std::bind(&Connection::OnRead,
+                                      shared_from_this(),
+                                      std::placeholders::_1));
 }
 
 void Connection::write() {
@@ -35,13 +35,16 @@ void Connection::write() {
         return;
     }
 
-    XDEBUG << "content to be written:\n"
+    // TODO enhance the performance here
+    XDEBUG << "Content to be written to socket:\n"
            << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
                           buffer_out_.size());
 
     socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
                                                   buffer_out_.size()),
-                              std::bind(&Connection::OnWritten, this, std::placeholders::_1));
+                              std::bind(&Connection::OnWritten,
+                                        shared_from_this(),
+                                        std::placeholders::_1));
 }
 
 void Connection::ConstructMessage() {
@@ -49,15 +52,16 @@ void Connection::ConstructMessage() {
         return;
 
     if (message_->MessageCompleted()) {
-        //XERROR_WITH_ID << "Message has been completed.";
+        XERROR << "Message is already complete.";
         return;
     }
 
-    XDEBUG << "Now start to construct the message..., content:\n"
+    // TODO enhance the performance here
+    XDEBUG << "Now start to construct the message, content:\n"
            << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()), buffer_in_.size());
 
     if (!message_->consume(buffer_in_)) {
-        //XERROR_WITH_ID << "Parse failed.";
+        XERROR << "Message parse failure.";
         return;
     }
 
@@ -78,6 +82,7 @@ void Connection::ConstructMessage() {
 }
 
 void Connection::reset() {
+    // TODO should we cancel the timer here?
     timer_triggered_ = false;
     message_->reset();
 
