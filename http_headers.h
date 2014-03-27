@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "common.h"
-#include "serializable.h"
 
 struct HttpHeader {
     std::string name;
@@ -14,33 +13,25 @@ struct HttpHeader {
         : name(name), value(value) {}
 };
 
-class HttpHeaders : public Serializable {
+class HttpHeaders {
 public:
     DEFAULT_CTOR_AND_DTOR(HttpHeaders);
 
     bool empty() const { return headers_.empty(); }
 
-    void PushBack(HttpHeader&& header);
-
-    HttpHeader& back();
-
-    const HttpHeader& back() const;
+    void add(HttpHeader&& header) { headers_.push_back(header); }
 
     void reset();
 
     bool find(const std::string& name, std::string& value) const;
 
-    virtual bool serialize(boost::asio::streambuf& out_buffer);
-
-private:
-    DISABLE_COPY_AND_ASSIGNMENT(HttpHeaders);
-
-    bool match(const std::string& desired, const HttpHeader& actual) const;
+    bool serialize(boost::asio::streambuf& out_buffer);
 
 private:
     std::vector<HttpHeader> headers_;
-};
 
-typedef std::shared_ptr<HttpHeaders> HttpHeadersPtr;
+private:
+    DISABLE_COPY_AND_ASSIGNMENT(HttpHeaders);
+};
 
 #endif // HTTP_HEADERS_H
