@@ -107,6 +107,8 @@ int HttpMessage::HeadersCompleteCallback(http_parser *parser) {
     }
     m->header_completed_ = true;
 
+    XDEBUG << "Headers are completed.";
+
     std::shared_ptr<Connection> c(m->connection_.lock());
     if (c)
         c->service().post(std::bind(&Connection::OnHeadersComplete, c));
@@ -121,6 +123,8 @@ int HttpMessage::BodyCallback(http_parser *parser, const char *at, std::size_t l
     boost::asio::buffer_copy(m->body_.prepare(length), boost::asio::buffer(at, length));
     m->body_.commit(length);
 
+    XDEBUG << "New body piece.";
+
     std::shared_ptr<Connection> c(m->connection_.lock());
     if (c)
         c->service().post(std::bind(&Connection::OnBody, c));
@@ -134,9 +138,11 @@ int HttpMessage::MessageCompleteCallback(http_parser *parser) {
 
     m->message_completed_ = true;
 
+    XDEBUG << "message is completed.";
+
     std::shared_ptr<Connection> c(m->connection_.lock());
     if (c)
-        c->service().post(std::bind(&Connection::OnBody, c));
+        c->service().post(std::bind(&Connection::OnBodyComplete, c));
 
     return 0;
 }

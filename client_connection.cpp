@@ -11,6 +11,7 @@ void ClientConnection::init() {
     connected_ = true;
 }
 void ClientConnection::OnBodyComplete() {
+    XDEBUG_WITH_ID << "Request is complete.";
     std::shared_ptr<Session> session(session_.lock());
     if (session)
         service_.post(std::bind(&Session::OnRequestComplete, session, message_));
