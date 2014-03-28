@@ -26,7 +26,8 @@ void Connection::read() {
                             boost::asio::transfer_at_least(1),
                             std::bind(&Connection::OnRead,
                                       shared_from_this(),
-                                      std::placeholders::_1));
+                                      std::placeholders::_1,
+                                      std::placeholders::_2));
 }
 
 void Connection::write() {
@@ -36,7 +37,7 @@ void Connection::write() {
     }
 
     // TODO enhance the performance here
-    XDEBUG << "Content to be written to socket:\n"
+    XDEBUG << "write() called, dump content to be written:\n"
            << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
                           buffer_out_.size());
 
@@ -44,7 +45,8 @@ void Connection::write() {
                                                   buffer_out_.size()),
                               std::bind(&Connection::OnWritten,
                                         shared_from_this(),
-                                        std::placeholders::_1));
+                                        std::placeholders::_1,
+                                        std::placeholders::_2));
 }
 
 void Connection::ConstructMessage() {
@@ -55,10 +57,6 @@ void Connection::ConstructMessage() {
         XERROR << "Message is already complete.";
         return;
     }
-
-    // TODO enhance the performance here
-    XDEBUG << "Now start to construct the message, content:\n"
-           << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()), buffer_in_.size());
 
     if (!message_->consume(buffer_in_)) {
         XERROR << "Message parse failure.";

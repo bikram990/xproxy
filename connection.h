@@ -28,6 +28,12 @@ public:
     // this method should be overridden in both derived classes
     virtual void OnBodyComplete() {}
 
+    // this method will be called when a round of communication completed
+    // that is to say, all response data has been received and sent to client
+    // both derived classes should overridden this method, to clear and
+    // reset the connection waiting for next round of communication
+    virtual void OnMessageExchangeComplete() = 0;
+
 protected:
     Connection(std::shared_ptr<Session> session,
                long timeout = 30,
@@ -38,8 +44,8 @@ protected:
 
     virtual void connect() = 0;
 
-    virtual void OnRead(const boost::system::error_code& e) = 0;
-    virtual void OnWritten(const boost::system::error_code& e) = 0;
+    virtual void OnRead(const boost::system::error_code& e, std::size_t length) = 0;
+    virtual void OnWritten(const boost::system::error_code& e, std::size_t length) = 0;
     virtual void OnTimeout(const boost::system::error_code& e) = 0;
 
     virtual void ConstructMessage();

@@ -11,19 +11,32 @@ void ServerConnection::init() {
     message_.reset(new HttpResponse(shared_from_this()));
 }
 
-void ServerConnection::OnHeadersComplete() {
-    std::shared_ptr<Session> session(session_.lock());
-    if (session)
-        service_.post(std::bind(&Session::OnResponse, session, message_));
+void ServerConnection::OnMessageExchangeComplete() {
+    if (message_->KeepAlive()) {
+        timer_.expires_from_now(timeout_);
+        timer_.async_wait(std::bind(&ServerConnection::OnTimeout,
+                                    std::static_pointer_cast<ServerConnection>(shared_from_this()),
+                                    std::placeholders::_1));
+    } else {
+        XDEBUG_WITH_ID << "The server side does not want to keep the connection alive, close it.";
+        connected_ = false;
+        socket_->close();
+        socket_.reset(Socket::Create(service_));
+    }
+
+    reset();
+
 }
 
 void ServerConnection::OnBody() {
+    XDEBUG_WITH_ID << "The response has new body data.";
     std::shared_ptr<Session> session(session_.lock());
     if (session)
         service_.post(std::bind(&Session::OnResponse, session, message_));
 }
 
 void ServerConnection::OnBodyComplete() {
+    XDEBUG_WITH_ID << "The response is completed.";
     std::shared_ptr<Session> session(session_.lock());
     if (session)
         service_.post(std::bind(&Session::OnResponseComplete, session, message_));
@@ -54,7 +67,7 @@ void ServerConnection::connect() {
         }
 }
 
-void ServerConnection::OnRead(const boost::system::error_code& e) {
+void ServerConnection::OnRead(const boost::system::error_code& e, std::size_t) {
     if (timer_triggered_) {
         XDEBUG_WITH_ID << "Server socket timed out, abort reading.";
         timer_triggered_ = false;
@@ -87,10 +100,14 @@ void ServerConnection::OnRead(const boost::system::error_code& e) {
         return;
     }
 
+    XDEBUG_WITH_ID << "OnRead() called in server connection, dump content:\n"
+                   << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()),
+                                  buffer_in_.size());
+
     ConstructMessage();
 }
 
-void ServerConnection::OnWritten(const boost::system::error_code& e) {
+void ServerConnection::OnWritten(const boost::system::error_code& e, std::size_t length) {
     // if(server_.state() == ProxyServer::kStopped) {
     if (false) { // TODO
         XDEBUG_WITH_ID << "xProxy server is stopping, abort writing to server.";
@@ -99,13 +116,20 @@ void ServerConnection::OnWritten(const boost::system::error_code& e) {
     }
 
     if (e) {
-        XERROR_WITH_ID << "Error occurred during writing to remote peer, message: "
+        XERROR_WITH_ID << "Error occurred during writing to server connection, message: "
                        << e.message();
         // TODO add logic here
         return;
     }
 
-    XDEBUG_WITH_ID << "Data has been written to remote peer, now start reading...";
+    buffer_out_.consume(length);
+    if (buffer_out_.size() > 0) {
+        XWARN_WITH_ID << "The writing operation does not write all data in out buffer!";
+        write();
+        return;
+    }
+
+    XDEBUG_WITH_ID << "Data has been written to server connection, now start reading...";
 
     read();
 }

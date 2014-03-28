@@ -13,12 +13,14 @@ public:
 
     virtual void init();
 
+    virtual void OnMessageExchangeComplete();
+
 private:
     virtual void connect() {} // do nothing here
 
-    virtual void OnRead(const boost::system::error_code& e);
+    virtual void OnRead(const boost::system::error_code& e, std::size_t);
 
-    virtual void OnWritten(const boost::system::error_code& e);
+    virtual void OnWritten(const boost::system::error_code& e, std::size_t length);
 
     virtual void OnTimeout(const boost::system::error_code& e);
 };

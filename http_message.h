@@ -19,6 +19,12 @@ public:
 
     bool MessageCompleted() const { return message_completed_; }
 
+    bool KeepAlive() const {
+        if (!header_completed_) // return false when header is incomplete
+            return false;
+        return ::http_should_keep_alive(const_cast<http_parser*>(&parser_)) != 0;
+    }
+
     int MajorVersion() const { return parser_.http_major; }
 
     int MinorVersion() const { return parser_.http_minor; }

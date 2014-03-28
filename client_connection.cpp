@@ -10,15 +10,29 @@ void ClientConnection::init() {
     message_.reset(new HttpRequest(shared_from_this()));
     connected_ = true;
 }
+
+void ClientConnection::OnMessageExchangeComplete() {
+    if (message_->KeepAlive()) {
+        reset();
+        timer_.expires_from_now(timeout_);
+        timer_.async_wait(std::bind(&ClientConnection::OnTimeout,
+                                    std::static_pointer_cast<ClientConnection>(shared_from_this()),
+                                    std::placeholders::_1));
+        read();
+    } else {
+        XDEBUG_WITH_ID << "The client side does not want to keep the connection alive, destroy the session...";
+        // TODO more code here
+    }
+}
+
 void ClientConnection::OnBodyComplete() {
-    XDEBUG_WITH_ID << "Request is complete.";
+    XDEBUG_WITH_ID << "The request is completed.";
     std::shared_ptr<Session> session(session_.lock());
     if (session)
         service_.post(std::bind(&Session::OnRequestComplete, session, message_));
 }
 
-void ClientConnection::OnRead(const boost::system::error_code& e) {
-    XDEBUG_WITH_ID << "OnRead callback is called.";
+void ClientConnection::OnRead(const boost::system::error_code& e, std::size_t) {
     if (timer_triggered_) {
         XDEBUG_WITH_ID << "Client socket timed out, abort reading.";
         timer_triggered_ = false;
@@ -51,10 +65,14 @@ void ClientConnection::OnRead(const boost::system::error_code& e) {
         return;
     }
 
+    XDEBUG_WITH_ID << "OnRead() called in client connection, dump content:\n"
+                   << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()),
+                                  buffer_in_.size());
+
     ConstructMessage();
 }
 
-void ClientConnection::OnWritten(const boost::system::error_code& e) {
+void ClientConnection::OnWritten(const boost::system::error_code& e, std::size_t length) {
     if(e) {
         XERROR_WITH_ID << "Error occurred during writing to client socket, message: "
                        << e.message();
@@ -62,14 +80,13 @@ void ClientConnection::OnWritten(const boost::system::error_code& e) {
         return;
     }
 
-    /// we always treat client connection as persistent connection
-    reset();
-    timer_.expires_from_now(timeout_);
-    timer_.async_wait(std::bind(&ClientConnection::OnTimeout,
-                                this, // TODO
-                                std::placeholders::_1));
+    XDEBUG_WITH_ID << "Content has been written to client connection.";
 
-    read();
+    buffer_out_.consume(length);
+    if (buffer_out_.size() > 0) {
+        XWARN_WITH_ID << "The writing operation does not write all data in out buffer!";
+        write();
+    }
 }
 
 void ClientConnection::OnTimeout(const boost::system::error_code& e) {
