@@ -5,7 +5,7 @@
 
 class HttpRequest : public HttpMessage {
 public:
-    HttpRequest();
+    HttpRequest(std::shared_ptr<Connection> connection);
     virtual ~HttpRequest() = default;
 
     virtual void reset();

@@ -1,3 +1,4 @@
+#include "connection.h"
 #include "http_message.h"
 #include "log.h"
 
@@ -12,9 +13,10 @@ http_parser_settings HttpMessage::settings_ = {
     &HttpMessage::MessageCompleteCallback
 };
 
-HttpMessage::HttpMessage(http_parser_type type)
+HttpMessage::HttpMessage(std::shared_ptr<Connection> connection, http_parser_type type)
     : header_completed_(false),
-      message_completed_(false) {
+      message_completed_(false),
+      connection_(connection) {
     ::http_parser_init(&parser_, type);
     parser_.data = this;
 }
@@ -104,6 +106,11 @@ int HttpMessage::HeadersCompleteCallback(http_parser *parser) {
         m->current_header_value_.clear();
     }
     m->header_completed_ = true;
+
+    std::shared_ptr<Connection> c(m->connection_.lock());
+    if (c)
+        c->service().post(std::bind(&Connection::OnHeadersComplete, c));
+
     return 0;
 }
 
@@ -113,6 +120,11 @@ int HttpMessage::BodyCallback(http_parser *parser, const char *at, std::size_t l
 
     boost::asio::buffer_copy(m->body_.prepare(length), boost::asio::buffer(at, length));
     m->body_.commit(length);
+
+    std::shared_ptr<Connection> c(m->connection_.lock());
+    if (c)
+        c->service().post(std::bind(&Connection::OnBody, c));
+
     return 0;
 }
 
@@ -121,5 +133,10 @@ int HttpMessage::MessageCompleteCallback(http_parser *parser) {
     assert(m);
 
     m->message_completed_ = true;
+
+    std::shared_ptr<Connection> c(m->connection_.lock());
+    if (c)
+        c->service().post(std::bind(&Connection::OnBody, c));
+
     return 0;
 }

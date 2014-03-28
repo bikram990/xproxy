@@ -13,15 +13,28 @@ public:
     virtual void read();
     virtual void write();
 
+    boost::asio::io_service& service() { return service_; }
+
     boost::asio::streambuf& OutBuffer() { return buffer_out_; }
 
     socket_type& socket() { return socket_->socket(); }
+
+    // in class ServerConnection, this method should be overridden
+    virtual void OnHeadersComplete() {}
+
+    // in class ServerConnection, this method should be overridden
+    virtual void OnBody() {}
+
+    // this method should be overridden in both derived classes
+    virtual void OnBodyComplete() {}
 
 protected:
     Connection(std::shared_ptr<Session> session,
                long timeout = 30,
                std::size_t buffer_size = 8192); // TODO
     virtual ~Connection() = default;
+
+    virtual void init() = 0;
 
     virtual void connect() = 0;
 
@@ -32,9 +45,6 @@ protected:
     virtual void ConstructMessage();
 
     void reset();
-
-    virtual void NewDataCallback(std::shared_ptr<Session> session) = 0;
-    virtual void CompleteCallback(std::shared_ptr<Session> session) = 0;
 
 protected:
     std::weak_ptr<Session> session_;

@@ -65,20 +65,12 @@ void Connection::ConstructMessage() {
         return;
     }
 
-    std::shared_ptr<Session> s(session_.lock());
-
-    if (s)
-        NewDataCallback(s);
-
     // TODO should we check if buffer_in_ is empty here?
 
     if (!message_->MessageCompleted()) {
         read();
         return;
     }
-
-    if (s)
-        CompleteCallback(s);
 }
 
 void Connection::reset() {

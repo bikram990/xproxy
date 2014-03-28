@@ -1,6 +1,8 @@
+#include "connection.h"
 #include "http_request.h"
 
-HttpRequest::HttpRequest() : HttpMessage(HTTP_REQUEST) {}
+HttpRequest::HttpRequest(std::shared_ptr<Connection> connection)
+    : HttpMessage(connection, HTTP_REQUEST) {}
 
 void HttpRequest::reset() {
     HttpMessage::reset();

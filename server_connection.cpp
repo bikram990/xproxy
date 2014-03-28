@@ -5,11 +5,29 @@
 #include "session.h"
 
 ServerConnection::ServerConnection(std::shared_ptr<Session> session)
-    : Connection(session, 15), resolver_(session->service()) { // TODO
-    message_.reset(new HttpResponse);
+    : Connection(session, 15), resolver_(session->service()) {} // TODO
+
+void ServerConnection::init() {
+    message_.reset(new HttpResponse(shared_from_this()));
 }
 
-ServerConnection::~ServerConnection() {}
+void ServerConnection::OnHeadersComplete() {
+    std::shared_ptr<Session> session(session_.lock());
+    if (session)
+        service_.post(std::bind(&Session::OnResponse, session, message_));
+}
+
+void ServerConnection::OnBody() {
+    std::shared_ptr<Session> session(session_.lock());
+    if (session)
+        service_.post(std::bind(&Session::OnResponse, session, message_));
+}
+
+void ServerConnection::OnBodyComplete() {
+    std::shared_ptr<Session> session(session_.lock());
+    if (session)
+        service_.post(std::bind(&Session::OnResponseComplete, session, message_));
+}
 
 void ServerConnection::connect() {
     // we switch to https mode before we connect to server
@@ -117,12 +135,4 @@ void ServerConnection::OnConnected(const boost::system::error_code& e) {
     XDEBUG_WITH_ID << "Remote peer connected: " << host_ << ":" << port_;
     connected_ = true;
     write();
-}
-
-void ServerConnection::NewDataCallback(std::shared_ptr<Session> session) {
-    service_.post(std::bind(&Session::OnResponse, session, message_));
-}
-
-void ServerConnection::CompleteCallback(std::shared_ptr<Session> session) {
-    service_.post(std::bind(&Session::OnResponseComplete, session, message_));
 }

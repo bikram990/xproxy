@@ -5,6 +5,8 @@
 #include "http_headers.h"
 #include "http_parser.h"
 
+class Connection;
+
 class HttpMessage {
 public:
     bool consume(boost::asio::streambuf& buffer);
@@ -34,7 +36,7 @@ private:
     static int MessageCompleteCallback(http_parser *parser);
 
 protected:
-    HttpMessage(http_parser_type type);
+    HttpMessage(std::shared_ptr<Connection> connection, http_parser_type type);
     virtual ~HttpMessage() = default;
 
     // this method should be overridden in HttpRequest
@@ -53,6 +55,8 @@ protected:
 
     HttpHeaders headers_;
     boost::asio::streambuf body_;
+
+    std::weak_ptr<Connection> connection_;
 
 private:
     static http_parser_settings settings_;

@@ -7,8 +7,19 @@
 class ServerConnection : public Connection, public Counter<ServerConnection> {
 public:
     ServerConnection(std::shared_ptr<Session> session);
-    virtual ~ServerConnection();
+    virtual ~ServerConnection() = default;
 
+    void host(const std::string& host) { host_ = host; }
+
+    void port(unsigned short port) { port_ = port; }
+
+    virtual void OnHeadersComplete();
+    virtual void OnBody();
+    virtual void OnBodyComplete();
+
+    virtual void init();
+
+private:
     virtual void connect();
 
     virtual void OnRead(const boost::system::error_code& e);
@@ -18,14 +29,6 @@ public:
     virtual void OnTimeout(const boost::system::error_code& e);
 
     virtual void OnConnected(const boost::system::error_code& e);
-
-    virtual void NewDataCallback(std::shared_ptr<Session> session);
-
-    virtual void CompleteCallback(std::shared_ptr<Session> session);
-
-    void host(const std::string& host) { host_ = host; }
-
-    void port(unsigned short port) { port_ = port; }
 
 private:
     std::string host_;

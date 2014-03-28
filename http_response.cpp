@@ -1,7 +1,8 @@
+#include "connection.h"
 #include "http_response.h"
 
-HttpResponse::HttpResponse()
-    : HttpMessage(HTTP_RESPONSE),
+HttpResponse::HttpResponse(std::shared_ptr<Connection> connection)
+    : HttpMessage(connection, HTTP_RESPONSE),
       status_code_(0),
       header_serialized_(false),
       body_serialized_position_(0) {}
