@@ -22,9 +22,12 @@ bool HttpRequest::serialize(boost::asio::streambuf& out_buffer) {
 
     headers_.serialize(out_buffer);
 
-    if (body_.size() > 0)
-        boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
-                                 boost::asio::buffer(body_.data(), body_.size()));
+    if (body_.size() > 0) {
+        std::size_t copied = boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
+                                                      boost::asio::buffer(body_.data(), body_.size()));
+        assert(copied == body_.size());
+        out_buffer.commit(copied);
+    }
     return true;
 }
 

@@ -32,19 +32,17 @@ bool HttpResponse::serialize(boost::asio::streambuf& out_buffer) {
             << ' ' << status_code_ << ' ' << status_message_
             << "\r\n";
         headers_.serialize(out_buffer);
-
-        if (body_.size() > 0)
-            boost::asio::buffer_copy(out_buffer.prepare(body_.size()),
-                                     boost::asio::buffer(body_.data(), body_.size()));
-        body_serialized_position_ = body_.size();
-
-        return true;
     }
 
-    if (body_.size() - body_serialized_position_ > 0)
-        boost::asio::buffer_copy(out_buffer.prepare(body_.size() - body_serialized_position_),
-                                 boost::asio::buffer(body_.data() + body_serialized_position_, body_.size()));
-    body_serialized_position_ = body_.size();
+    std::size_t actual_size = body_.size() - body_serialized_position_;
+    if (actual_size > 0) {
+        std::size_t copied = boost::asio::buffer_copy(out_buffer.prepare(actual_size),
+                                                      boost::asio::buffer(body_.data() + body_serialized_position_,
+                                                                          actual_size));
+        assert(copied == actual_size);
+        out_buffer.commit(copied);
+        body_serialized_position_ += copied;
+    }
     return true;
 }
 
