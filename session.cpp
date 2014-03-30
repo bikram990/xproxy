@@ -11,6 +11,7 @@ Session::Session(ProxyServer &server)
     : server_(server),
       manager_(server.SessionManager()),
       service_(server.service()),
+      https_(false),
       stopped_(false) {}
 
 Session::~Session() {
@@ -43,18 +44,29 @@ void Session::stop() {
 }
 
 void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
-    // TODO handle https CONNECT request here
+    auto req = std::static_pointer_cast<HttpRequest>(request);
+    if (req->method().length() == 7
+            && req->method()[0] == 'C' && req->method()[1] == 'O') {
+        static std::string ssl_response("HTTP/1.1 200 Connection Established\r\n"
+                                        "Content-Length: 0\r\n"
+                                        "Connection: keep-alive\r\n"
+                                        "Proxy-Connection: keep-alive\r\n\r\n");
+        https_ = true;
+
+        std::ostream out(&client_connection_->OutBuffer());
+        out << ssl_response;
+        client_connection_->WriteSSLReply();
+        return;
+    }
+
     if (!request->serialize(server_connection_->OutBuffer())) {
         XERROR_WITH_ID << "Error occurred during serialization request.";
         destroy();
         return;
     }
 
-    // TODO enhance the logic here
-    std::string host;
-    request->headers().find("Host", host);
-   server_connection_->host(host);
-   server_connection_->port(80);
+    server_connection_->host(client_connection_->host());
+    server_connection_->port(client_connection_->port());
     // server_connection_->host("10.64.1.186");
     // server_connection_->port(8080);
 
@@ -76,4 +88,5 @@ void Session::OnResponseComplete(std::shared_ptr<HttpMessage> response) {
 
     server_connection_->OnMessageExchangeComplete();
     client_connection_->OnMessageExchangeComplete();
+
 }

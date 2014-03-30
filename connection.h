@@ -19,6 +19,14 @@ public:
 
     socket_type& socket() { return socket_->socket(); }
 
+    const std::string& host() const { return host_; }
+
+    unsigned short port() const { return port_; }
+
+    void host(const std::string& host) { host_ = host; }
+
+    void port(unsigned short port) { port_ = port; }
+
     // in class ServerConnection, this method should be overridden
     virtual void OnHeadersComplete() {}
 
@@ -76,6 +84,9 @@ protected:
     boost::asio::streambuf buffer_out_;
 
     std::shared_ptr<HttpMessage> message_;
+
+    std::string host_;
+    unsigned short port_;
 
 private:
     DISABLE_COPY_AND_ASSIGNMENT(Connection);

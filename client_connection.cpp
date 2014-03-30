@@ -1,6 +1,8 @@
+#include <boost/lexical_cast.hpp>
 #include "client_connection.h"
 #include "http_request.h"
 #include "log.h"
+#include "resource_manager.h"
 #include "session.h"
 
 ClientConnection::ClientConnection(std::shared_ptr<Session> session)
@@ -25,8 +27,50 @@ void ClientConnection::OnMessageExchangeComplete() {
 void ClientConnection::OnBodyComplete() {
     XDEBUG_WITH_ID << "The request is completed.";
     std::shared_ptr<Session> session(session_.lock());
-    if (session)
+    if (session) {
+        ParseRemotePeer(session);
         service_.post(std::bind(&Session::OnRequestComplete, session, message_));
+    }
+}
+
+void ClientConnection::ParseRemotePeer(const std::shared_ptr<Session>& session) {
+    if (session->https() || !message_->HeaderCompleted())
+        return;
+
+    auto request = std::static_pointer_cast<HttpRequest>(message_);
+    auto& method = request->method();
+    if (method.length() == 7 && method[0] == 'C' && method[1] == 'O') {
+        host_ = request->url();
+        port_ = 443;
+
+        auto sep = host_.find(':');
+        if (sep != std::string::npos) {
+            port_ = boost::lexical_cast<unsigned short>(host_.substr(sep + 1));
+            host_ = host_.substr(0, sep);
+        }
+    } else {
+        port_ = 80;
+        if (!message_->headers().find("Host", host_)) {
+            XERROR_WITH_ID << "Host header not found, this should never happen.";
+            DestroySession();
+            return;
+        }
+
+        auto sep = host_.find(':');
+        if (sep != std::string::npos) {
+            port_ = boost::lexical_cast<unsigned short>(host_.substr(sep + 1));
+            host_ = host_.substr(0, sep);
+        }
+    }
+}
+
+void ClientConnection::WriteSSLReply() {
+    socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
+                                                  buffer_out_.size()),
+                              std::bind(&ClientConnection::OnSSL,
+                                        std::static_pointer_cast<ClientConnection>(shared_from_this()),
+                                        std::placeholders::_1,
+                                        std::placeholders::_2));
 }
 
 void ClientConnection::OnRead(const boost::system::error_code& e, std::size_t) {
@@ -95,4 +139,23 @@ void ClientConnection::OnTimeout(const boost::system::error_code& e) {
         XDEBUG_WITH_ID << "Client socket timed out, close it.";
         DestroySession();
     }
+}
+
+void ClientConnection::OnSSL(const boost::system::error_code& e, std::size_t length) {
+    if (e) {
+        XERROR_WITH_ID << "Error occurred during writing SSL OK reply to client connection, message: "
+                       << e.message();
+        DestroySession();
+        return;
+    }
+
+    auto ca = ResourceManager::GetCertManager().GetCertificate(host_);
+    auto dh = ResourceManager::GetCertManager().GetDHParameters();
+    socket_->SwitchProtocol(kHttps, kServer, ca, dh);
+
+    // because we have decoded "CONNECT..." request, so we reset it here
+    // to decode new request
+    message_->reset();
+
+    read();
 }

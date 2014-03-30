@@ -14,6 +14,10 @@ public:
 
     virtual int OnUrl(const char *at, std::size_t length);
 
+    const std::string& method() const { return method_; }
+
+    const std::string& url() const { return url_; }
+
 private:
     std::string method_;
     std::string url_;

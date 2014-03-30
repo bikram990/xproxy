@@ -19,6 +19,8 @@ public:
 
     boost::asio::io_service& service() const { return service_; }
 
+    bool https() const { return https_; }
+
     bool stopped() const { return stopped_; }
 
     std::shared_ptr<class ClientConnection> ClientConnection() { return client_connection_; }
@@ -50,6 +52,7 @@ private:
 
     boost::asio::io_service& service_;
 
+    bool https_;
     bool stopped_;
 
     std::shared_ptr<class ClientConnection> client_connection_;

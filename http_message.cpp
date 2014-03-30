@@ -66,6 +66,8 @@ void HttpMessage::reset() {
     ::http_parser_init(&parser_, static_cast<http_parser_type>(parser_.type));
     header_completed_ = false;
     message_completed_ = false;
+    chunked_ = false;
+    callback_choice_ = -1;
     current_header_field_.clear();
     current_header_value_.clear();
     headers_.reset();

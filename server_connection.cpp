@@ -1,6 +1,7 @@
 #include <boost/lexical_cast.hpp>
 #include "http_response.h"
 #include "log.h"
+#include "resource_manager.h"
 #include "server_connection.h"
 #include "session.h"
 
@@ -40,11 +41,11 @@ void ServerConnection::OnBodyComplete() {
 }
 
 void ServerConnection::connect() {
-    // TODO we switch to https mode before we connect to server
-//    if(context_.https) {
-//        server_socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
-//                ResourceManager::CertManager::DHParametersPtr>(kHttps);
-//    }
+    std::shared_ptr<Session> s(session_.lock());
+    if (s && s->https()) {
+        socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
+                    ResourceManager::CertManager::DHParametersPtr>(kHttps);
+    }
 
     try {
         boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));

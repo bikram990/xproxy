@@ -15,11 +15,15 @@ public:
 
     virtual void OnMessageExchangeComplete();
 
+    void WriteSSLReply();
+
 private:
     enum {
         kSocketTimeout = 60,
         kBufferSize = 2048
     };
+
+    void ParseRemotePeer(const std::shared_ptr<Session>& session);
 
     virtual void connect() {} // do nothing here
 
@@ -28,6 +32,8 @@ private:
     virtual void OnWritten(const boost::system::error_code& e, std::size_t length);
 
     virtual void OnTimeout(const boost::system::error_code& e);
+
+    void OnSSL(const boost::system::error_code& e, std::size_t length);
 };
 
 #endif // CLIENT_CONNECTION_H

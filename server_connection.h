@@ -9,10 +9,6 @@ public:
     ServerConnection(std::shared_ptr<Session> session);
     virtual ~ServerConnection() = default;
 
-    void host(const std::string& host) { host_ = host; }
-
-    void port(unsigned short port) { port_ = port; }
-
     virtual void OnBody();
     virtual void OnBodyComplete();
 
@@ -37,8 +33,6 @@ private:
     virtual void OnConnected(const boost::system::error_code& e);
 
 private:
-    std::string host_;
-    unsigned short port_;
     boost::asio::ip::tcp::resolver resolver_;
 };
 
