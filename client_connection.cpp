@@ -4,7 +4,7 @@
 #include "session.h"
 
 ClientConnection::ClientConnection(std::shared_ptr<Session> session)
-    : Connection(session, 60, 2048) {} // TODO
+    : Connection(session, kSocketTimeout, kBufferSize) {}
 
 void ClientConnection::init() {
     message_.reset(new HttpRequest(shared_from_this()));
@@ -14,14 +14,11 @@ void ClientConnection::init() {
 void ClientConnection::OnMessageExchangeComplete() {
     if (message_->KeepAlive()) {
         reset();
-        timer_.expires_from_now(timeout_);
-        timer_.async_wait(std::bind(&ClientConnection::OnTimeout,
-                                    std::static_pointer_cast<ClientConnection>(shared_from_this()),
-                                    std::placeholders::_1));
+        StartTimer();
         read();
     } else {
         XDEBUG_WITH_ID << "The client side does not want to keep the connection alive, destroy the session...";
-        // TODO more code here
+        DestroySession();
     }
 }
 
@@ -35,14 +32,13 @@ void ClientConnection::OnBodyComplete() {
 void ClientConnection::OnRead(const boost::system::error_code& e, std::size_t) {
     if (timer_triggered_) {
         XDEBUG_WITH_ID << "Client socket timed out, abort reading.";
-        timer_triggered_ = false;
+        DestroySession();
         return;
     }
 
-    //if(server_.state() == ProxyServer::kStopped) {
-    if (false) { // TODO change the value here
-        XDEBUG_WITH_ID << "xProxy server is stopping, abort reading.";
-        timer_.cancel();
+    if (SessionInvalidated()) {
+        XDEBUG_WITH_ID << "Session is invalidated, abort reading.";
+        CancelTimer();
         return;
     }
 
@@ -52,22 +48,22 @@ void ClientConnection::OnRead(const boost::system::error_code& e, std::size_t) {
         else
             XERROR_WITH_ID << "Error occurred during reading from socket, message: "
                            << e.message();
-        timer_.cancel();
-        // TODO add logic here
+        CancelTimer();
+        DestroySession();
         return;
     }
 
-    timer_.cancel();
+    CancelTimer();
 
     if(buffer_in_.size() <= 0) {
         XWARN_WITH_ID << "No data in buffer.";
-        // TODO add logic here
+        DestroySession();
         return;
     }
 
-    XDEBUG_WITH_ID << "OnRead() called in client connection, dump content:\n"
-                   << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()),
-                                  buffer_in_.size());
+    XDEBUG_WITH_ID_X << "OnRead() called in client connection, dump content:\n"
+                     << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()),
+                                    buffer_in_.size());
 
     ConstructMessage();
 }
@@ -76,7 +72,7 @@ void ClientConnection::OnWritten(const boost::system::error_code& e, std::size_t
     if(e) {
         XERROR_WITH_ID << "Error occurred during writing to client socket, message: "
                        << e.message();
-        // TODO add logic here
+        DestroySession();
         return;
     }
 
@@ -97,7 +93,6 @@ void ClientConnection::OnTimeout(const boost::system::error_code& e) {
                        << e.message();
     else if (timer_.expires_at() <= boost::asio::deadline_timer::traits_type::now()) {
         XDEBUG_WITH_ID << "Client socket timed out, close it.";
-        timer_triggered_ = true;
-        // TODO add logic here
+        DestroySession();
     }
 }

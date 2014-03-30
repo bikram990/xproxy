@@ -21,6 +21,11 @@ public:
     virtual void OnMessageExchangeComplete();
 
 private:
+    enum {
+        kSocketTimeout = 15,
+        kBufferSize = 8192
+    };
+
     virtual void connect();
 
     virtual void OnRead(const boost::system::error_code& e, std::size_t);

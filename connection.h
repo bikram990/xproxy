@@ -37,7 +37,7 @@ public:
 protected:
     Connection(std::shared_ptr<Session> session,
                long timeout = 30,
-               std::size_t buffer_size = 8192); // TODO
+               std::size_t buffer_size = 8192);
     virtual ~Connection() = default;
 
     virtual void init() = 0;
@@ -52,6 +52,12 @@ protected:
 
     void reset();
 
+    // some helper functions
+    bool SessionInvalidated();
+    void DestroySession();
+    void StartTimer();
+    void CancelTimer();
+
 protected:
     std::weak_ptr<Session> session_;
 
@@ -59,6 +65,7 @@ protected:
 
     boost::asio::deadline_timer timer_;
     boost::posix_time::seconds timeout_;
+    bool timer_running_;
     bool timer_triggered_;
 
     std::unique_ptr<Socket> socket_;

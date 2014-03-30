@@ -5,7 +5,7 @@
 #include "session.h"
 
 ServerConnection::ServerConnection(std::shared_ptr<Session> session)
-    : Connection(session, 15), resolver_(session->service()) {} // TODO
+    : Connection(session, kSocketTimeout, kBufferSize), resolver_(session->service()) {}
 
 void ServerConnection::init() {
     message_.reset(new HttpResponse(shared_from_this()));
@@ -13,10 +13,7 @@ void ServerConnection::init() {
 
 void ServerConnection::OnMessageExchangeComplete() {
     if (message_->KeepAlive()) {
-        timer_.expires_from_now(timeout_);
-        timer_.async_wait(std::bind(&ServerConnection::OnTimeout,
-                                    std::static_pointer_cast<ServerConnection>(shared_from_this()),
-                                    std::placeholders::_1));
+        StartTimer();
     } else {
         XDEBUG_WITH_ID << "The server side does not want to keep the connection alive, close it.";
         connected_ = false;
@@ -43,7 +40,7 @@ void ServerConnection::OnBodyComplete() {
 }
 
 void ServerConnection::connect() {
-    // we switch to https mode before we connect to server
+    // TODO we switch to https mode before we connect to server
 //    if(context_.https) {
 //        server_socket_->SwitchProtocol<ResourceManager::CertManager::CAPtr,
 //                ResourceManager::CertManager::DHParametersPtr>(kHttps);
@@ -59,25 +56,18 @@ void ServerConnection::connect() {
 
         socket_->async_connect(endpoint_iterator,
                                std::bind(&ServerConnection::OnConnected,
-                                         this, // TODO
+                                         std::static_pointer_cast<ServerConnection>(shared_from_this()),
                                          std::placeholders::_1));
         } catch(const boost::system::system_error& e) {
             XERROR_WITH_ID << "Failed to resolve [" << host_ << ":" << port_ << "], error: " << e.what();
-            // TODO add logic here
+            DestroySession();
         }
 }
 
 void ServerConnection::OnRead(const boost::system::error_code& e, std::size_t) {
-    if (timer_triggered_) {
-        XDEBUG_WITH_ID << "Server socket timed out, abort reading.";
-        timer_triggered_ = false;
-        return;
-    }
-
-    //if(server_.state() == ProxyServer::kStopped) {
-    if (false) { // TODO
-        XDEBUG_WITH_ID << "xProxy server is stopping, abort reading from server.";
-        timer_.cancel();
+    if (SessionInvalidated()) {
+        XDEBUG_WITH_ID << "Session is invalidated, abort reading.";
+        CancelTimer();
         return;
     }
 
@@ -89,36 +79,35 @@ void ServerConnection::OnRead(const boost::system::error_code& e, std::size_t) {
         } else {
             XERROR_WITH_ID << "Error occurred during reading from server socket, message: "
                            << e.message();
-            // TODO add logic here
+            DestroySession();
             return;
         }
     }
 
     if(buffer_in_.size() <= 0) {
         XWARN_WITH_ID << "No data in server socket.";
-        // TODO add logic here
+        DestroySession();
         return;
     }
 
-    XDEBUG_WITH_ID << "OnRead() called in server connection, dump content:\n"
-                   << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()),
-                                  buffer_in_.size());
+    XDEBUG_WITH_ID_X << "OnRead() called in server connection, dump content:\n"
+                     << std::string(boost::asio::buffer_cast<const char*>(buffer_in_.data()),
+                                    buffer_in_.size());
 
     ConstructMessage();
 }
 
 void ServerConnection::OnWritten(const boost::system::error_code& e, std::size_t length) {
-    // if(server_.state() == ProxyServer::kStopped) {
-    if (false) { // TODO
-        XDEBUG_WITH_ID << "xProxy server is stopping, abort writing to server.";
-        timer_.cancel();
+    if (SessionInvalidated()) {
+        XDEBUG_WITH_ID << "Session is invalidated, abort writing to server.";
+        CancelTimer();
         return;
     }
 
     if (e) {
         XERROR_WITH_ID << "Error occurred during writing to server connection, message: "
                        << e.message();
-        // TODO add logic here
+        DestroySession();
         return;
     }
 
@@ -152,7 +141,7 @@ void ServerConnection::OnConnected(const boost::system::error_code& e) {
     if (e) {
         XERROR_WITH_ID << "Error occurred during connecting to remote peer, message: "
                        << e.message();
-        // TODO add logic here
+        DestroySession();
         return;
     }
 

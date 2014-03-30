@@ -27,4 +27,11 @@ void InitLogging(const std::string& conf_file = "xproxy.conf");
 #define XERROR_WITH_ID xproxy::log::logger << log4cpp::Priority::ERROR << META_INFO << "[id: " << id() << "] "
 #define XFATAL_WITH_ID xproxy::log::logger << log4cpp::Priority::FATAL << META_INFO << "[id: " << id() << "] "
 
+#define XDEBUG_X if (xproxy::log::logger.isDebugEnabled()) \
+    xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO
+
+#define XDEBUG_WITH_ID_X if (xproxy::log::logger.isDebugEnabled()) \
+    xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO << "[id: " << id() << "] "
+
+
 #endif // LOG_H

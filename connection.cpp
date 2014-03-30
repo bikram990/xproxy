@@ -10,6 +10,7 @@ Connection::Connection(std::shared_ptr<Session> session,
       service_(session->service()),
       timer_(session->service()),
       timeout_(timeout),
+      timer_running_(false),
       timer_triggered_(false),
       socket_(Socket::Create(session->service())),
       connected_(false),
@@ -36,10 +37,9 @@ void Connection::write() {
         return;
     }
 
-    // TODO enhance the performance here
-    XDEBUG << "write() called, dump content to be written:\n"
-           << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
-                          buffer_out_.size());
+    XDEBUG_X << "write() called, dump content to be written:\n"
+             << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
+                            buffer_out_.size());
 
     socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
                                                   buffer_out_.size()),
@@ -81,4 +81,34 @@ void Connection::reset() {
 
     if (buffer_out_.size() > 0)
         buffer_out_.consume(buffer_out_.size());
+}
+
+bool Connection::SessionInvalidated() {
+    std::shared_ptr<Session> s(session_.lock());
+    if (!s || s->stopped())
+        return true;
+    return false;
+}
+
+void Connection::DestroySession() {
+    std::shared_ptr<Session> s(session_.lock());
+    if (!s)
+        return;
+    s->destroy();
+}
+
+void Connection::StartTimer() {
+    timer_running_ = true;
+    timer_.expires_from_now(timeout_);
+    auto self(shared_from_this());
+    timer_.async_wait([this, self] (const boost::system::error_code& e) {
+        timer_running_	= false;
+        timer_triggered_ = true;
+        OnTimeout(e);
+    });
+}
+
+void Connection::CancelTimer() {
+    if (timer_running_)
+        timer_.cancel();
 }
