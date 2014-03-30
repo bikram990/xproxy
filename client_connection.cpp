@@ -65,6 +65,7 @@ void ClientConnection::ParseRemotePeer(const std::shared_ptr<Session>& session) 
 }
 
 void ClientConnection::WriteSSLReply() {
+    XDEBUG_WITH_ID << "Writing SSL reply to client...";
     socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
                                                   buffer_out_.size()),
                               std::bind(&ClientConnection::OnSSL,
@@ -148,6 +149,14 @@ void ClientConnection::OnSSL(const boost::system::error_code& e, std::size_t len
         DestroySession();
         return;
     }
+
+    buffer_out_.consume(length);
+    if (buffer_out_.size() > 0) {
+        XWARN_WITH_ID << "The SSL writing operation does not write all data in out buffer!";
+        WriteSSLReply();
+    }
+
+    XDEBUG_WITH_ID << "SSL reply has been written to client, now start reading...";
 
     auto ca = ResourceManager::GetCertManager().GetCertificate(host_);
     auto dh = ResourceManager::GetCertManager().GetDHParameters();
