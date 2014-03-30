@@ -2,6 +2,16 @@
 #include "http_message.h"
 #include "log.h"
 
+#define CRLF "\r\n"
+#define END_CHUNK "0\r\n\r\n"
+
+typedef void(Connection::*callback_ptr)();
+std::vector<callback_ptr> HttpMessage::callbacks_ = {
+    &Connection::OnHeadersComplete,
+    &Connection::OnBody,
+    &Connection::OnBodyComplete
+};
+
 http_parser_settings HttpMessage::settings_ = {
     &HttpMessage::MessageBeginCallback,
     &HttpMessage::UrlCallback,
@@ -16,7 +26,9 @@ http_parser_settings HttpMessage::settings_ = {
 HttpMessage::HttpMessage(std::shared_ptr<Connection> connection, http_parser_type type)
     : header_completed_(false),
       message_completed_(false),
-      connection_(connection) {
+      connection_(connection),
+      chunked_(false),
+      callback_choice_(-1) {
     ::http_parser_init(&parser_, type);
     parser_.data = this;
 }
@@ -27,6 +39,13 @@ bool HttpMessage::consume(boost::asio::streambuf& buffer) {
                                                  boost::asio::buffer_cast<const char *>(buffer.data()),
                                                  buffer.size());
     buffer.consume(consumed);
+
+    if (callback_choice_ >= 0 && callback_choice_ < callbacks_.size()) {
+        std::shared_ptr<Connection> c(connection_.lock());
+        if (c)
+            c->service().post(std::bind(callbacks_[callback_choice_], c));
+    }
+
     if (consumed != orig_size) {
         if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {
             XERROR << "Error occurred during message parsing, error code: "
@@ -107,9 +126,11 @@ int HttpMessage::HeadersCompleteCallback(http_parser *parser) {
     }
     m->header_completed_ = true;
 
-    std::shared_ptr<Connection> c(m->connection_.lock());
-    if (c)
-        c->service().post(std::bind(&Connection::OnHeadersComplete, c));
+    if (m->parser_.flags & F_CHUNKED)
+        m->chunked_ = true;
+
+    XDEBUG << "header complete";
+    m->callback_choice_ = kHeadersComplete;
 
     return 0;
 }
@@ -118,12 +139,21 @@ int HttpMessage::BodyCallback(http_parser *parser, const char *at, std::size_t l
     HttpMessage *m = static_cast<HttpMessage*>(parser->data);
     assert(m);
 
+    if (m->chunked_) {
+        std::ostream out(&m->body_);
+        out << std::hex << length;
+        out.copyfmt(std::ios(nullptr));
+        out << CRLF;
+    }
     boost::asio::buffer_copy(m->body_.prepare(length), boost::asio::buffer(at, length));
     m->body_.commit(length);
+    if (m->chunked_) {
+        std::ostream out(&m->body_);
+        out << CRLF;
+    }
 
-    std::shared_ptr<Connection> c(m->connection_.lock());
-    if (c)
-        c->service().post(std::bind(&Connection::OnBody, c));
+    XDEBUG << "body";
+    m->callback_choice_ = kBody;
 
     return 0;
 }
@@ -132,11 +162,15 @@ int HttpMessage::MessageCompleteCallback(http_parser *parser) {
     HttpMessage *m = static_cast<HttpMessage*>(parser->data);
     assert(m);
 
+    if (m->chunked_) {
+        std::ostream out(&m->body_);
+        out << END_CHUNK;
+    }
+
     m->message_completed_ = true;
 
-    std::shared_ptr<Connection> c(m->connection_.lock());
-    if (c)
-        c->service().post(std::bind(&Connection::OnBodyComplete, c));
+    XDEBUG << "message complete";
+    m->callback_choice_ = kBodyComplete;
 
     return 0;
 }

@@ -9,6 +9,8 @@ class Connection;
 
 class HttpMessage {
 public:
+    typedef void(Connection::*callback_ptr)();
+
     bool consume(boost::asio::streambuf& buffer);
 
     virtual bool serialize(boost::asio::streambuf& out_buffer) = 0;
@@ -64,7 +66,14 @@ protected:
 
     std::weak_ptr<Connection> connection_;
 
-private:
+private: // some helper members
+    enum { kHeadersComplete = 0, kBody, kBodyComplete };
+
+    bool chunked_;
+
+    int callback_choice_;
+
+    static std::vector<callback_ptr> callbacks_;
     static http_parser_settings settings_;
 
 private:
