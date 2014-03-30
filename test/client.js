@@ -13,6 +13,9 @@ socket.connect(PORT, HOST, function() {
 
 socket.on('data', function(data) {
     console.log('Response: ' + data);
+});
+
+socket.on('end', function() {
     socket.destroy();
 });
 
