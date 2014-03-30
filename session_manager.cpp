@@ -13,6 +13,8 @@ void SessionManager::stop(std::shared_ptr<Session> session) {
 
 void SessionManager::StopAll() {
     std::for_each(sessions_.begin(), sessions_.end(),
-                  boost::bind(&Session::stop, _1));
+                  [](std::shared_ptr<Session> session) {
+                      session->stop();
+                  });
     sessions_.clear();
 }

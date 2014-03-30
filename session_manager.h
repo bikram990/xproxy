@@ -2,13 +2,12 @@
 #define SESSION_MANAGER_H
 
 #include <set>
-#include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
+#include "common.h"
 
 class ProxyServer;
 class Session;
 
-class SessionManager : private boost::noncopyable {
+class SessionManager {
     friend class ProxyServer;
 public:
     void start(std::shared_ptr<Session> session);
@@ -19,6 +18,9 @@ private:
     SessionManager() {}
 
     std::set<std::shared_ptr<Session>> sessions_;
+
+private:
+    DISABLE_COPY_AND_ASSIGNMENT(SessionManager);
 };
 
 #endif // SESSION_MANAGER_H
