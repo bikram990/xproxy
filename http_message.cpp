@@ -131,7 +131,6 @@ int HttpMessage::HeadersCompleteCallback(http_parser *parser) {
     if (m->parser_.flags & F_CHUNKED)
         m->chunked_ = true;
 
-    XDEBUG << "header complete";
     m->callback_choice_ = kHeadersComplete;
 
     return 0;
@@ -154,7 +153,6 @@ int HttpMessage::BodyCallback(http_parser *parser, const char *at, std::size_t l
         out << CRLF;
     }
 
-    XDEBUG << "body";
     m->callback_choice_ = kBody;
 
     return 0;
@@ -171,7 +169,6 @@ int HttpMessage::MessageCompleteCallback(http_parser *parser) {
 
     m->message_completed_ = true;
 
-    XDEBUG << "message complete";
     m->callback_choice_ = kBodyComplete;
 
     return 0;
