@@ -1,6 +1,7 @@
 #ifndef SESSION_MANAGER_H
 #define SESSION_MANAGER_H
 
+#include <mutex>
 #include <set>
 #include "common.h"
 
@@ -18,6 +19,7 @@ private:
     SessionManager() {}
 
     std::set<std::shared_ptr<Session>> sessions_;
+    std::mutex lock_;
 
 private:
     DISABLE_COPY_AND_ASSIGNMENT(SessionManager);
