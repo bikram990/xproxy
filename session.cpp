@@ -53,15 +53,7 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
                                         "Proxy-Connection: keep-alive\r\n\r\n");
         https_ = true;
 
-        std::ostream out(&client_connection_->OutBuffer());
-        out << ssl_response;
-        client_connection_->WriteSSLReply();
-        return;
-    }
-
-    if (!request->serialize(server_connection_->OutBuffer())) {
-        XERROR_WITH_ID << "Error occurred during serialization request.";
-        destroy();
+        client_connection_->WriteSSLReply(ssl_response);
         return;
     }
 
@@ -70,24 +62,11 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
     // server_connection_->host("10.64.1.186");
     // server_connection_->port(8080);
 
-    server_connection_->write();
+    server_connection_->write(request);
 }
 
 void Session::OnResponse(std::shared_ptr<HttpMessage> response) {
-    std::lock_guard<std::mutex> lock(client_connection_->OutBufferLock());
-    auto& buf = client_connection_->OutBuffer();
-    bool owner = false;
-    if (buf.size() <= 0)
-        owner = true;
-
-    if (!response->serialize(buf)) {
-        XERROR_WITH_ID << "Error occurred during serialization response.";
-        destroy();
-        return;
-    }
-
-    if (owner)
-        client_connection_->write();
+    client_connection_->write(response);
 }
 
 void Session::OnResponseComplete(std::shared_ptr<HttpMessage> response) {

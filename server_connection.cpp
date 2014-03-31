@@ -112,12 +112,20 @@ void ServerConnection::OnWritten(const boost::system::error_code& e, std::size_t
         return;
     }
 
-    buffer_out_.consume(length);
-    if (buffer_out_.size() > 0) {
+    std::lock_guard<std::mutex> lock(lock_);
+    buffer_out_.front()->consume(length);
+    if (buffer_out_.front()->size() > 0) {
         XWARN_WITH_ID << "The writing operation does not write all data in out buffer!";
         write();
         return;
     }
+    buffer_out_.pop_front();
+    if (!buffer_out_.empty()) {
+        XDEBUG_WITH_ID << "Seems other write operations added data to out buffers.";
+        write();
+        return;
+    }
+    writing_ = false;
 
     XDEBUG_WITH_ID << "Data has been written to server connection, now start reading...";
 
@@ -145,8 +153,8 @@ void ServerConnection::OnConnected(const boost::system::error_code& e) {
                        << "host: " << host_ << "\n"
                        << "port: " << port_ << "\n"
                        << "request content: \n"
-                       << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
-                                      buffer_out_.size());
+                       << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.front()->data()),
+                                      buffer_out_.front()->size());
         DestroySession();
         return;
     }

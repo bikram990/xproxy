@@ -14,6 +14,15 @@ void ClientConnection::init() {
 }
 
 void ClientConnection::OnMessageExchangeComplete() {
+    if (writing_) {
+        std::lock_guard<std::mutex> lock(lock_);
+        if (writing_) {
+            service_.post(std::bind(&ClientConnection::OnMessageExchangeComplete,
+                                    std::static_pointer_cast<ClientConnection>(shared_from_this())));
+            return;
+        }
+    }
+
     if (message_->KeepAlive()) {
         reset();
         StartTimer();
@@ -64,10 +73,31 @@ void ClientConnection::ParseRemotePeer(const std::shared_ptr<Session>& session) 
     }
 }
 
-void ClientConnection::WriteSSLReply() {
+void ClientConnection::WriteSSLReply(const std::string& reply) {
     XDEBUG_WITH_ID << "Writing SSL reply to client...";
-    socket_->async_write_some(boost::asio::buffer(buffer_out_.data(),
-                                                  buffer_out_.size()),
+    auto buf = std::make_shared<boost::asio::streambuf>();
+    std::ostream out(buf.get());
+    out << reply;
+
+    std::lock_guard<std::mutex> lock(lock_); // TODO in fact, there is no need to lock
+    assert(buffer_out_.empty());
+    assert(!writing_);
+//    if (!buffer_out_.empty()) {
+//        XERROR_WITH_ID << "Hey, the out buffers are not empty while writing SSL reply!";
+//        DestroySession();
+//        return;
+//    }
+//    if (writing_) {
+//        XERROR_WITH_ID << "Oh, connection is writing while writing SSL reply!";
+//        DestroySession();
+//        return;
+//    }
+
+    buffer_out_.push_back(buf);
+
+    writing_ = true;
+    socket_->async_write_some(boost::asio::buffer(buffer_out_.front()->data(),
+                                                  buffer_out_.front()->size()),
                               std::bind(&ClientConnection::OnSSL,
                                         std::static_pointer_cast<ClientConnection>(shared_from_this()),
                                         std::placeholders::_1,
@@ -124,11 +154,20 @@ void ClientConnection::OnWritten(const boost::system::error_code& e, std::size_t
     XDEBUG_WITH_ID << "Content has been written to client connection.";
 
     std::lock_guard<std::mutex> lock(lock_);
-    buffer_out_.consume(length);
-    if (buffer_out_.size() > 0) {
-        XDEBUG_WITH_ID << "Seems other write operation added new data in buffer.";
+    buffer_out_.front()->consume(length);
+    if (buffer_out_.front()->size() > 0) {
+        XWARN_WITH_ID << "The writing operation does not write all data in out buffer!";
         write();
+        return;
     }
+    buffer_out_.pop_front();
+    if (!buffer_out_.empty()) {
+        XDEBUG_WITH_ID << "Seems other write operations added data to out buffers.";
+        write();
+        return;
+    }
+
+    writing_ = false;
 }
 
 void ClientConnection::OnTimeout(const boost::system::error_code& e) {
@@ -151,11 +190,21 @@ void ClientConnection::OnSSL(const boost::system::error_code& e, std::size_t len
         return;
     }
 
-    buffer_out_.consume(length);
-    if (buffer_out_.size() > 0) {
+    std::lock_guard<std::mutex> lock(lock_); // TODO lock is not needed
+    buffer_out_.front()->consume(length);
+    if (buffer_out_.front()->size() > 0) {
         XWARN_WITH_ID << "The SSL writing operation does not write all data in out buffer!";
-        WriteSSLReply();
+        socket_->async_write_some(boost::asio::buffer(buffer_out_.front()->data(),
+                                                      buffer_out_.front()->size()),
+                                  std::bind(&ClientConnection::OnSSL,
+                                            std::static_pointer_cast<ClientConnection>(shared_from_this()),
+                                            std::placeholders::_1,
+                                            std::placeholders::_2));
+        return;
     }
+    buffer_out_.pop_front();
+    assert(buffer_out_.empty());
+    writing_ = false;
 
     XDEBUG_WITH_ID << "SSL reply has been written to client, now start reading...";
 

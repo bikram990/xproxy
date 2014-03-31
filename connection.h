@@ -1,7 +1,9 @@
 #ifndef CONNECTION_H
 #define CONNECTION_H
 
+#include <deque>
 #include <memory>
+#include <mutex>
 #include "common.h"
 #include "socket.h"
 
@@ -10,12 +12,10 @@ class Session;
 
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
-    virtual void read();
-    virtual void write();
+    void read();
+    void write(std::shared_ptr<HttpMessage> message);
 
     boost::asio::io_service& service() { return service_; }
-
-    boost::asio::streambuf& OutBuffer() { return buffer_out_; }
 
     socket_type& socket() { return socket_->socket(); }
 
@@ -58,6 +58,8 @@ protected:
 
     virtual void ConstructMessage();
 
+    void write();
+
     void reset();
 
     // some helper functions
@@ -81,7 +83,10 @@ protected:
 
     std::size_t buffer_size_;
     boost::asio::streambuf buffer_in_;
-    boost::asio::streambuf buffer_out_;
+
+    bool writing_;
+    std::deque<std::shared_ptr<boost::asio::streambuf>> buffer_out_;
+    std::mutex lock_; // lock for buffer_out_
 
     std::shared_ptr<HttpMessage> message_;
 

@@ -16,9 +16,7 @@ public:
 
     virtual void OnMessageExchangeComplete();
 
-    void WriteSSLReply();
-
-    std::mutex& OutBufferLock() { return lock_; }
+    void WriteSSLReply(const std::string& reply);
 
 private:
     enum {
@@ -37,9 +35,6 @@ private:
     virtual void OnTimeout(const boost::system::error_code& e);
 
     void OnSSL(const boost::system::error_code& e, std::size_t length);
-
-private:
-    std::mutex lock_;
 };
 
 #endif // CLIENT_CONNECTION_H
