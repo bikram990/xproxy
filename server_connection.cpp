@@ -141,7 +141,12 @@ void ServerConnection::OnTimeout(const boost::system::error_code& e) {
 void ServerConnection::OnConnected(const boost::system::error_code& e) {
     if (e) {
         XERROR_WITH_ID << "Error occurred during connecting to remote peer, message: "
-                       << e.message();
+                       << e.message() << "\nDetailed info:\n"
+                       << "host: " << host_ << "\n"
+                       << "port: " << port_ << "\n"
+                       << "request content: \n"
+                       << std::string(boost::asio::buffer_cast<const char*>(buffer_out_.data()),
+                                      buffer_out_.size());
         DestroySession();
         return;
     }
