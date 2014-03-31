@@ -53,10 +53,10 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
     auto req = std::static_pointer_cast<HttpRequest>(request);
     if (req->method().length() == 7
             && req->method()[0] == 'C' && req->method()[1] == 'O') {
-        static std::string ssl_response("HTTP/1.1 200 Connection Established\r\n"
-                                        "Content-Length: 0\r\n"
-                                        "Connection: keep-alive\r\n"
-                                        "Proxy-Connection: keep-alive\r\n\r\n");
+        const static std::string ssl_response("HTTP/1.1 200 Connection Established\r\n"
+                                              "Content-Length: 0\r\n"
+                                              "Connection: keep-alive\r\n"
+                                              "Proxy-Connection: keep-alive\r\n\r\n");
         https_ = true;
 
         client_connection_->WriteSSLReply(ssl_response);
