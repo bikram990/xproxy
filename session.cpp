@@ -74,13 +74,20 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
 }
 
 void Session::OnResponse(std::shared_ptr<HttpMessage> response) {
-    if (!response->serialize(client_connection_->OutBuffer())) {
+    std::lock_guard<std::mutex> lock(client_connection_->OutBufferLock());
+    auto& buf = client_connection_->OutBuffer();
+    bool owner = false;
+    if (buf.size() <= 0)
+        owner = true;
+
+    if (!response->serialize(buf)) {
         XERROR_WITH_ID << "Error occurred during serialization response.";
         destroy();
         return;
     }
 
-    client_connection_->write();
+    if (owner)
+        client_connection_->write();
 }
 
 void Session::OnResponseComplete(std::shared_ptr<HttpMessage> response) {

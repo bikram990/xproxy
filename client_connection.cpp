@@ -123,9 +123,10 @@ void ClientConnection::OnWritten(const boost::system::error_code& e, std::size_t
 
     XDEBUG_WITH_ID << "Content has been written to client connection.";
 
+    std::lock_guard<std::mutex> lock(lock_);
     buffer_out_.consume(length);
     if (buffer_out_.size() > 0) {
-        XWARN_WITH_ID << "The writing operation does not write all data in out buffer!";
+        XDEBUG_WITH_ID << "Seems other write operation added new data in buffer.";
         write();
     }
 }
