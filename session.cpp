@@ -39,8 +39,14 @@ void Session::destroy() {
 
 void Session::stop() {
     stopped_ = true;
-    client_connection_->socket().close();
-    server_connection_->socket().close();
+    try {
+        client_connection_->socket().close();
+        server_connection_->socket().close();
+    } catch(boost::system::system_error& e) {
+        XERROR << "Error occurred during close socket, code: " << e.code().value()
+               << ", message: " << e.code().message();
+        // do nothing here
+    }
 }
 
 void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
