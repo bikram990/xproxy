@@ -15,7 +15,8 @@ Connection::Connection(std::shared_ptr<Session> session,
       socket_(Socket::Create(session->service())),
       connected_(false),
       buffer_size_(buffer_size),
-      writing_(false) {}
+      out_(std::make_unique<boost::asio::streambuf>()),
+      aux_out_(std::make_unique<boost::asio::streambuf>()) {}
 
 void Connection::read() {
     if (!connected_) {
@@ -33,25 +34,21 @@ void Connection::read() {
 }
 
 void Connection::write(std::shared_ptr<HttpMessage> message) {
-    auto buf = std::make_shared<boost::asio::streambuf>();
+    std::lock_guard<std::mutex> lock(lock_);
+    bool owner = out_->size() <= 0;
+    auto buf = owner ? out_.get() : aux_out_.get();
     if (!message->serialize(*buf)) {
         XERROR << "Error occurred during serialization message.";
         DestroySession();
         return;
     }
 
-    XDEBUG_X << "write() called, dump content to be written:\n"
-             << std::string(boost::asio::buffer_cast<const char*>(buf->data()),
-                            buf->size());
+    const static std::string msg1("write() called, will start a write operation.");
+    const static std::string msg2("write() called, a write operation exists, just write data to out buffer.");
+    XDEBUG << owner ? msg1 : msg2;
 
-    std::lock_guard<std::mutex> lock(lock_);
-
-    buffer_out_.push_back(buf);
-
-    if (!writing_) {
-        writing_ = true;
+    if (owner)
         write();
-    }
 }
 
 void Connection::ConstructMessage() {
@@ -81,8 +78,7 @@ void Connection::write() {
         connect();
         return;
     }
-    socket_->async_write_some(boost::asio::buffer(buffer_out_.front()->data(),
-                                                  buffer_out_.front()->size()),
+    socket_->async_write_some(boost::asio::buffer(out_->data(), out_->size()),
                               std::bind(&Connection::OnWritten,
                                         shared_from_this(),
                                         std::placeholders::_1,
@@ -92,15 +88,15 @@ void Connection::write() {
 void Connection::reset() {
     // TODO should we cancel the timer here?
     timer_triggered_ = false;
-    writing_ = false;
     message_->reset();
 
     if (buffer_in_.size() > 0)
         buffer_in_.consume(buffer_in_.size());
 
-    if (buffer_out_.size() > 0)
-        // buffer_out_.consume(buffer_out_.size());
-        buffer_out_.clear();
+    if (out_->size() > 0)
+        out_->consume(out_->size());
+    if (aux_out_->size() > 0)
+        aux_out_->consume(aux_out_->size());
 }
 
 bool Connection::SessionInvalidated() {

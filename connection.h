@@ -1,7 +1,6 @@
 #ifndef CONNECTION_H
 #define CONNECTION_H
 
-#include <deque>
 #include <memory>
 #include <mutex>
 #include "common.h"
@@ -84,9 +83,9 @@ protected:
     std::size_t buffer_size_;
     boost::asio::streambuf buffer_in_;
 
-    bool writing_;
-    std::deque<std::shared_ptr<boost::asio::streambuf>> buffer_out_;
-    std::mutex lock_; // lock for buffer_out_
+    std::unique_ptr<boost::asio::streambuf> out_;
+    std::unique_ptr<boost::asio::streambuf> aux_out_;
+    std::mutex lock_; // lock for out buffer
 
     std::shared_ptr<HttpMessage> message_;
 
