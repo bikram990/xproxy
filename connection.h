@@ -14,6 +14,25 @@ public:
     void read();
     void write(std::shared_ptr<HttpMessage> message);
 
+    template<typename Data, typename Converter>
+    void write(Data& data, const Converter& convert) {
+        std::lock_guard<std::mutex> lock(lock_);
+        bool owner = out_->size() <= 0;
+        auto buf = owner ? out_.get() : aux_out_.get();
+        if (!convert(data, *buf)) {
+            XERROR << "Error occurred during serialization.";
+            DestroySession();
+            return;
+        }
+
+        const static std::string msg1("write() called, will start a write operation.");
+        const static std::string msg2("write() called, a write operation exists, just write data to out buffer.");
+        XDEBUG << (owner ? msg1 : msg2);
+
+        if (owner)
+            write();
+    }
+
     boost::asio::io_service& service() { return service_; }
 
     socket_type& socket() { return socket_->socket(); }

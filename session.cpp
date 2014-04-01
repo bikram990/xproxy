@@ -68,7 +68,10 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
     // server_connection_->host("10.64.1.186");
     // server_connection_->port(8080);
 
-    server_connection_->write(request);
+    // server_connection_->write(request);
+    server_connection_->write(request, [](std::shared_ptr<HttpMessage>& req, boost::asio::streambuf& buf) -> bool {
+        return req->serialize(buf);
+    });
 }
 
 void Session::OnResponse(std::shared_ptr<HttpMessage> response) {

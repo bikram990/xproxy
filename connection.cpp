@@ -15,8 +15,10 @@ Connection::Connection(std::shared_ptr<Session> session,
       socket_(Socket::Create(session->service())),
       connected_(false),
       buffer_size_(buffer_size),
-      out_(std::make_unique<boost::asio::streambuf>()),
-      aux_out_(std::make_unique<boost::asio::streambuf>()) {}
+      out_(new boost::asio::streambuf),
+      aux_out_(new boost::asio::streambuf) {}
+//      out_(std::make_unique<boost::asio::streambuf>()),
+//      aux_out_(std::make_unique<boost::asio::streambuf>()) {}
 
 void Connection::read() {
     if (!connected_) {
@@ -45,7 +47,7 @@ void Connection::write(std::shared_ptr<HttpMessage> message) {
 
     const static std::string msg1("write() called, will start a write operation.");
     const static std::string msg2("write() called, a write operation exists, just write data to out buffer.");
-    XDEBUG << owner ? msg1 : msg2;
+    XDEBUG << (owner ? msg1 : msg2);
 
     if (owner)
         write();
