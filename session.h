@@ -54,6 +54,7 @@ private:
 
     bool https_;
     bool stopped_;
+    bool is_proxied_;
 
     std::shared_ptr<class ClientConnection> client_connection_;
     std::shared_ptr<ServerConnection> server_connection_;

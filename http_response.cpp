@@ -17,6 +17,10 @@ void HttpResponse::reset() {
 }
 
 bool HttpResponse::serialize(boost::asio::streambuf& out_buffer) {
+    return serialize(out_buffer, false);
+}
+
+bool HttpResponse::serialize(boost::asio::streambuf& out_buffer, bool ignore_headers) {
     // for response, we can serialize many times, but:
     // 1. the first operation must wait for header completed
     // 2. the later operations should only serialize body
@@ -24,7 +28,7 @@ bool HttpResponse::serialize(boost::asio::streambuf& out_buffer) {
     if (!HeaderCompleted())
         return false;
 
-    if (!header_serialized_) {
+    if (!header_serialized_ && !ignore_headers) {
         header_serialized_ = true;
 
         std::ostream out(&out_buffer);

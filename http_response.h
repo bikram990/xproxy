@@ -11,6 +11,7 @@ public:
     virtual void reset();
 
     virtual bool serialize(boost::asio::streambuf& out_buffer);
+    virtual bool serialize(boost::asio::streambuf& out_buffer, bool ignore_headers);
 
     virtual int OnStatus(const char *at, std::size_t length);
 
