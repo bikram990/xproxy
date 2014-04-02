@@ -102,6 +102,7 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
 
     server_connection_->host(ResourceManager::GetServerConfig().GetGAEServerDomain());
     server_connection_->port(443);
+    https_ = true;
     server_connection_->write(proxy_request, [](boost::asio::streambuf& req, boost::asio::streambuf& buf) -> bool {
         boost::asio::buffer_copy(buf.prepare(req.size()), req.data());
         buf.commit(req.size());
