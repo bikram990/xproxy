@@ -1,27 +1,22 @@
 project(xproxy)
 cmake_minimum_required(VERSION 2.8)
-aux_source_directory(. SRC_LIST)
-add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 if(CMAKE_COMPILER_IS_GNUCXX)
     SET(CMAKE_CXX_FLAGS "-std=c++11")
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
     # the follow flag is to fix this issue:
     #   https://github.com/Homebrew/homebrew/issues/22083
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth=256")
 endif()
 
-message(STATUS "release c flags: " ${CMAKE_C_FLAGS_RELEASE})
-message(STATUS "debug c flags: " ${CMAKE_C_FLAGS_DEBUG})
-message(STATUS "release cxx flags: " ${CMAKE_CXX_FLAGS_RELEASE})
-message(STATUS "debug cxx flags: " ${CMAKE_CXX_FLAGS_DEBUG})
-message(STATUS "current build type: " ${CMAKE_BUILD_TYPE})
-message(STATUS "c flags: " ${CMAKE_C_FLAGS})
-message(STATUS "cxx flags: " ${CMAKE_CXX_FLAGS})
-
+set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${INCLUDE_DIR})
+aux_source_directory(${SRC_DIR} SRC_LIST)
+add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 # for http-parser submodule
 set(http-parser_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/http-parser)
