@@ -15,8 +15,10 @@ class ByteBuffer {
 public:
     typedef std::size_t size_type;
     typedef char* pointer_type;
+    typedef const char* const_pointer_type;
     typedef char value_type;
     typedef char& reference_type;
+    typedef const char& const_reference_type;
     typedef char* iterator;
     typedef const char* const_iterator;
 
@@ -81,14 +83,17 @@ public:
         return *this;
     }
 
-    pointer_type data() { return data_; }
+    pointer_type   	data()           { return data_; }
+    const_pointer_type data()     const { return data_; }
+    size_type      	size()     const { return size_; }
+    bool           	empty()    const { return size_ == 0; }
+    size_type      	capacity() const { return capacity_; }
+    iterator       	begin()          { return data_; }
+    const_iterator 	begin()    const { return data_; }
+    iterator       	end()            { return data_ + size_; }
+    const_iterator 	end()      const { return data_ + size_; }
 
-    size_type size() { return size_; }
-
-    size_type capacity() { return capacity_; }
-
-    void reset() { size_ = 0; }
-
+    void reset() { size_ = 0; } // TODO we may do shrink job here
 
 private:
     void EnsureSize(size_type size) {
