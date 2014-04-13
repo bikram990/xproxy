@@ -15,3 +15,5 @@
 5. +the container =std::vector= in =HttpContainer= is not suitable for modification, change a suitable one+
 
 6. the =shared_ptr=/=weak_ptr= relationship in =Connection=/=HttpMessage= is not needed, refine them later
+
+7. we may use normal type instead of pointer of the =ByteBuffer= member in =SegmentalByteBuffer=
