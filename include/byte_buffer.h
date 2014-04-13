@@ -2,6 +2,7 @@
 #define BYTE_BUFFER_H
 
 #include <boost/asio.hpp>
+#include "common.h"
 
 /**
  * @brief The ByteBuffer class
@@ -111,6 +112,75 @@ private:
     char *data_;
     size_type size_;
     size_type capacity_;
+};
+
+class SegmentalByteBuffer {
+public:
+    typedef std::vector::size_type segid_type;
+
+    ByteBuffer::const_pointer_type invalid_pointer = nullptr;
+    ByteBuffer::const_iterator invalid_iterator = nullptr;
+
+    explicit SegmentalByteBuffer(size_type size = 0)
+        : buffer_(new ByteBuffer(size)),
+          current_pos_(0) {}
+
+    SegmentalByteBuffer(const SegmentalByteBuffer& buffer)
+        : buffer_(new ByteBuffer(*buffer.buffer_)),
+          current_pos_(buffer.current_pos_),
+          segments_(buffer.segments_) {}
+
+    SegmentalByteBuffer& operator=(const SegmentalByteBuffer& buffer) {
+        *buffer_ = *buffer.buffer_;
+        current_pos_ = buffer.current_pos_;
+        segments_ = buffer.segments_;
+
+        return *this;
+    }
+
+    virtual ~SegmentalByteBuffer() { if(buffer_) delete buffer_; }
+
+    ByteBuffer::size_type replace(segid_type seg_id, ByteBuffer::const_pointer_type data, ByteBuffer::size_type size) {
+        if (seg_id < 0 || seg_id >= segments_.size()
+                || segments_[seg_id].begin < current_pos_)
+            return npos;
+
+        Segment& seg = segments_[seg_id];
+        auto orig_size = seg.end - seg.begin;
+        auto new_end = seg.begin + size;
+        auto delta_size = size - orig_size;
+
+        if (delta_size > 0)
+            buffer_->EnsureSize(delta_size);
+
+        // if the new size != original size, we need to move the data after this segment
+        if (delta_size != 0) {
+            std::memmove(new_end, seg.end, buffer_->size() - seg.end);
+            for (auto i = seg_id + 1; i < segments_.size(); ++i) {
+                segments_[i].begin += delta_size;
+                segments_[i].end   += delta_size;
+            }
+        }
+
+        std::memcpy(seg.begin, data, size);
+        return seg.begin;
+    }
+
+    SegmentalByteBuffer& operator<<(const std::pair<const char*, ByteBuffer::size_type>& block) {
+        Segment seg{buffer_->size(), buffer_->size() + block.second};
+        *buffer << block;
+        return *this;
+    }
+
+private:
+    struct Segment {
+        ByteBuffer::size_type begin;
+        ByteBuffer::size_type end;
+    };
+
+    ByteBuffer *buffer_;
+    ByteBuffer::size_type current_pos_;
+    std::vector<Segment> segments_;
 };
 
 typedef boost::shared_ptr<ByteBuffer> SharedByteBuffer;
