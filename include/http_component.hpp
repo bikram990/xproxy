@@ -167,4 +167,45 @@ public:
     }
 };
 
+class HttpMessage {
+public:
+    virtual ~HttpMessage() = default;
+
+    void SyncRawBuffer(bool sync) const { buf_sync_ = sync; }
+
+protected:
+    HttpMessage()
+        : major_version_(1),
+          minor_version_(1),
+          buf_sync_(false),
+          raw_buf_(std::make_shared<SegmentalByteBuffer>(8192)) {} // TODO
+
+protected:
+    int major_version_;
+    int minor_version_;
+    std::map<std::string, std::string> headers_;
+
+    bool buf_sync_; // whether we should sync raw buf or not while updating fields
+    std::shared_ptr<SegmentalByteBuffer> raw_buf_;
+};
+
+class HttpRequest : public HttpMessage {
+public:
+    HttpRequest();
+    virtual ~HttpRequest();
+
+private:
+    std::string method_;
+    std::string uri_;
+};
+
+class HttpResponse : public HttpMessage {
+public:
+    HttpResponse();
+    virtual ~HttpResponse();
+private:
+    int status_;
+    std::string message_;
+};
+
 #endif // HTTP_COMPONENT_HPP
