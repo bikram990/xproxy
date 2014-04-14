@@ -70,6 +70,13 @@ public:
         return *this;
     }
 
+    ByteBuffer& operator<<(const ByteBuffer& buffer) {
+        EnsureSize(buffer.size());
+        std::memcpy(data_ + size_, buffer.data(), buffer.size());
+        size_ += buffer.size();
+        return *this;
+    }
+
     ByteBuffer& operator<<(const std::pair<const char*, size_type>& block) {
         EnsureSize(block.second);
         std::memcpy(data_ + size_, block.first, block.second);
