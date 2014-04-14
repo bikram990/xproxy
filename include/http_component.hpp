@@ -239,6 +239,11 @@ public:
         return *this;
     }
 
+    HttpMessage& AppendBody(const std::string& str, bool new_seg = true) {
+        raw_buf_->append(str, new_seg);
+        return *this;
+    }
+
     virtual std::string GetField(FieldType type) = 0;
     virtual void SetField(FieldType type, std::string&& value) = 0;
 
