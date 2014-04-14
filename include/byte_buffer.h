@@ -173,25 +173,40 @@ public:
         return seg.begin;
     }
 
-    template<typename... Args>
-    ByteBuffer::size_type replace(segid_type seg_id, Args... args) {
-        if (!ValidateSegmentId(seg_id))
-            return npos;
-
-        ByteBuffer temp;
-        temp << args; // TODO is this format right?
-        // TODO complete here
+    ByteBuffer::size_type replace(segid_type seg_id, const ByteBuffer& buffer) {
+        return replace(seg_id, buffer.data(), buffer.size());
     }
 
-    SegmentalByteBuffer& operator<<(const std::pair<const char*, ByteBuffer::size_type>& block) {
-        *buffer << block;
-        segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + block.second}));
+    SegmentalByteBuffer& append(const char *data, std::size_t size, bool new_seg = true) {
+        *buffer_ << str;
+
+        if (new_seg)
+            segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + size}));
+        else
+            segments_.back().end += size;
+
         return *this;
     }
 
-    SegmentalByteBuffer& operator<<(const ByteBuffer& buffer) {
-        *buffer << buffer;
-        segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + buffer.size()}));
+    SegmentalByteBuffer& append(const ByteBuffer& buffer, bool new_seg = true) {
+        *buffer_ << str;
+
+        if (new_seg)
+            segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + buffer.size()}));
+        else
+            segments_.back().end += buffer.size();
+
+        return *this;
+    }
+
+    SegmentalByteBuffer& append(const std::string& str, bool new_seg = true) {
+        *buffer_ << str;
+
+        if (new_seg)
+            segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + str.length()}));
+        else
+            segments_.back().end += str.length();
+
         return *this;
     }
 
