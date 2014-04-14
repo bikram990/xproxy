@@ -124,6 +124,7 @@ private:
 class SegmentalByteBuffer {
 public:
     typedef std::vector::size_type segid_type;
+    typedef std::vector::size_type seg_size_type;
 
     ByteBuffer::const_pointer_type invalid_pointer = nullptr;
     ByteBuffer::const_iterator invalid_iterator = nullptr;
@@ -148,8 +149,7 @@ public:
     virtual ~SegmentalByteBuffer() { if(buffer_) delete buffer_; }
 
     ByteBuffer::size_type replace(segid_type seg_id, ByteBuffer::const_pointer_type data, ByteBuffer::size_type size) {
-        if (seg_id < 0 || seg_id >= segments_.size()
-                || segments_[seg_id].begin < current_pos_)
+        if (!ValidateSegmentId(seg_id))
             return npos;
 
         Segment& seg = segments_[seg_id];
@@ -173,11 +173,37 @@ public:
         return seg.begin;
     }
 
+    template<typename... Args>
+    ByteBuffer::size_type replace(segid_type seg_id, Args... args) {
+        if (!ValidateSegmentId(seg_id))
+            return npos;
+
+        ByteBuffer temp;
+        temp << args; // TODO is this format right?
+        // TODO complete here
+    }
+
     SegmentalByteBuffer& operator<<(const std::pair<const char*, ByteBuffer::size_type>& block) {
-        Segment seg{buffer_->size(), buffer_->size() + block.second};
         *buffer << block;
+        segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + block.second}));
         return *this;
     }
+
+    SegmentalByteBuffer& operator<<(const ByteBuffer& buffer) {
+        *buffer << buffer;
+        segments_.push_back(std::forward(Segment{buffer_->size(), buffer_->size() + buffer.size()}));
+        return *this;
+    }
+
+    void reset() {
+        buffer_->reset();
+        current_pos_ = 0;
+        segments_.clear();
+    }
+
+    ByteBuffer::size_type size() const { return buffer_->size(); }
+    seg_size_type SegmentCount() const { return segments_.size(); }
+    bool empty() const { return buffer_->empty(); }
 
 private:
     struct Segment {
@@ -185,6 +211,13 @@ private:
         ByteBuffer::size_type end;
     };
 
+    bool ValidateSegmentId(segid_type seg_id) {
+        return seg_id >= 0
+                && seg_id < segments_.size()
+                && segments_[seg_id].begin >= current_pos_;
+    }
+
+private:
     ByteBuffer *buffer_;
     ByteBuffer::size_type current_pos_;
     std::vector<Segment> segments_;
