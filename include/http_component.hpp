@@ -234,8 +234,8 @@ public:
         return true;
     }
 
-    HttpMessage& AppendBody(const char *data, std::size_t size) {
-        *raw_buf_ << std::make_pair(data, size);
+    HttpMessage& AppendBody(const char *data, std::size_t size, bool new_seg = true) {
+        raw_buf_->append(data, size, new_seg);
         return *this;
     }
 
