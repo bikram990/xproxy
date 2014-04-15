@@ -1,5 +1,5 @@
-#ifndef HTTP_PARSER_H
-#define HTTP_PARSER_H
+#ifndef HTTP_PARSER_HPP
+#define HTTP_PARSER_HPP
 
 #include "common.h"
 #include "libs/http-parser/http_parser.h"
@@ -82,4 +82,4 @@ private:
     DISABLE_COPY_AND_ASSIGNMENT(HttpParser);
 };
 
-#endif // HTTP_PARSER_H
+#endif // HTTP_PARSER_HPP
