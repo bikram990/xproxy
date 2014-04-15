@@ -1,5 +1,4 @@
 #include "connection.h"
-#include "http_message.h"
 #include "log.h"
 #include "session.h"
 

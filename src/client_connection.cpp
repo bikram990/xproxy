@@ -1,6 +1,6 @@
 #include <boost/lexical_cast.hpp>
 #include "client_connection.h"
-#include "http_request.h"
+#include "http_request.hpp"
 #include "log.h"
 #include "resource_manager.h"
 #include "session.h"
@@ -9,7 +9,7 @@ ClientConnection::ClientConnection(std::shared_ptr<Session> session)
     : Connection(session, kSocketTimeout, kBufferSize) {}
 
 void ClientConnection::init() {
-    message_.reset(new HttpRequest(shared_from_this()));
+    parser_.reset(new HttpParser(shared_from_this(), HTTP_REQUEST));
     connected_ = true;
 }
 
@@ -24,7 +24,7 @@ void ClientConnection::OnMessageExchangeComplete() {
         }
     }
 
-    if (message_->KeepAlive()) {
+    if (parser_->KeepAlive()) {
         reset();
         StartTimer();
         read();
@@ -39,18 +39,17 @@ void ClientConnection::OnBodyComplete() {
     std::shared_ptr<Session> session(session_.lock());
     if (session) {
         ParseRemotePeer(session);
-        service_.post(std::bind(&Session::OnRequestComplete, session, message_));
+        service_.post(std::bind(&Session::OnRequestComplete, session, parser_->message()));
     }
 }
 
 void ClientConnection::ParseRemotePeer(const std::shared_ptr<Session>& session) {
-    if (session->https() || !message_->HeaderCompleted())
+    if (session->https() || !parser_->HeaderCompleted())
         return;
 
-    auto request = std::static_pointer_cast<HttpRequest>(message_);
-    auto& method = request->method();
+    std::string method = parser_->message().GetField(HttpMessage::kRequestMethod);
     if (method.length() == 7 && method[0] == 'C' && method[1] == 'O') {
-        host_ = request->url();
+        host_ = parser_->message().GetField(HttpMessage::kRequestUri);
         port_ = 443;
 
         auto sep = host_.find(':');
@@ -60,7 +59,7 @@ void ClientConnection::ParseRemotePeer(const std::shared_ptr<Session>& session) 
         }
     } else {
         port_ = 80;
-        if (!message_->headers().find("Host", host_)) {
+        if (!parser_->message().FindHeader("Host", host_)) {
             XERROR_WITH_ID << "Host header not found, this should never happen.";
             DestroySession();
             return;
@@ -195,7 +194,7 @@ void ClientConnection::OnSSL(const boost::system::error_code& e, std::size_t len
 
     // because we have decoded "CONNECT..." request, so we reset it here
     // to decode new request
-    message_->reset();
+    parser_->reset();
 
     read();
 }

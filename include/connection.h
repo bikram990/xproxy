@@ -5,8 +5,8 @@
 #include <mutex>
 #include "common.h"
 #include "socket.h"
+#include "http_parser.hpp"
 
-class HttpMessage;
 class Session;
 
 class Connection : public std::enable_shared_from_this<Connection> {
@@ -106,7 +106,7 @@ protected:
     std::unique_ptr<boost::asio::streambuf> aux_out_;
     std::mutex lock_; // lock for out buffer
 
-    std::shared_ptr<HttpMessage> message_;
+    std::unique_ptr<HttpParser> parser_;
 
     std::string host_;
     unsigned short port_;

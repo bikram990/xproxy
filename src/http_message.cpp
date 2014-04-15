@@ -1,175 +1,80 @@
-#include "connection.h"
-#include "http_message.h"
-#include "log.h"
+#include "http_message.hpp"
 
-#define CRLF "\r\n"
-#define END_CHUNK "0\r\n\r\n"
+HttpMessage::HttpMessage()
+    : major_version_(1),
+      minor_version_(1),
+      buf_sync_(false),
+      raw_buf_(std::make_shared<SegmentalByteBuffer>(8192)) {}
 
-typedef void(Connection::*callback_ptr)();
-std::vector<callback_ptr> HttpMessage::callbacks_ = {
-    &Connection::OnHeadersComplete,
-    &Connection::OnBody,
-    &Connection::OnBodyComplete
-};
-
-http_parser_settings HttpMessage::settings_ = {
-    &HttpMessage::MessageBeginCallback,
-    &HttpMessage::UrlCallback,
-    &HttpMessage::StatusCallback,
-    &HttpMessage::HeaderFieldCallback,
-    &HttpMessage::HeaderValueCallback,
-    &HttpMessage::HeadersCompleteCallback,
-    &HttpMessage::BodyCallback,
-    &HttpMessage::MessageCompleteCallback
-};
-
-HttpMessage::HttpMessage(std::shared_ptr<Connection> connection, http_parser_type type)
-    : header_completed_(false),
-      message_completed_(false),
-      connection_(connection),
-      chunked_(false),
-      callback_choice_(-1) {
-    ::http_parser_init(&parser_, type);
-    parser_.data = this;
+void HttpMessage::MajorVersion(int version) {
+    major_version_ = version;
+    if (buf_sync_)
+        UpdateFirstLine();
 }
 
-bool HttpMessage::consume(boost::asio::streambuf& buffer) {
-    std::size_t orig_size = buffer.size();
-    std::size_t consumed = ::http_parser_execute(&parser_, &settings_,
-                                                 boost::asio::buffer_cast<const char *>(buffer.data()),
-                                                 buffer.size());
-    buffer.consume(consumed);
+void HttpMessage::MinorVersion(int version) {
+    minor_version_ = version;
+    if (buf_sync_)
+        UpdateFirstLine();
+}
 
-    if (callback_choice_ >= 0 && callback_choice_ < callbacks_.size()) {
-        std::shared_ptr<Connection> c(connection_.lock());
-        if (c)
-            c->service().post(std::bind(callbacks_[callback_choice_], c));
-    }
+HttpMessage &HttpMessage::AddHeader(const std::string &name, const std::string &value) {
+    headers_[name] = value;
+    if (buf_sync_)
+        UpdateHeaders();
+    return *this;
+}
 
-    if (consumed != orig_size) {
-        if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {
-            XERROR << "Error occurred during message parsing, error code: "
-                   << parser_.http_errno << ", message: "
-                   << ::http_errno_description(static_cast<http_errno>(parser_.http_errno));
-            return false;
-        } else {
-            // TODO will this happen? a message is parsed, but there is still data?
-            XWARN << "Weird: parser does not consume all data, but there is no error.";
-            return true;
-        }
-    }
-
+bool HttpMessage::FindHeader(const std::string &name, std::string &value) const {
+    auto it = headers_.find(name);
+    if (it == headers_.end())
+        return false;
+    value = it->second;
     return true;
 }
 
+HttpMessage &HttpMessage::AppendBody(const std::string &str, bool new_seg) {
+    raw_buf_->append(str, new_seg);
+    return *this;
+}
+
+HttpMessage &HttpMessage::AppendBody(const char *data, std::size_t size, bool new_seg) {
+    raw_buf_->append(data, size, new_seg);
+    return *this;
+}
+
+void HttpMessage::UpdateRawBuffer() {
+    UpdateFirstLine();
+    UpdateHeaders();
+}
+
+void HttpMessage::UpdateSegment(SegmentalByteBuffer::segid_type id, const ByteBuffer &buf) {
+    if (raw_buf_->SegmentCount() > id) { // the raw buf contains this segment already
+        auto ret = raw_buf_->replace(id, buf.data(), buf.size());
+        if (ret == ByteBuffer::npos) {
+            // TODO error handling here
+        }
+    } else if (raw_buf_->SegmentCount() == id) { // the raw buf is in correct state: ready for segment with id
+        *raw_buf_ << buf;
+    } else { // the raw buf is in incorrect state: need other segments to be inserted before this segment
+        // TODO error handling here
+    }
+}
+
+void HttpMessage::UpdateHeaders() {
+    ByteBuffer temp(headers_.size() * 100); // the size
+    for (auto it : headers_) {
+        temp << it->first << ": " << it->second << CRLF;
+    }
+    temp << CRLF;
+
+    UpdateSegment(1, temp);
+}
+
 void HttpMessage::reset() {
-    ::http_parser_init(&parser_, static_cast<http_parser_type>(parser_.type));
-    header_completed_ = false;
-    message_completed_ = false;
-    chunked_ = false;
-    callback_choice_ = -1;
-    current_header_field_.clear();
-    current_header_value_.clear();
-    headers_.reset();
-    if (body_.size())
-        body_.consume(body_.size());
-}
-
-int HttpMessage::MessageBeginCallback(http_parser *parser) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-
-    m->header_completed_ = false;
-    m->message_completed_ = false;
-    return 0;
-}
-
-int HttpMessage::UrlCallback(http_parser *parser, const char *at, std::size_t length) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-    return m->OnUrl(at, length);
-}
-
-int HttpMessage::StatusCallback(http_parser *parser, const char *at, std::size_t length) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-    return m->OnStatus(at, length);
-}
-
-int HttpMessage::HeaderFieldCallback(http_parser *parser, const char *at, std::size_t length) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-
-    if (!m->current_header_value_.empty()) {
-        m->headers_.add(HttpHeader(m->current_header_field_, m->current_header_value_));
-        m->current_header_field_.clear();
-        m->current_header_value_.clear();
-    }
-    m->current_header_field_.append(at, length);
-    return 0;
-}
-
-int HttpMessage::HeaderValueCallback(http_parser *parser, const char *at, std::size_t length) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-
-    m->current_header_value_.append(at, length);
-    return 0;
-}
-
-int HttpMessage::HeadersCompleteCallback(http_parser *parser) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-
-    if (!m->current_header_value_.empty()) {
-        m->headers_.add(HttpHeader(m->current_header_field_, m->current_header_value_));
-        m->current_header_field_.clear();
-        m->current_header_value_.clear();
-    }
-    m->header_completed_ = true;
-
-    if (m->parser_.flags & F_CHUNKED)
-        m->chunked_ = true;
-
-    m->callback_choice_ = kHeadersComplete;
-
-    return 0;
-}
-
-int HttpMessage::BodyCallback(http_parser *parser, const char *at, std::size_t length) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-
-    if (m->chunked_) {
-        std::ostream out(&m->body_);
-        out << std::hex << length;
-        out.copyfmt(std::ios(nullptr));
-        out << CRLF;
-    }
-    boost::asio::buffer_copy(m->body_.prepare(length), boost::asio::buffer(at, length));
-    m->body_.commit(length);
-    if (m->chunked_) {
-        std::ostream out(&m->body_);
-        out << CRLF;
-    }
-
-    m->callback_choice_ = kBody;
-
-    return 0;
-}
-
-int HttpMessage::MessageCompleteCallback(http_parser *parser) {
-    HttpMessage *m = static_cast<HttpMessage*>(parser->data);
-    assert(m);
-
-    if (m->chunked_) {
-        std::ostream out(&m->body_);
-        out << END_CHUNK;
-    }
-
-    m->message_completed_ = true;
-
-    m->callback_choice_ = kBodyComplete;
-
-    return 0;
+    major_version_ = 1;
+    minor_version_ = 1;
+    headers_.clear();
+    buf_sync_ = false;
+    raw_buf_->reset();
 }

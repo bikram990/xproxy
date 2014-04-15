@@ -1,8 +1,10 @@
 #ifndef HTTP_PARSER_HPP
 #define HTTP_PARSER_HPP
 
-#include "common.h"
-#include "libs/http-parser/http_parser.h"
+#include "http_parser.h"
+
+class Connection;
+class HttpMessage;
 
 class HttpParser {
 public:
@@ -28,16 +30,18 @@ public:
         return consumed;
     }
 
-public:
-    HttpParser(http_parser_type type)
-        : header_completed_(false),
-          message_completed_(false),
-          chunked_(false) {
-        ::http_parser_init(&parser_, type);
-        parser_.data = this;
+    bool HeaderCompleted() const { return header_completed_; }
 
-        InitMessage();
-    }
+    bool MessageCompleted() const { return message_completed_; }
+
+    HttpMessage& message() const { return *message_.get(); }
+
+    bool KeepAlive() const;
+
+    void reset();
+
+public:
+    HttpParser(std::shared_ptr<Connection> connection, http_parser_type type);
 
     virtual ~HttpParser() = default;
 
@@ -51,21 +55,11 @@ public:
     static int OnMessageComplete(http_parser *parser);
 
 private:
-    void InitMessage(http_parser_type type) {
-        switch (type) {
-        case HTTP_REQUEST:
-            message_.reset(new HttpRequest);
-            break;
-        case HTTP_RESPONSE:
-            message_.reset(new HttpResponse);
-            break;
-        case HTTP_BOTH:
-        default:
-            ; // TODO ignore here?
-        }
-    }
+    void InitMessage(http_parser_type type);
 
 private:
+    std::weak_ptr<Connection> connection_;
+
     http_parser parser_;
 
     bool header_completed_;

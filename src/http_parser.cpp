@@ -1,8 +1,6 @@
+#include "http_message.hpp"
 #include "http_parser.hpp"
 #include "log.h"
-
-#define CRLF "\r\n"
-#define END_CHUNK "0\r\n\r\n"
 
 http_parser_settings HttpParser::settings_ = {
     &HttpParser::OnMessageBegin,
@@ -14,6 +12,34 @@ http_parser_settings HttpParser::settings_ = {
     &HttpParser::OnBody,
     &HttpParser::OnMessageComplete
 };
+
+HttpParser::HttpParser(std::shared_ptr<Connection> connection,
+                       http_parser_type type)
+    : connection_(connection),
+      header_completed_(false),
+      message_completed_(false),
+      chunked_(false) {
+    ::http_parser_init(&parser_, type);
+    parser_.data = this;
+
+    InitMessage();
+}
+
+bool HttpParser::KeepAlive() const {
+    if (!header_completed_) // return false when header is incomplete
+        return false;
+    return ::http_should_keep_alive(const_cast<http_parser*>(&parser_)) != 0;
+}
+
+void HttpParser::reset() {
+    ::http_parser_init(&parser_, static_cast<http_parser_type>(parser_.type));
+    header_completed_ = false;
+    message_completed_ = false;
+    chunked_ = false;
+    current_header_field_.clear();
+    current_header_value_.clear();
+    message_->reset();
+}
 
 int HttpParser::OnMessageBegin(http_parser *parser) {
     HttpParser *p = static_cast<HttpParser*>(parser->data);
@@ -119,4 +145,18 @@ int HttpParser::OnMessageComplete(http_parser *parser) {
     p->message_completed_ = true;
 
     return 0;
+}
+
+void HttpParser::InitMessage(http_parser_type type) {
+    switch (type) {
+    case HTTP_REQUEST:
+        message_.reset(new HttpRequest);
+        break;
+    case HTTP_RESPONSE:
+        message_.reset(new HttpResponse);
+        break;
+    case HTTP_BOTH:
+    default:
+        ; // TODO ignore here?
+    }
 }
