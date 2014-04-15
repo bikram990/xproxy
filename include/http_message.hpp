@@ -59,6 +59,12 @@ public:
 
     virtual void reset();
 
+    template<class Buffer, typename Copier>
+    void serialize(Buffer& buffer, Copier&& copier) const {
+        auto copied = copier(buffer, raw_buf_.data(), raw_buf_.available());
+        raw_buf_.consume(copied);
+    }
+
 protected:
     HttpMessage(); // TODO
 
@@ -74,7 +80,7 @@ protected:
     std::map<std::string, std::string> headers_;
 
     bool buf_sync_; // whether we should sync raw buf or not while updating fields
-    std::shared_ptr<SegmentalByteBuffer> raw_buf_;
+    mutable SegmentalByteBuffer raw_buf_;
 
 private:
     void UpdateHeaders();

@@ -1,5 +1,6 @@
-#include "http_message.hpp"
 #include "http_parser.hpp"
+#include "http_request.hpp"
+#include "http_response.hpp"
 #include "log.h"
 
 http_parser_settings HttpParser::settings_ = {
@@ -22,8 +23,10 @@ HttpParser::HttpParser(std::shared_ptr<Connection> connection,
     ::http_parser_init(&parser_, type);
     parser_.data = this;
 
-    InitMessage();
+    InitMessage(type);
 }
+
+HttpParser::~HttpParser() {}
 
 bool HttpParser::KeepAlive() const {
     if (!header_completed_) // return false when header is incomplete
@@ -67,7 +70,7 @@ int HttpParser::OnStatus(http_parser *parser, const char *at, std::size_t length
     assert(p);
 
     p->message_->SetField(HttpMessage::kResponseStatus,
-                          std::move(std::to_string(parser_.status_code)));
+                          std::move(std::to_string(p->parser_.status_code)));
     p->message_->SetField(HttpMessage::kResponseMessage,
                           std::move(std::string(at, length)));
     return 0;

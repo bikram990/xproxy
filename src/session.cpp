@@ -1,7 +1,7 @@
 #include <boost/lexical_cast.hpp>
 #include "client_connection.h"
-#include "http_request.h"
-#include "http_response.h"
+#include "http_request.hpp"
+#include "http_response.hpp"
 #include "proxy_server.h"
 #include "resource_manager.h"
 #include "server_connection.h"
@@ -50,7 +50,7 @@ void Session::stop() {
     }
 }
 
-void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
+void Session::OnRequestComplete(const HttpMessage& request) {
     auto req = std::static_pointer_cast<HttpRequest>(request);
     if (req->method().length() == 7
             && req->method()[0] == 'C' && req->method()[1] == 'O') {
@@ -110,17 +110,17 @@ void Session::OnRequestComplete(std::shared_ptr<HttpMessage> request) {
     });
 }
 
-void Session::OnResponse(std::shared_ptr<HttpMessage> response) {
+void Session::OnResponse(const HttpMessage& response) {
     if (!is_proxied_) {
         client_connection_->write(response);
         return;
     }
-    client_connection_->write(response, [](std::shared_ptr<HttpMessage>& resp, boost::asio::streambuf& buf) -> bool {
+    client_connection_->write(response, [](const HttpMessage& resp, boost::asio::streambuf& buf) -> bool {
         return std::static_pointer_cast<HttpResponse>(resp)->serialize(buf, true);
     });
 }
 
-void Session::OnResponseComplete(std::shared_ptr<HttpMessage> response) {
+void Session::OnResponseComplete(const HttpMessage& response) {
     OnResponse(response);
 
     server_connection_->OnMessageExchangeComplete();

@@ -1,7 +1,9 @@
 #ifndef HTTP_PARSER_HPP
 #define HTTP_PARSER_HPP
 
+#include "common.h"
 #include "http_parser.h"
+#include "log.h"
 
 class Connection;
 class HttpMessage;
@@ -43,7 +45,7 @@ public:
 public:
     HttpParser(std::shared_ptr<Connection> connection, http_parser_type type);
 
-    virtual ~HttpParser() = default;
+    virtual ~HttpParser();
 
     static int OnMessageBegin(http_parser *parser);
     static int OnUrl(http_parser *parser, const char *at, std::size_t length);

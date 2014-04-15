@@ -5,14 +5,15 @@
 #include <mutex>
 #include "common.h"
 #include "socket.h"
-#include "http_parser.hpp"
 
+class HttpMessage;
+class HttpParser;
 class Session;
 
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
     void read();
-    void write(std::shared_ptr<HttpMessage> message);
+    void write(const HttpMessage& message);
 
     template<typename Data, typename Converter>
     void write(Data& data, const Converter& convert) {

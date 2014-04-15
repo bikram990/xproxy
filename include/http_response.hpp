@@ -30,7 +30,7 @@ public:
                 UpdateFirstLine();
             break;
         case FieldType::kResponseMessage:
-            message_ = std::forward(message_);
+            message_ = std::move(value);
             if (buf_sync_)
                 UpdateFirstLine();
             break;

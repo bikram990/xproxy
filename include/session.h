@@ -31,7 +31,7 @@ public:
     void destroy();
     void stop();
 
-    void OnRequestComplete(std::shared_ptr<HttpMessage> request);
+    void OnRequestComplete(const HttpMessage& request);
 
     /*
      * if response is very large, e.g. a video, we need to send the data that
@@ -40,8 +40,8 @@ public:
      * a very long time waiting
      * so, there are two response related callback
      */
-    void OnResponse(std::shared_ptr<HttpMessage> response);
-    void OnResponseComplete(std::shared_ptr<HttpMessage> response);
+    void OnResponse(const HttpMessage& response);
+    void OnResponseComplete(const HttpMessage& response);
 
 private:
     void InitClientSSLContext();

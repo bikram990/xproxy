@@ -1,4 +1,6 @@
 #include "connection.h"
+#include "http_message.hpp"
+#include "http_parser.hpp"
 #include "log.h"
 #include "session.h"
 
@@ -34,15 +36,16 @@ void Connection::read() {
                                       std::placeholders::_2));
 }
 
-void Connection::write(std::shared_ptr<HttpMessage> message) {
+void Connection::write(const HttpMessage& message) {
     std::lock_guard<std::mutex> lock(lock_);
     bool owner = out_->size() <= 0;
     auto buf = owner ? out_.get() : aux_out_.get();
-    if (!message->serialize(*buf)) {
-        XERROR << "Error occurred during serialization message.";
-        DestroySession();
-        return;
-    }
+    message.serialize(*buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
+        auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
+        assert(copied == size);
+        buf.commit(copied);
+        return copied;
+    });
 
     const static std::string msg1("write() called, will start a write operation.");
     const static std::string msg2("write() called, a write operation exists, just write data to out buffer.");
@@ -56,19 +59,19 @@ void Connection::ConstructMessage() {
     if (buffer_in_.size() <= 0)
         return;
 
-    if (message_->MessageCompleted()) {
+    if (parser_->MessageCompleted()) {
         XERROR << "Message is already complete.";
         return;
     }
 
-    if (!message_->consume(buffer_in_)) {
+    if (!parser_->consume(buffer_in_)) {
         XERROR << "Message parse failure.";
         return;
     }
 
     // TODO should we check if buffer_in_ is empty here?
 
-    if (!message_->MessageCompleted()) {
+    if (!parser_->MessageCompleted()) {
         read();
         return;
     }
@@ -89,7 +92,7 @@ void Connection::write() {
 void Connection::reset() {
     // TODO should we cancel the timer here?
     timer_triggered_ = false;
-    message_->reset();
+    parser_->reset();
 
     if (buffer_in_.size() > 0)
         buffer_in_.consume(buffer_in_.size());

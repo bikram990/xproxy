@@ -1,5 +1,6 @@
 #include <boost/lexical_cast.hpp>
-#include "http_response.h"
+#include "http_message.hpp"
+#include "http_parser.hpp"
 #include "log.h"
 #include "resource_manager.h"
 #include "server_connection.h"
@@ -9,11 +10,11 @@ ServerConnection::ServerConnection(std::shared_ptr<Session> session)
     : Connection(session, kSocketTimeout, kBufferSize), resolver_(session->service()) {}
 
 void ServerConnection::init() {
-    message_.reset(new HttpResponse(shared_from_this()));
+    parser_.reset(new HttpParser(shared_from_this(), HTTP_RESPONSE));
 }
 
 void ServerConnection::OnMessageExchangeComplete() {
-    if (message_->KeepAlive()) {
+    if (parser_->KeepAlive()) {
         StartTimer();
     } else {
         XDEBUG_WITH_ID << "The server side does not want to keep the connection alive, close it.";
@@ -30,14 +31,14 @@ void ServerConnection::OnBody() {
     XDEBUG_WITH_ID << "The response has new body data.";
     std::shared_ptr<Session> session(session_.lock());
     if (session)
-        service_.post(std::bind(&Session::OnResponse, session, message_));
+        service_.post(std::bind(&Session::OnResponse, session, std::ref(parser_->message())));
 }
 
 void ServerConnection::OnBodyComplete() {
     XDEBUG_WITH_ID << "The response is completed.";
     std::shared_ptr<Session> session(session_.lock());
     if (session)
-        service_.post(std::bind(&Session::OnResponseComplete, session, message_));
+        service_.post(std::bind(&Session::OnResponseComplete, session, std::ref(parser_->message())));
 }
 
 void ServerConnection::connect() {

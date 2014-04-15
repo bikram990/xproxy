@@ -1,5 +1,7 @@
 #include <boost/lexical_cast.hpp>
 #include "client_connection.h"
+#include "http_parser.h"
+#include "http_parser.hpp"
 #include "http_request.hpp"
 #include "log.h"
 #include "resource_manager.h"
@@ -39,7 +41,7 @@ void ClientConnection::OnBodyComplete() {
     std::shared_ptr<Session> session(session_.lock());
     if (session) {
         ParseRemotePeer(session);
-        service_.post(std::bind(&Session::OnRequestComplete, session, parser_->message()));
+        service_.post(std::bind(&Session::OnRequestComplete, session, std::ref(parser_->message())));
     }
 }
 

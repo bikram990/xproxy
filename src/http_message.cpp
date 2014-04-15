@@ -4,7 +4,7 @@ HttpMessage::HttpMessage()
     : major_version_(1),
       minor_version_(1),
       buf_sync_(false),
-      raw_buf_(std::make_shared<SegmentalByteBuffer>(8192)) {}
+      raw_buf_(8192) {}
 
 void HttpMessage::MajorVersion(int version) {
     major_version_ = version;
