@@ -170,8 +170,8 @@ public:
 
         // if the new size != original size, we need to move the data after this segment
         if (delta_size != 0) {
-            std::memmove(buffer_->data_ + new_end,
-                         buffer_->data_ + seg.end,
+            std::memmove(buffer_->data() + new_end,
+                         buffer_->data() + seg.end,
                          buffer_->size() - seg.end);
             for (auto i = seg_id + 1; i < segments_.size(); ++i) {
                 segments_[i].begin += delta_size;
@@ -179,7 +179,7 @@ public:
             }
         }
 
-        std::memcpy(buffer_->data_ + seg.begin, data, size);
+        std::memcpy(buffer_->data() + seg.begin, data, size);
         return seg.begin;
     }
 
@@ -227,8 +227,27 @@ public:
     }
 
     ByteBuffer::size_type size() const { return buffer_->size(); }
+
+    ByteBuffer::size_type available() const {
+        if (current_pos_ >= buffer_->size() || empty())
+            return 0;
+        return buffer_->size() - current_pos_;
+    }
+
+    ByteBuffer::const_pointer_type data() const {
+        if (current_pos_ >= buffer_->size() || empty())
+            return nullptr;
+        return buffer_->data() + current_pos_;
+    }
+
     seg_size_type SegmentCount() const { return segments_.size(); }
+
     bool empty() const { return buffer_->empty(); }
+
+    void consume(ByteBuffer::size_type size) {
+        current_pos_ += size;
+        assert(current_pos_ < buffer_->size());
+    }
 
 private:
     bool ValidateSegmentId(segid_type seg_id) {
