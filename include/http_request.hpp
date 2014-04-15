@@ -8,7 +8,7 @@ public:
     HttpRequest() = default;
     virtual ~HttpRequest() = default;
 
-    virtual std::string GetField(FieldType type) {
+    virtual std::string GetField(FieldType type) const {
         switch (type) {
         case FieldType::kRequestMethod:
             return method_;

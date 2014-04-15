@@ -53,7 +53,7 @@ public:
 
     HttpMessage& AppendBody(const std::string& str, bool new_seg = true);
 
-    virtual std::string GetField(FieldType type) = 0;
+    virtual std::string GetField(FieldType type) const = 0;
 
     virtual void SetField(FieldType type, std::string&& value) = 0;
 

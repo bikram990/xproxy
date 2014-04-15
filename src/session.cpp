@@ -51,9 +51,8 @@ void Session::stop() {
 }
 
 void Session::OnRequestComplete(const HttpMessage& request) {
-    auto req = std::static_pointer_cast<HttpRequest>(request);
-    if (req->method().length() == 7
-            && req->method()[0] == 'C' && req->method()[1] == 'O') {
+    auto method = request.GetField(HttpMessage::kRequestMethod);
+    if (method.length() == 7 && method[0] == 'C' && method[1] == 'O') {
         const static std::string ssl_response("HTTP/1.1 200 Connection Established\r\n"
                                               "Content-Length: 0\r\n"
                                               "Connection: keep-alive\r\n"
@@ -72,19 +71,27 @@ void Session::OnRequestComplete(const HttpMessage& request) {
         // server_connection_->port(8080);
 
         // server_connection_->write(request);
-        server_connection_->write(request, [](std::shared_ptr<HttpMessage>& req, boost::asio::streambuf& buf) -> bool {
-            return req->serialize(buf);
+        server_connection_->write(request, [](const HttpMessage& req, boost::asio::streambuf& buf) -> bool {
+            req.serialize(buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
+                auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
+                assert(copied == size);
+                buf.commit(copied);
+                return copied;
+            });
+            return true;
         });
         return;
     }
 
     boost::asio::streambuf proxy_request;
     boost::asio::streambuf body;
-    if (!request->serialize(body)) {
-        XERROR_WITH_ID << "Unable to serialize request.";
-        destroy();
-        return;
-    }
+    request.serialize(body, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
+        auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
+        assert(copied == size);
+        buf.commit(copied);
+        return copied;
+    });
+
     std::ostream pr(&proxy_request);
     pr << "POST /proxy HTTP/1.1\r\n"
        << "Host: " << ResourceManager::GetServerConfig().GetGAEAppId() << ".appspot.com\r\n"
@@ -103,7 +110,7 @@ void Session::OnRequestComplete(const HttpMessage& request) {
     server_connection_->host(ResourceManager::GetServerConfig().GetGAEServerDomain());
     server_connection_->port(443);
     https_ = true;
-    server_connection_->write(proxy_request, [](boost::asio::streambuf& req, boost::asio::streambuf& buf) -> bool {
+    server_connection_->write(proxy_request, [](const boost::asio::streambuf& req, boost::asio::streambuf& buf) -> bool {
         boost::asio::buffer_copy(buf.prepare(req.size()), req.data());
         buf.commit(req.size());
         return true;
@@ -116,7 +123,13 @@ void Session::OnResponse(const HttpMessage& response) {
         return;
     }
     client_connection_->write(response, [](const HttpMessage& resp, boost::asio::streambuf& buf) -> bool {
-        return std::static_pointer_cast<HttpResponse>(resp)->serialize(buf, true);
+        resp.serialize(buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
+            auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
+            assert(copied == size);
+            buf.commit(copied);
+            return copied;
+        });
+        return true;
     });
 }
 

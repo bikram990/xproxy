@@ -8,7 +8,7 @@ public:
     HttpResponse() = default;
     virtual ~HttpResponse() = default;
 
-    virtual std::string GetField(FieldType type) {
+    virtual std::string GetField(FieldType type) const {
         switch (type) {
         case FieldType::kResponseStatus:
             return std::to_string(status_);

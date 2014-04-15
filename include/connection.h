@@ -4,10 +4,10 @@
 #include <memory>
 #include <mutex>
 #include "common.h"
+#include "http_parser.hpp"
 #include "socket.h"
 
 class HttpMessage;
-class HttpParser;
 class Session;
 
 class Connection : public std::enable_shared_from_this<Connection> {
@@ -16,7 +16,7 @@ public:
     void write(const HttpMessage& message);
 
     template<typename Data, typename Converter>
-    void write(Data& data, const Converter& convert) {
+    void write(const Data& data, Converter&& convert) {
         std::lock_guard<std::mutex> lock(lock_);
         bool owner = out_->size() <= 0;
         auto buf = owner ? out_.get() : aux_out_.get();

@@ -34,12 +34,12 @@ bool HttpMessage::FindHeader(const std::string &name, std::string &value) const 
 }
 
 HttpMessage &HttpMessage::AppendBody(const std::string &str, bool new_seg) {
-    raw_buf_->append(str, new_seg);
+    raw_buf_.append(str, new_seg);
     return *this;
 }
 
 HttpMessage &HttpMessage::AppendBody(const char *data, std::size_t size, bool new_seg) {
-    raw_buf_->append(data, size, new_seg);
+    raw_buf_.append(data, size, new_seg);
     return *this;
 }
 
@@ -49,13 +49,13 @@ void HttpMessage::UpdateRawBuffer() {
 }
 
 void HttpMessage::UpdateSegment(SegmentalByteBuffer::segid_type id, const ByteBuffer &buf) {
-    if (raw_buf_->SegmentCount() > id) { // the raw buf contains this segment already
-        auto ret = raw_buf_->replace(id, buf.data(), buf.size());
+    if (raw_buf_.SegmentCount() > id) { // the raw buf contains this segment already
+        auto ret = raw_buf_.replace(id, buf.data(), buf.size());
         if (ret == ByteBuffer::npos) {
             // TODO error handling here
         }
-    } else if (raw_buf_->SegmentCount() == id) { // the raw buf is in correct state: ready for segment with id
-        *raw_buf_ << buf;
+    } else if (raw_buf_.SegmentCount() == id) { // the raw buf is in correct state: ready for segment with id
+        raw_buf_.append(buf);
     } else { // the raw buf is in incorrect state: need other segments to be inserted before this segment
         // TODO error handling here
     }
@@ -64,7 +64,7 @@ void HttpMessage::UpdateSegment(SegmentalByteBuffer::segid_type id, const ByteBu
 void HttpMessage::UpdateHeaders() {
     ByteBuffer temp(headers_.size() * 100); // the size
     for (auto it : headers_) {
-        temp << it->first << ": " << it->second << CRLF;
+        temp << it.first << ": " << it.second << CRLF;
     }
     temp << CRLF;
 
@@ -76,5 +76,5 @@ void HttpMessage::reset() {
     minor_version_ = 1;
     headers_.clear();
     buf_sync_ = false;
-    raw_buf_->reset();
+    raw_buf_.reset();
 }
