@@ -11,6 +11,11 @@
 #define DISABLE_COPY_AND_ASSIGNMENT(T) T(const T&) = delete; \
     T& operator=(const T&) = delete
 
+#define CR '\r'
+#define LF '\n'
+#define CRLF "\r\n"
+#define END_CHUNK "0\r\n\r\n"
+
 /*
  * Short read error in SSL mode.
  *
