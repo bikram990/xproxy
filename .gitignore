@@ -3,6 +3,8 @@ build_*/
 *.user
 *.user.*
 
+*.backup
+
 test/temp*
 
 GPATH
