@@ -1,7 +1,7 @@
 #ifndef HTTP_MESSAGE_HPP
 #define HTTP_MESSAGE_HPP
 
-#include "byte_buffer.h"
+#include "memory/segmental_byte_buffer.hpp"
 
 class HttpMessage {
 public:
