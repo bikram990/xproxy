@@ -68,6 +68,21 @@ public:
         return *this;
     }
 
+    bool operator==(const ByteBuffer& buffer) const {
+        if (this == &buffer)
+            return true;
+
+        if (size_ != buffer.size_)
+            return false;
+
+        for (auto i = 0; i < size_; ++i) {
+            if (*(data_ + i) != *(buffer.data_ + i))
+                return false;
+        }
+
+        return true;
+    }
+
     ByteBuffer& operator<<(char c) {
         EnsureSize(1);
         data_[size_++] = c;
