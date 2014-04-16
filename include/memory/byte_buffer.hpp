@@ -1,7 +1,7 @@
 #ifndef BYTE_BUFFER_HPP
 #define BYTE_BUFFER_HPP
 
-#include "common.h"
+#include <string>
 
 /**
  * @brief The ByteBuffer class

@@ -1,6 +1,8 @@
 #ifndef SEGMENTAL_BYTE_BUFFER_HPP
 #define SEGMENTAL_BYTE_BUFFER_HPP
 
+#include <vector>
+#include <cassert>
 #include "memory/byte_buffer.hpp"
 
 class SegmentalByteBuffer {
