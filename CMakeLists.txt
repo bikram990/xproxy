@@ -45,7 +45,7 @@ add_executable(${PROJECT_NAME} ${SRC_LIST})
 ################################################################################
 # Configure http-parser submodule
 ################################################################################
-set(http-parser_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/http-parser)
+set(http-parser_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/http-parser)
 file(GLOB http-parser_SOURCE ${http-parser_DIR}/http_parser.c)
 include_directories(${http-parser_DIR})
 add_library(http-parser STATIC ${http-parser_SOURCE})
@@ -127,7 +127,7 @@ file(COPY cert/ DESTINATION cert/)
 ################################################################################
 set(TEST_EXE "test-${PROJECT_NAME}")
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
-set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/gtest)
+set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/gtest)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     # force this option to ON so that Google Test will use /MD instead of /MT

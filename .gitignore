@@ -7,7 +7,7 @@ build_*/
 *.user.*
 
 # google test library
-libs/gtest
+lib/gtest
 
 # backup files
 *.backup
