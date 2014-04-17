@@ -32,3 +32,18 @@ TEST(SegmentalByteBufferTest, Common) {
 
     EXPECT_TRUE(sbb.SegmentCount() == 2);
 }
+
+TEST(SegmentalByteBufferTest, Replace) {
+    SegmentalByteBuffer sbb;
+    sbb.append("abcde", true)
+       .append("12345", true)
+       .append("!@#$%", true);
+
+    EXPECT_TRUE(sbb.SegmentCount() == 3);
+
+    char data[3] = {'r', 'e', 'p'};
+
+    sbb.replace(1, data, 3);
+
+    EXPECT_TRUE(sbb.size() == 13);
+}
