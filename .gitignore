@@ -1,14 +1,24 @@
+# build folders
 build/
 build_*/
+
+# project files
 *.user
 *.user.*
 
+# google test library
+libs/gtest
+
+# backup files
 *.backup
 
+# temp fies
 test/temp*
 
+# gtags for emacs
 GPATH
 GRTAGS
 GTAGS
 
+# mac
 .DS_Store
