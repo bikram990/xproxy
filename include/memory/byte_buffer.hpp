@@ -28,14 +28,14 @@ public:
     enum { kDefaultSize = 1024, kGrowFactor = 2 };
 
     struct wrapper {
-        const_pointer_type d;
-        size_type s;
+        const void *d;
+        std::size_t s;
 
-        const_pointer_type data() const { return d; }
-        size_type size() const { return s; }
+        const void *data() const { return d; }
+        std::size_t size() const { return s; }
     };
 
-    static wrapper wrap(const_pointer_type data, size_type size) {
+    static wrapper wrap(const void *data, std::size_t size) {
         return wrapper{data, size};
     }
 

@@ -55,7 +55,7 @@ void HttpMessage::UpdateSegment(SegmentalByteBuffer::segid_type id, const ByteBu
             // TODO error handling here
         }
     } else if (raw_buf_.SegmentCount() == id) { // the raw buf is in correct state: ready for segment with id
-        raw_buf_.append(buf);
+        raw_buf_.append(buf, true);
     } else { // the raw buf is in incorrect state: need other segments to be inserted before this segment
         // TODO error handling here
     }

@@ -69,7 +69,7 @@ public:
         return replace(seg_id, buffer.data(), buffer.size());
     }
 
-    SegmentalByteBuffer& append(const char *data, std::size_t size, bool new_seg = true) {
+    SegmentalByteBuffer& append(const void *data, std::size_t size, bool new_seg) {
         *buffer_ << ByteBuffer::wrap(data, size);
 
         if (new_seg)
@@ -80,7 +80,7 @@ public:
         return *this;
     }
 
-    SegmentalByteBuffer& append(const ByteBuffer& buffer, bool new_seg = true) {
+    SegmentalByteBuffer& append(const ByteBuffer& buffer, bool new_seg) {
         *buffer_ << buffer;
 
         if (new_seg)
@@ -91,7 +91,7 @@ public:
         return *this;
     }
 
-    SegmentalByteBuffer& append(const std::string& str, bool new_seg = true) {
+    SegmentalByteBuffer& append(const std::string& str, bool new_seg) {
         *buffer_ << str;
 
         if (new_seg)
