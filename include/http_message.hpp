@@ -37,6 +37,8 @@ public:
         UpdateRawBuffer();
     }
 
+    SegmentalByteBuffer& RawBuffer() const { return raw_buf_; }
+
     int MajorVersion() const { return major_version_; }
 
     int MinorVersion() const { return minor_version_; }

@@ -3,10 +3,10 @@
 
 #include "common.h"
 #include "http_parser.h"
+#include "http_message.hpp"
 #include "log.h"
 
 class Connection;
-class HttpMessage;
 
 class HttpParser {
 public:
@@ -15,6 +15,8 @@ public:
         std::size_t consumed =
             ::http_parser_execute(&parser_, &settings_,
                                   boost::asio::buffer_cast<const char*>(buffer.data()), buffer.size());
+
+        message_->RawBuffer().append(boost::asio::buffer_cast<const char*>(buffer.data()), consumed, true);
 
         if (consumed != buffer.size()) {
             if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {

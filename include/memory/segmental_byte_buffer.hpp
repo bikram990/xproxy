@@ -70,35 +70,43 @@ public:
     }
 
     SegmentalByteBuffer& append(const void *data, std::size_t size, bool new_seg) {
-        *buffer_ << ByteBuffer::wrap(data, size);
-
         if (new_seg)
             segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + size}));
         else
             segments_.back().end += size;
 
+        *buffer_ << ByteBuffer::wrap(data, size);
         return *this;
     }
 
     SegmentalByteBuffer& append(const ByteBuffer& buffer, bool new_seg) {
-        *buffer_ << buffer;
-
         if (new_seg)
             segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + buffer.size()}));
         else
             segments_.back().end += buffer.size();
 
+        *buffer_ << buffer;
         return *this;
     }
 
     SegmentalByteBuffer& append(const std::string& str, bool new_seg) {
-        *buffer_ << str;
-
         if (new_seg)
             segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + str.length()}));
         else
             segments_.back().end += str.length();
 
+        *buffer_ << str;
+        return *this;
+    }
+
+    template<typename Data>
+    SegmentalByteBuffer& append(const Data& data, std::size_t size, bool new_seg) {
+        if (new_seg)
+            segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + size}));
+        else
+            segments_.back().end += size;
+
+        *buffer_ << data;
         return *this;
     }
 
