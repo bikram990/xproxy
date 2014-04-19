@@ -13,14 +13,13 @@ class Session;
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
     void read();
-    void write(const HttpMessage& message);
 
-    template<typename Data, typename Converter>
-    void write(const Data& data, Converter&& convert) {
+    template<typename Data, typename Copier>
+    void write(const Data& data, Copier&& copier) {
         std::lock_guard<std::mutex> lock(lock_);
         bool owner = out_->size() <= 0;
         auto buf = owner ? out_.get() : aux_out_.get();
-        if (!convert(data, *buf)) {
+        if (!copier(data, *buf)) {
             XERROR << "Error occurred during serialization.";
             DestroySession();
             return;

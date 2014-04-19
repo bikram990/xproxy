@@ -36,25 +36,6 @@ void Connection::read() {
                                       std::placeholders::_2));
 }
 
-void Connection::write(const HttpMessage& message) {
-    std::lock_guard<std::mutex> lock(lock_);
-    bool owner = out_->size() <= 0;
-    auto buf = owner ? out_.get() : aux_out_.get();
-    message.serialize(*buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
-        auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
-        assert(copied == size);
-        buf.commit(copied);
-        return copied;
-    });
-
-    const static std::string msg1("write() called, will start a write operation.");
-    const static std::string msg2("write() called, a write operation exists, just write data to out buffer.");
-    XDEBUG << (owner ? msg1 : msg2);
-
-    if (owner)
-        write();
-}
-
 void Connection::ConstructMessage() {
     if (buffer_in_.size() <= 0)
         return;
