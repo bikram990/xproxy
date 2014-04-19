@@ -2,11 +2,11 @@
 #define HTTP_PARSER_HPP
 
 #include "common.h"
-#include "http_message.hpp"
 #include "http_parser.h"
 #include "log.h"
 
 class Connection;
+class HttpMessage;
 
 class HttpParser {
 public:

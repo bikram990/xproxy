@@ -1,7 +1,7 @@
+#include "connection.h"
 #include "http_parser.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
-#include "log.h"
 
 http_parser_settings HttpParser::settings_ = {
     &HttpParser::OnMessageBegin,
@@ -114,6 +114,11 @@ int HttpParser::OnHeadersComplete(http_parser *parser) {
         p->chunked_ = true;
 
     // TODO we need do more thing here, e.g. set the keep_alive flag
+    // TODO it's better to use io_service.post() here, and should
+    // wrap it with strand, same as below
+    auto c = p->connection_.lock();
+    if (c)
+        c->OnHeadersComplete();
 
     return 0;
 }
@@ -134,6 +139,10 @@ int HttpParser::OnBody(http_parser *parser, const char *at, std::size_t length) 
         p->message_->AppendBody(CRLF, 2, false);
     }
 
+    auto c = p->connection_.lock();
+    if (c)
+        c->OnBody();
+
     return 0;
 }
 
@@ -146,6 +155,10 @@ int HttpParser::OnMessageComplete(http_parser *parser) {
     }
 
     p->message_completed_ = true;
+
+    auto c = p->connection_.lock();
+    if (c)
+        c->OnBodyComplete();
 
     return 0;
 }
