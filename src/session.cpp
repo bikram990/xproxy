@@ -71,7 +71,7 @@ void Session::OnRequestComplete(const HttpMessage& request) {
         // server_connection_->port(8080);
 
         // server_connection_->write(request);
-        server_connection_->write(request, [](const HttpMessage& req, boost::asio::streambuf& buf) -> bool {
+        server_connection_->write(request, [](const HttpMessage& req, boost::asio::streambuf& buf) {
             req.serialize(buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
                 auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
                 assert(copied == size);
@@ -109,8 +109,11 @@ void Session::OnRequestComplete(const HttpMessage& request) {
 
     server_connection_->host(ResourceManager::GetServerConfig().GetGAEServerDomain());
     server_connection_->port(443);
+    // TODO here we should not just set https_ to true,
+    // because if later client sends another request, this field will mislead it
+    // instead we should add a field https_ to connection class
     https_ = true;
-    server_connection_->write(proxy_request, [](const boost::asio::streambuf& req, boost::asio::streambuf& buf) -> bool {
+    server_connection_->write(proxy_request, [](const boost::asio::streambuf& req, boost::asio::streambuf& buf) {
         boost::asio::buffer_copy(buf.prepare(req.size()), req.data());
         buf.commit(req.size());
         return true;
@@ -119,10 +122,19 @@ void Session::OnRequestComplete(const HttpMessage& request) {
 
 void Session::OnResponse(const HttpMessage& response) {
     if (!is_proxied_) {
-        client_connection_->write(response);
+        client_connection_->write(response, [](const HttpMessage& resp, boost::asio::streambuf& buf) {
+            resp.serialize(buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
+                auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
+                assert(copied == size);
+                buf.commit(copied);
+                return copied;
+            });
+            return true;
+        });
         return;
     }
-    client_connection_->write(response, [](const HttpMessage& resp, boost::asio::streambuf& buf) -> bool {
+    client_connection_->write(response, [](const HttpMessage& resp, boost::asio::streambuf& buf) {
+        // TODO here we should remove the proxy headers
         resp.serialize(buf, [](boost::asio::streambuf& buf, const char *data, std::size_t size) {
             auto copied = boost::asio::buffer_copy(buf.prepare(size), boost::asio::buffer(data, size));
             assert(copied == size);
@@ -134,6 +146,8 @@ void Session::OnResponse(const HttpMessage& response) {
 }
 
 void Session::OnResponseComplete(const HttpMessage& response) {
+    // TODO here if the response doesn't have more data, we should skip this
+    // consider add a RawDataAvailable() method to HttpMessage
     OnResponse(response);
 
     server_connection_->OnMessageExchangeComplete();

@@ -1,4 +1,3 @@
-#include <boost/lexical_cast.hpp>
 #include "http_message.hpp"
 #include "http_parser.hpp"
 #include "log.h"
@@ -49,7 +48,7 @@ void ServerConnection::connect() {
     }
 
     try {
-        boost::asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
+        boost::asio::ip::tcp::resolver::query query(host_, std::to_string(port_));
         auto endpoint_iterator = resolver_.resolve(query);
 
         XDEBUG_WITH_ID << "Connecting to remote, host: " << host_

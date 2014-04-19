@@ -38,7 +38,7 @@ void ClientConnection::OnMessageExchangeComplete() {
 
 void ClientConnection::OnBodyComplete() {
     XDEBUG_WITH_ID << "The request is completed.";
-    std::shared_ptr<Session> session(session_.lock());
+    auto session(session_.lock());
     if (session) {
         ParseRemotePeer(session);
         service_.post(std::bind(&Session::OnRequestComplete, session, std::ref(parser_->message())));
