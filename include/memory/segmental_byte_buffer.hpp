@@ -136,7 +136,7 @@ public:
 
     void consume(ByteBuffer::size_type size) {
         current_pos_ += size;
-        assert(current_pos_ < buffer_->size());
+        assert(current_pos_ <= buffer_->size());
     }
 
 private:
