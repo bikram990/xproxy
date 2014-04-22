@@ -20,23 +20,23 @@ public:
     ByteBuffer::const_iterator invalid_iterator = nullptr;
 
     explicit SegmentalByteBuffer(ByteBuffer::size_type size = 0)
-        : buffer_(new ByteBuffer(size)),
+        : buffer_(size),
           current_pos_(0) {}
 
     SegmentalByteBuffer(const SegmentalByteBuffer& buffer)
-        : buffer_(new ByteBuffer(*buffer.buffer_)),
+        : buffer_(buffer.buffer_),
           current_pos_(buffer.current_pos_),
           segments_(buffer.segments_) {}
 
     SegmentalByteBuffer& operator=(const SegmentalByteBuffer& buffer) {
-        *buffer_ = *buffer.buffer_;
+        buffer_ = buffer.buffer_;
         current_pos_ = buffer.current_pos_;
         segments_ = buffer.segments_;
 
         return *this;
     }
 
-    virtual ~SegmentalByteBuffer() { if(buffer_) delete buffer_; }
+    virtual ~SegmentalByteBuffer() = default;
 
     ByteBuffer::size_type replace(segid_type seg_id, ByteBuffer::const_pointer_type data, ByteBuffer::size_type size) {
         if (!ValidateSegmentId(seg_id))
@@ -48,20 +48,20 @@ public:
         auto delta_size = size - orig_size;
 
         if (delta_size > 0)
-            buffer_->EnsureSize(delta_size);
+            buffer_.EnsureSize(delta_size);
 
         // if the new size != original size, we need to move the data after this segment
         if (delta_size != 0) {
-            std::memmove(buffer_->data() + new_end,
-                         buffer_->data() + seg.end,
-                         buffer_->size() - seg.end);
+            std::memmove(buffer_.data() + new_end,
+                         buffer_.data() + seg.end,
+                         buffer_.size() - seg.end);
             for (auto i = seg_id + 1; i < segments_.size(); ++i) {
                 segments_[i].begin += delta_size;
                 segments_[i].end   += delta_size;
             }
         }
 
-        std::memcpy(buffer_->data() + seg.begin, data, size);
+        std::memcpy(buffer_.data() + seg.begin, data, size);
         return seg.begin;
     }
 
@@ -71,72 +71,72 @@ public:
 
     SegmentalByteBuffer& append(const void *data, std::size_t size, bool new_seg) {
         if (new_seg)
-            segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + size}));
+            segments_.push_back(std::move(Segment{buffer_.size(), buffer_.size() + size}));
         else
             segments_.back().end += size;
 
-        *buffer_ << ByteBuffer::wrap(data, size);
+        buffer_ << ByteBuffer::wrap(data, size);
         return *this;
     }
 
     SegmentalByteBuffer& append(const ByteBuffer& buffer, bool new_seg) {
         if (new_seg)
-            segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + buffer.size()}));
+            segments_.push_back(std::move(Segment{buffer_.size(), buffer_.size() + buffer.size()}));
         else
             segments_.back().end += buffer.size();
 
-        *buffer_ << buffer;
+        buffer_ << buffer;
         return *this;
     }
 
     SegmentalByteBuffer& append(const std::string& str, bool new_seg) {
         if (new_seg)
-            segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + str.length()}));
+            segments_.push_back(std::move(Segment{buffer_.size(), buffer_.size() + str.length()}));
         else
             segments_.back().end += str.length();
 
-        *buffer_ << str;
+        buffer_ << str;
         return *this;
     }
 
     template<typename Data>
     SegmentalByteBuffer& append(const Data& data, std::size_t size, bool new_seg) {
         if (new_seg)
-            segments_.push_back(std::move(Segment{buffer_->size(), buffer_->size() + size}));
+            segments_.push_back(std::move(Segment{buffer_.size(), buffer_.size() + size}));
         else
             segments_.back().end += size;
 
-        *buffer_ << data;
+        buffer_ << data;
         return *this;
     }
 
     void reset() {
-        buffer_->reset();
+        buffer_.reset();
         current_pos_ = 0;
         segments_.clear();
     }
 
-    ByteBuffer::size_type size() const { return buffer_->size(); }
+    ByteBuffer::size_type size() const { return buffer_.size(); }
 
     ByteBuffer::size_type available() const {
-        if (current_pos_ >= buffer_->size() || empty())
+        if (current_pos_ >= buffer_.size() || empty())
             return 0;
-        return buffer_->size() - current_pos_;
+        return buffer_.size() - current_pos_;
     }
 
     ByteBuffer::const_pointer_type data() const {
-        if (current_pos_ >= buffer_->size() || empty())
+        if (current_pos_ >= buffer_.size() || empty())
             return nullptr;
-        return buffer_->data() + current_pos_;
+        return buffer_.data() + current_pos_;
     }
 
     seg_size_type SegmentCount() const { return segments_.size(); }
 
-    bool empty() const { return buffer_->empty(); }
+    bool empty() const { return buffer_.empty(); }
 
     void consume(ByteBuffer::size_type size) {
         current_pos_ += size;
-        assert(current_pos_ <= buffer_->size());
+        assert(current_pos_ <= buffer_.size());
     }
 
 private:
@@ -145,7 +145,7 @@ private:
     }
 
 private:
-    ByteBuffer *buffer_;
+    ByteBuffer buffer_;
     ByteBuffer::size_type current_pos_;
     std::vector<Segment> segments_;
 };
