@@ -17,3 +17,7 @@
 6. the =shared_ptr=/=weak_ptr= relationship in =Connection=/=HttpMessage= is not needed, refine them later
 
 7. we may use normal type instead of pointer of the =ByteBuffer= member in =SegmentalByteBuffer=
+
+-------------------------------------------------------------------------------
+
+1. consider to design a more better buffering system
