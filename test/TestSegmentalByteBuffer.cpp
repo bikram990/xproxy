@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "CommonTestDefinition.hpp"
 #include "memory/segmental_byte_buffer.hpp"
 
 TEST(SegmentalByteBufferTest, Common) {
@@ -45,5 +45,14 @@ TEST(SegmentalByteBufferTest, Replace) {
 
     sbb.replace(1, data, 3);
 
-    EXPECT_TRUE(sbb.size() == 13);
+    EXPECT_EQ(sbb.size(), 13);
+    EXPECT_EQ(sbb.available(), 13);
+    EXPECT_TRUE((ArraysMatch<char, 13>(sbb.data(), "rep12345!@#$%")));
+
+    sbb.consume(3);
+    EXPECT_EQ(sbb.size(), 13);
+    EXPECT_EQ(sbb.available(), 10);
+    EXPECT_TRUE((ArraysMatch<char, 10>(sbb.data(), "12345!@#$%")));
+
+    EXPECT_EQ(sbb.replace(1, data, 3), ByteBuffer::npos);
 }
