@@ -75,7 +75,7 @@ protected:
 
     virtual void UpdateFirstLine() = 0;
 
-    void UpdateSegment(SegmentalByteBuffer::segid_type id, const ByteBuffer& buf);
+    void UpdateSegment(SegmentalByteBuffer::seg_id_type id, const ByteBuffer& buf);
 
 protected:
     int major_version_;

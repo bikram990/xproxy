@@ -48,7 +48,7 @@ void HttpMessage::UpdateRawBuffer() {
     UpdateHeaders();
 }
 
-void HttpMessage::UpdateSegment(SegmentalByteBuffer::segid_type id, const ByteBuffer &buf) {
+void HttpMessage::UpdateSegment(SegmentalByteBuffer::seg_id_type id, const ByteBuffer &buf) {
     if (raw_buf_.SegmentCount() > id) { // the raw buf contains this segment already
         auto ret = raw_buf_.replace(id, buf.data(), buf.size());
         if (ret == ByteBuffer::npos) {
