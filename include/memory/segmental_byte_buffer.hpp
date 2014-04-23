@@ -56,6 +56,7 @@ public:
             for (auto i = seg_id; i < segments_.size(); ++i) {
                 segments_[i] += delta_size;
             }
+            buffer_.size_ += delta_size;
         }
 
         std::memcpy(buffer_.data() + segments_[seg_id - 1], data, size);
