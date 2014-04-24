@@ -1,6 +1,7 @@
 #ifndef SEGMENTAL_BYTE_BUFFER_HPP
 #define SEGMENTAL_BYTE_BUFFER_HPP
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include "memory/byte_buffer.hpp"
@@ -115,6 +116,23 @@ public:
 
         buffer_ << data;
         return *this;
+    }
+
+    ByteBuffer::size_type seperate(ByteBuffer::size_type new_seg_end) {
+        if (new_seg_end == 0 || new_seg_end >= segments_[segments_.size() - 1]) // out of range
+            return ByteBuffer::npos;
+
+        auto it = std::find(segments_.begin(), segments_.end(), new_seg_end);
+        if (it != segments_.end()) // this segment exists already
+            return new_seg_end;
+
+        it = std::find_if(segments_.begin(), segments_.end(), [=](ByteBuffer::size_type end) {
+            return end > new_seg_end;
+        });
+
+        segments_.insert(it, new_seg_end);
+
+        return new_seg_end;
     }
 
     void reset() {

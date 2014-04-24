@@ -56,3 +56,25 @@ TEST(SegmentalByteBufferTest, Replace) {
 
     EXPECT_TRUE(sbb.replace(1, data, 3) == ByteBuffer::npos);
 }
+
+TEST(SegmentalByteBufferTest, Seperate) {
+    SegmentalByteBuffer sbb;
+    sbb.append("abcde", true)
+       .append("12345", true)
+       .append("!@#$%", false);
+
+    EXPECT_EQ(sbb.SegmentCount(), 2);
+
+    EXPECT_TRUE(sbb.seperate(0) == ByteBuffer::npos);
+    EXPECT_TRUE(sbb.seperate(100) == ByteBuffer::npos);
+
+    EXPECT_EQ(sbb.seperate(10), 10);
+
+    EXPECT_EQ(sbb.SegmentCount(), 3);
+
+    char data[2] = {'x', 'y'};
+    sbb.replace(2, data, 2);
+
+    EXPECT_EQ(sbb.size(), 12);
+    EXPECT_TRUE((ArraysMatch<char, 12>(sbb.data(), "abcdexy!@#$%")));
+}
