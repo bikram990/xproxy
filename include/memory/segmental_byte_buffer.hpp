@@ -70,6 +70,9 @@ public:
     SegmentalByteBuffer& append(const void *data, std::size_t size, bool new_seg) {
         assert(buffer_.size() == segments_[segments_.size() - 1]);
 
+        if (buffer_.size() <= 0) // if there is no segment yet, we should always add new segment
+            new_seg = true;
+
         if (new_seg)
             segments_.push_back(buffer_.size() + size);
         else
@@ -86,6 +89,9 @@ public:
     SegmentalByteBuffer& append(const std::string& str, bool new_seg) {
         assert(buffer_.size() == segments_[segments_.size() - 1]);
 
+        if (buffer_.size() <= 0) // if there is no segment yet, we should always add new segment
+            new_seg = true;
+
         if (new_seg)
             segments_.push_back(buffer_.size() + str.length());
         else
@@ -98,6 +104,9 @@ public:
     template<typename Data>
     SegmentalByteBuffer& append(const Data& data, std::size_t size, bool new_seg) {
         assert(buffer_.size() == segments_[segments_.size() - 1]);
+
+        if (buffer_.size() <= 0) // if there is no segment yet, we should always add new segment
+            new_seg = true;
 
         if (new_seg)
             segments_.push_back(buffer_.size() + size);
