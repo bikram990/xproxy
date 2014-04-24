@@ -77,4 +77,16 @@ TEST(SegmentalByteBufferTest, Seperate) {
 
     EXPECT_EQ(sbb.size(), 12);
     EXPECT_TRUE((ArraysMatch<char, 12>(sbb.data(), "abcdexy!@#$%")));
+
+    sbb.consume(5);
+    EXPECT_TRUE((ArraysMatch<char, 2>(sbb.data(), "xy")));
+
+    EXPECT_EQ(sbb.seperate(9), 9);
+    EXPECT_EQ(sbb.SegmentCount(), 4);
+    sbb.replace(4, "OPQZYX", 6);
+
+    EXPECT_EQ(sbb.size(), 15);
+    EXPECT_EQ(sbb.available(), 10);
+
+    EXPECT_TRUE((ArraysMatch<char, 10>(sbb.data(), "xy!@OPQZYX")));
 }
