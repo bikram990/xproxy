@@ -12,13 +12,13 @@ class HttpParser {
 public:
     template<class Buffer>
     std::size_t consume(const Buffer& buffer) {
+        message_->RawBuffer().append(boost::asio::buffer_cast<const char*>(buffer.data()), buffer.size(), false);
+
         std::size_t consumed =
             ::http_parser_execute(&parser_, &settings_,
-                                  boost::asio::buffer_cast<const char*>(buffer.data()), buffer.size());
+                                  message_->RawBuffer().data(), message_->RawBuffer().available());
 
-        message_->RawBuffer().append(boost::asio::buffer_cast<const char*>(buffer.data()), consumed, true);
-
-        if (consumed != buffer.size()) {
+        if (consumed != message_->RawBuffer().available()) {
             if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {
                 XERROR << "Error occurred during message parsing, error code: "
                        << parser_.http_errno << ", message: "
@@ -62,15 +62,39 @@ private:
     void InitMessage(http_parser_type type);
 
 private:
+    struct buffer : public ByteBuffer::wrapper {
+        bool empty() const { return dt == nullptr; }
+        void clear() { dt = nullptr; sz = 0; }
+
+        void append(const char *data, std::size_t size) {
+            if (dt == nullptr) {
+                dt = data;
+                sz = size;
+                return;
+            }
+
+            // to make sure it is continuous
+            assert(data == dt + sz);
+
+            sz += size;
+        }
+
+        operator std::string() const {
+            return std::string(dt, sz);
+        }
+    };
+
+private:
     std::weak_ptr<Connection> connection_;
 
     http_parser parser_;
 
+    bool first_header_;
     bool header_completed_;
     bool message_completed_;
     bool chunked_;
-    std::string current_header_field_;
-    std::string current_header_value_;
+    buffer current_header_field_;
+    buffer current_header_value_;
 
     std::unique_ptr<HttpMessage> message_;
 

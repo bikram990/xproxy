@@ -17,6 +17,7 @@ http_parser_settings HttpParser::settings_ = {
 HttpParser::HttpParser(std::shared_ptr<Connection> connection,
                        http_parser_type type)
     : connection_(connection),
+      first_header_(true),
       header_completed_(false),
       message_completed_(false),
       chunked_(false) {
@@ -80,6 +81,15 @@ int HttpParser::OnHeaderField(http_parser *parser, const char *at, std::size_t l
     HttpParser *p = static_cast<HttpParser*>(parser->data);
     assert(p);
 
+    // we seperate the first line in buffer if it is the first header
+    if (p->first_header_) {
+        p->first_header_ = false;
+        // the length of the first line
+        auto length = std::distance(p->message_->RawBuffer().data(), at);
+        auto seg_end = p->message_->RawBuffer().seperate(length);
+        assert(seg_end == length);
+    }
+
     if (!p->current_header_value_.empty()) {
         p->message_->AddHeader(p->current_header_field_,
                                p->current_header_value_);
@@ -102,12 +112,21 @@ int HttpParser::OnHeadersComplete(http_parser *parser) {
     HttpParser *p = static_cast<HttpParser*>(parser->data);
     assert(p);
 
-    if (!p->current_header_value_.empty()) {
-        p->message_->AddHeader(p->current_header_field_,
-                               p->current_header_value_);
-        p->current_header_field_.clear();
-        p->current_header_value_.clear();
-    }
+    // current_header_value_ MUST NOT be empty
+    assert(!p->current_header_value_.empty());
+
+    // we seperate the headers segment in buffer here
+    // the last header end, and add the header trailing length: "\r\n\r\n"
+    auto headers_end = p->current_header_value_.data() + p->current_header_value_.size() + 4;
+    auto length = std::distance(p->message_->RawBuffer().data(), headers_end);
+    auto seg_end = p->message_->RawBuffer().seperate(length);
+    assert(seg_end == length);
+
+    p->message_->AddHeader(p->current_header_field_,
+                           p->current_header_value_);
+    p->current_header_field_.clear();
+    p->current_header_value_.clear();
+
     p->header_completed_ = true;
 
     if (p->parser_.flags & F_CHUNKED)
