@@ -71,7 +71,12 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 file(GLOB TEST_SRC ${TEST_DIR}/*.cpp)
 
 # we should also add source code here, not only the testing code
-add_executable(${TEST_EXE} ${TEST_SRC} ${SRC_LIST})
+# however, we should remove the main.cpp, otherwise it will overwrite the
+# main() function defined in gtest_main
+#file(GLOB ${PROJECT_NAME}_SRC ${SRC_DIR}/*.cpp)
+aux_source_directory(${SRC_DIR} SRC_FOR_TEST)
+list(REMOVE_ITEM SRC_FOR_TEST ${SRC_DIR}/main.cpp)
+add_executable(${TEST_EXE} ${TEST_SRC} ${SRC_FOR_TEST})
 target_link_libraries(${TEST_EXE} gtest gtest_main)
 target_link_libraries(${TEST_EXE} http-parser)
 
