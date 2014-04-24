@@ -54,5 +54,5 @@ TEST(SegmentalByteBufferTest, Replace) {
     EXPECT_EQ(sbb.available(), 10);
     EXPECT_TRUE((ArraysMatch<char, 10>(sbb.data(), "12345!@#$%")));
 
-    EXPECT_EQ(sbb.replace(1, data, 3), ByteBuffer::npos);
+    EXPECT_TRUE(sbb.replace(1, data, 3) == ByteBuffer::npos);
 }
