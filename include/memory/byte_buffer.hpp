@@ -28,15 +28,15 @@ public:
     enum { kDefaultSize = 1024, kGrowFactor = 2 };
 
     struct wrapper {
-        const void *d;
-        std::size_t s;
+        const char *dt;
+        std::size_t sz;
 
-        const void *data() const { return d; }
-        std::size_t size() const { return s; }
+        const char *data() const { return dt; }
+        std::size_t size() const { return sz; }
     };
 
     static wrapper wrap(const void *data, std::size_t size) {
-        return wrapper{data, size};
+        return wrapper{static_cast<const char*>(data), size};
     }
 
     virtual ~ByteBuffer() {
