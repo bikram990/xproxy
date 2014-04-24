@@ -52,6 +52,32 @@ add_library(http-parser STATIC ${http-parser_SOURCE})
 target_link_libraries(${PROJECT_NAME} http-parser)
 
 ################################################################################
+# Setup unit test using google test
+################################################################################
+set(TEST_EXE "test-${PROJECT_NAME}")
+set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
+set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/gtest)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    # force this option to ON so that Google Test will use /MD instead of /MT
+    # /MD is now the default for Visual Studio, so it should be our default, too
+    option(gtest_force_shared_crt
+           "Use shared CRT even when Google Test is built as static lib."
+           ON)
+endif()
+
+add_subdirectory(${GTEST_DIR})
+include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+file(GLOB TEST_SRC ${TEST_DIR}/*.cpp)
+
+# we should also add source code here, not only the testing code
+add_executable(${TEST_EXE} ${TEST_SRC} ${SRC_LIST})
+target_link_libraries(${TEST_EXE} gtest gtest_main)
+target_link_libraries(${TEST_EXE} http-parser)
+
+add_test(${TEST_EXE} ${TEST_EXE}) # first: test name, second: test command
+
+################################################################################
 # Configure boost library
 ################################################################################
 if(WIN32)
@@ -73,6 +99,7 @@ if(Boost_FOUND)
     endif()
     include_directories(${Boost_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+    target_link_libraries(${TEST_EXE} ${Boost_LIBRARIES})
 else()
     message(FATAL_ERROR "Boost is not found.")
     return()
@@ -96,6 +123,7 @@ find_package(OpenSSL)
 if(OPENSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES})
+    target_link_libraries(${TEST_EXE} ${OPENSSL_LIBRARIES})
 else()
     message(FATAL_ERROR "OpenSSL is not found.")
     return()
@@ -115,33 +143,10 @@ endif()
 
 include_directories(${LOG4CPP_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} ${LOG4CPP_LIBRARIES})
+target_link_libraries(${TEST_EXE} ${LOG4CPP_LIBRARIES})
 
 ################################################################################
 # Copy configuration file and certificates to output directory
 ################################################################################
 configure_file(xproxy.conf xproxy.conf COPYONLY)
 file(COPY cert/ DESTINATION cert/)
-
-################################################################################
-# Setup unit test using google test
-################################################################################
-set(TEST_EXE "test-${PROJECT_NAME}")
-set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
-set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/gtest)
-
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    # force this option to ON so that Google Test will use /MD instead of /MT
-    # /MD is now the default for Visual Studio, so it should be our default, too
-    option(gtest_force_shared_crt
-           "Use shared CRT even when Google Test is built as static lib."
-           ON)
-endif()
-
-add_subdirectory(${GTEST_DIR})
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-file(GLOB TEST_SRC ${TEST_DIR}/*.cpp)
-
-add_executable(${TEST_EXE} ${TEST_SRC})
-target_link_libraries(${TEST_EXE} gtest gtest_main)
-
-add_test(${TEST_EXE} ${TEST_EXE}) # first: test name, second: test command
