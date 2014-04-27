@@ -21,3 +21,5 @@
 -------------------------------------------------------------------------------
 
 1. consider to design a more better buffering system
+
+2. use Google Mock to do unit test
