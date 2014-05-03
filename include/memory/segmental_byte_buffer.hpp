@@ -150,6 +150,10 @@ public:
         return buffer_.size() - current_pos_;
     }
 
+    ByteBuffer::const_pointer_type head() const {
+        return empty() ? nullptr : buffer_.data();
+    }
+
     ByteBuffer::const_pointer_type data() const {
         if (current_pos_ >= buffer_.size() || empty())
             return nullptr;

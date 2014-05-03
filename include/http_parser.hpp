@@ -12,11 +12,13 @@ class HttpParser {
 public:
     template<class Buffer>
     std::size_t consume(const Buffer& buffer) {
+        auto orig_size = message_->RawBuffer().size();
         message_->RawBuffer().append(boost::asio::buffer_cast<const char*>(buffer.data()), buffer.size(), false);
 
         std::size_t consumed =
             ::http_parser_execute(&parser_, &settings_,
-                                  message_->RawBuffer().data(), message_->RawBuffer().available());
+                                  //message_->RawBuffer().data(), message_->RawBuffer().available());
+                                  message_->RawBuffer().head() + orig_size, message_->RawBuffer().size() - orig_size);
 
         if (consumed != message_->RawBuffer().available()) {
             if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {
