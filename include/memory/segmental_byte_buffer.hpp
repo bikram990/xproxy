@@ -139,6 +139,7 @@ public:
         buffer_.reset();
         current_pos_ = 0;
         segments_.clear();
+        segments_.push_back(0);
     }
 
     ByteBuffer::size_type size() const { return buffer_.size(); }
