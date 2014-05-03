@@ -114,7 +114,7 @@ public:
         else
             segments_.back() = segments_.back() + size;
 
-        buffer_ << data;
+        buffer_ << ByteBuffer::wrap(data, size);
         return *this;
     }
 
