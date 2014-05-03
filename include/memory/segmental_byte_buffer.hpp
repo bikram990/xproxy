@@ -119,7 +119,7 @@ public:
     }
 
     ByteBuffer::size_type seperate(ByteBuffer::size_type new_seg_end) {
-        if (new_seg_end == 0 || new_seg_end >= segments_[segments_.size() - 1]) // out of range
+        if (new_seg_end > segments_[segments_.size() - 1]) // out of range
             return ByteBuffer::npos;
 
         auto it = std::find(segments_.begin(), segments_.end(), new_seg_end);
