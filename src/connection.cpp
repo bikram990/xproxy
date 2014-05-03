@@ -45,10 +45,12 @@ void Connection::ConstructMessage() {
         return;
     }
 
-    if (!parser_->consume(buffer_in_)) {
+    auto consumed = parser_->consume(buffer_in_);
+    if (!consumed) {
         XERROR << "Message parse failure.";
         return;
     }
+    buffer_in_.consume(consumed);
 
     // TODO should we check if buffer_in_ is empty here?
 
