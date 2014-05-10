@@ -1,57 +1,26 @@
-#include <boost/bind.hpp>
-#include <boost/thread/thread.hpp>
 #include "client_connection.h"
-#include "common.h"
 #include "log.h"
 #include "proxy_server.h"
+#include <functional>
 
-namespace {
-    static Singleton<ProxyServer> server_;
-}
-
-ProxyServer& ProxyServer::instance() {
-    return server_.get();
-}
-
-ProxyServer::ProxyServer(unsigned short port, int thread_count)
-    : state_(kUninitialized), port_(port),
-      thread_pool_size_(thread_count),
-      signals_(service_), acceptor_(service_),
-      session_manager_(new class SessionManager) {}
+ProxyServer::ProxyServer(unsigned short port)
+    : port_(port), signals_(service_), acceptor_(service_) {}
 
 void ProxyServer::start() {
-    if(state_ == kUninitialized) {
-        if(!init()) {
-            XFATAL << "Failed to initialzie proxy server.";
-            return;
-        }
+    if(!init()) {
+        XFATAL << "Failed to initialzie proxy server.";
+        return;
     }
 
-    if(state_ == kRunning)
-        return;
-
     StartAccept();
-
-    service_keeper_.reset(new boost::asio::io_service::work(service_));
-
-    std::vector<boost::shared_ptr<boost::thread>> threads;
-
-    for(int i = 0; i < thread_pool_size_; ++i)
-        threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&boost::asio::io_service::run, &service_))));
-
-    state_ = kRunning;
     XINFO << "Proxy is started.";
-
-    for(std::vector<boost::shared_ptr<boost::thread> >::iterator it = threads.begin();
-        it != threads.end(); it++)
-        (*it)->join();
 }
 
 bool ProxyServer::init() {
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
     // signals_.add(SIGQUIT); // TODO is this needed?
-    signals_.async_wait(boost::bind(&ProxyServer::OnStopSignalReceived, this));
+    signals_.async_wait(std::bind(&ProxyServer::OnStopSignalReceived, this));
 
     boost::asio::ip::tcp::endpoint e(boost::asio::ip::tcp::v4(), port_);
     acceptor_.open(e.protocol());
@@ -63,41 +32,37 @@ bool ProxyServer::init() {
 }
 
 void ProxyServer::StartAccept() {
-    if(state_ == kStopped)
-        return;
-
-    current_session_.reset(new Session(*this));
-    current_session_->init();
-    acceptor_.async_accept(current_session_->ClientConnection()->socket(),
-                           boost::bind(&ProxyServer::OnConnectionAccepted, this,
-                                       boost::asio::placeholders::error));
+    current_client_connection_.reset(new ClientConnection(*this));
+    acceptor_.async_accept(current_client_connection_->socket(),
+                           std::bind(&ProxyServer::OnConnectionAccepted, this, std::placeholders::_1));
 }
 
-void ProxyServer::OnConnectionAccepted(const boost::system::error_code &e) {
-    if(state_ == kStopped) {
-        return;
-    }
-
+void ProxyServer::OnConnectionAccepted(const boost::system::error_code& e) {
     if(e) {
         XERROR << "Error occurred during accept connection, message: " << e.message();
         return;
     }
 
-    XDEBUG << "A new session [id: " << current_session_->id() << "] is established, client address: ["
-           << current_session_->ClientConnection()->socket().remote_endpoint().address() << ":"
-           << current_session_->ClientConnection()->socket().remote_endpoint().port() << "].";
+    XDEBUG << "A new client connection [id: " << current_client_connection_->id()
+           << "] is established, client address: ["
+           << current_client_connection_->socket().remote_endpoint().address() << ":"
+           << current_client_connection_->socket().remote_endpoint().port() << "].";
 
-    session_manager_->start(current_session_);
+    client_connections_.insert(current_client_connection_);
+    current_client_connection_->read();
 
     StartAccept();
 }
 
 void ProxyServer::OnStopSignalReceived() {
     XINFO << "xProxy server is stopping...";
-
-    state_ = kStopped;
-
     acceptor_.close();
-    service_keeper_.reset();
-    session_manager_->StopAll();
+    StopAllConnections();
+}
+
+void ProxyServer::StopAllConnections() {
+    std::for_each(client_connections_.begin(),
+                  client_connections_.end(),
+                  [](std::shared_ptr<Connection> connection) { connection->stop(); });
+    client_connections_.clear();
 }
