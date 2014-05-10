@@ -18,6 +18,8 @@
 
 7. we may use normal type instead of pointer of the =ByteBuffer= member in =SegmentalByteBuffer=
 
+8. remove =#include<boost/asio.hpp>= in "common.h", just define simple things there
+
 -------------------------------------------------------------------------------
 
 1. consider to design a more better buffering system
