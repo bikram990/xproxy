@@ -5,6 +5,49 @@
 #include "memory/segmental_byte_buffer.hpp"
 
 class HttpMessage {
+private:
+    class SerializeHelper {
+    public:
+        SerializeHelper(HttpMessage& message)
+            : message_(message),
+              headers_serialized_(false),
+              body_serialized_(0) {}
+
+        ~SerializeHelper() = default;
+
+        std::size_t serialize(ByteBuffer& buffer) {
+            std::size_t size = 0;
+            if (!headers_serialized_) {
+                assert(body_serialized_ == 0);
+
+                size += message_.SerializeFirstLine(buffer);
+                size += message_.SerializeHeaders(buffer);
+                headers_serialized_ = true;
+            }
+
+            assert(message_.body_.size() >= body_serialized_);
+
+            if (message_.body_.size() == body_serialized_)
+                return size;
+
+            buffer << ByteBuffer.wrap(message_.body_.data() + body_serialized_,
+                                      message_.body_.size() - body_serialized_);
+            body_serialized_ = message_.body_.size();
+
+            return size + message_.body_.size() - body_serialized_;
+        }
+
+        void reset() {
+            headers_serialized_ = false;
+            body_serialized_ = 0;
+        }
+
+    private:
+        HttpMessage& message_;
+        bool headers_serialized_;
+        std::size_t body_serialized_;
+    };
+
 public:
     enum FieldType {
         kRequestMethod, kRequestUri,
@@ -12,82 +55,71 @@ public:
     };
 
 public:
-    virtual ~HttpMessage() = default;
+    int MajorVersion() const { return major_version_; }
+    int MinorVersion() const { return minor_version_; }
+    void MajorVersion(int version) { major_version_ = version; }
+    void MinorVersion(int version) { minor_version_ = version; }
 
-    // TODO maybe we don't need to provide this function
-    void TurnOffRawBufSync() { buf_sync_ = false; }
-
-    /**
-     * @brief TurnOnRawBufSync: turn on the buffer sync feature on this message.
-     *
-     * If this function is called, the raw buffer will be updated, and, every
-     * change made to the message will casue its raw buffer updated, it will
-     * affect performance.
-     *
-     * Recommended: make the sync feature off at first (it is off by default),
-     * after all fields are set and will not change any more, then turn on it.
-     *
-     * A even better usage: make the sync feature off all the time, then set all
-     * fields, and update the raw buffer manually at the same time, so we don't
-     * need to turn on it to sync raw buffer. However, be careful when using in
-     * this way.
-     */
-    void TurnOnRawBufSync() {
-        buf_sync_ = true;
-        UpdateRawBuffer();
+    bool FindHeader(const std::string& name, std::string& value) const {
+        auto it = headers_.find(name);
+        if (it == headers_.end())
+            return false;
+        value = it->second;
+        return true;
     }
 
-    SegmentalByteBuffer& RawBuffer() const { return raw_buf_; }
+    HttpMessage& AddHeader(const std::string& name, const std::string& value) {
+        headers_[name] = value;
+        return *this;
+    }
 
-    int MajorVersion() const { return major_version_; }
+    HttpMessage& AppendBody(const char *data, std::size_t size) {
+        body_ << ByteBuffer.wrap(data, size);
+        return *this;
+    }
 
-    int MinorVersion() const { return minor_version_; }
+    std::size_t serialize(ByteBuffer& buffer) {
+        return helper_.serialize(buffer);
+    }
 
-    void MajorVersion(int version);
-
-    void MinorVersion(int version);
-
-    // return reference of itself to support chaining invocation, same below
-    HttpMessage& AddHeader(const std::string& name, const std::string& value);
-
-    bool FindHeader(const std::string& name, std::string& value) const;
-
-    HttpMessage& AppendBody(const char *data, std::size_t size, bool new_seg = true);
-
-    HttpMessage& AppendBody(const std::string& str, bool new_seg = true);
-
+public:
     virtual std::string GetField(FieldType type) const = 0;
 
     virtual void SetField(FieldType type, std::string&& value) = 0;
 
-    virtual void reset();
-
-    template<class Buffer, typename Copier>
-    void serialize(Buffer& buffer, Copier&& copier) const {
-        auto copied = copier(buffer, raw_buf_.data(), raw_buf_.available());
-        raw_buf_.consume(copied);
+    virtual void reset() {
+        major_version_ = 1;
+        minor_version_ = 1;
+        headers_.clear();
+        body_.clear();
+        helper_.reset();
     }
 
 protected:
-    HttpMessage(); // TODO
+    HttpMessage() : major_version_(1), minor_version_(1), helper_(*this) {}
+    virtual ~HttpMessage() = default;
 
-    void UpdateRawBuffer();
+    virtual std::size_t SerializeFirstLine(ByteBuffer& buffer) = 0;
 
-    virtual void UpdateFirstLine() = 0;
-
-    void UpdateSegment(SegmentalByteBuffer::seg_id_type id, const ByteBuffer& buf);
+    std::size_t SerializeHeaders(ByteBuffer& buffer) {
+        auto orig_size = buffer.size();
+        for (auto it : headers_) {
+            buffer << it.first << ": " << it.second << CRLF;
+        }
+        buffer << CRLF;
+        return buffer.size() - orig_size;
+    }
 
 protected:
     int major_version_;
     int minor_version_;
-    std::map<std::string, std::string> headers_;
-
-    bool buf_sync_; // whether we should sync raw buf or not while updating fields
-    mutable SegmentalByteBuffer raw_buf_;
 
 private:
-    void UpdateHeaders();
+    std::map<std::string, std::string> headers_;
+    ByteBuffer body_;
+    SerializeHelper helper_;
 
+private:
     DISABLE_COPY_AND_ASSIGNMENT(HttpMessage);
 };
 

@@ -19,20 +19,16 @@ public:
         default:
             ; // ignore
         }
-        return std::string{};
+        return std::string();
     }
 
     virtual void SetField(FieldType type, std::string&& value) {
         switch (type) {
         case FieldType::kRequestMethod:
             method_ = std::move(value);
-            if (buf_sync_)
-                UpdateFirstLine();
             break;
         case FieldType::kRequestUri:
             uri_ = std::move(value);
-            if (buf_sync_)
-                UpdateFirstLine();
             break;
         case FieldType::kResponseStatus:
         case FieldType::kResponseMessage:
@@ -48,11 +44,11 @@ public:
     }
 
 protected:
-    virtual void UpdateFirstLine() {
-        ByteBuffer temp(method_.length() + uri_.length() + 100);
-        temp << method_ << ' ' << uri_  << ' ' << "HTTP/"
-             << major_version_ << '.' << minor_version_ << CRLF;
-        UpdateSegment(0, temp);
+    virtual std::size_t SerializeFirstLine(ByteBuffer& buffer) {
+        auto orig_size = buffer.size();
+        buffer << method_ << ' ' << uri_  << ' ' << "HTTP/"
+               << major_version_ << '.' << minor_version_ << CRLF;
+        return buffer.size() - orig_size;
     }
 
 private:
