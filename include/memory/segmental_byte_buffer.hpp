@@ -114,12 +114,12 @@ public:
         else
             segments_.back() = segments_.back() + size;
 
-        buffer_ << data;
+        buffer_ << ByteBuffer::wrap(data, size);
         return *this;
     }
 
     ByteBuffer::size_type seperate(ByteBuffer::size_type new_seg_end) {
-        if (new_seg_end == 0 || new_seg_end >= segments_[segments_.size() - 1]) // out of range
+        if (new_seg_end > segments_[segments_.size() - 1]) // out of range
             return ByteBuffer::npos;
 
         auto it = std::find(segments_.begin(), segments_.end(), new_seg_end);
@@ -139,6 +139,7 @@ public:
         buffer_.reset();
         current_pos_ = 0;
         segments_.clear();
+        segments_.push_back(0);
     }
 
     ByteBuffer::size_type size() const { return buffer_.size(); }
@@ -147,6 +148,10 @@ public:
         if (current_pos_ >= buffer_.size() || empty())
             return 0;
         return buffer_.size() - current_pos_;
+    }
+
+    ByteBuffer::const_pointer_type head() const {
+        return empty() ? nullptr : buffer_.data();
     }
 
     ByteBuffer::const_pointer_type data() const {
