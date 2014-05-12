@@ -1,31 +1,25 @@
-#include "http_message.hpp"
+#include "memory/byte_buffer.hpp"
+#include "message/http/http_message.hpp"
+
+namespace xproxy {
+namespace message {
+namespace http {
 
 HttpMessage::HttpMessage()
     : major_version_(1),
       minor_version_(1),
-      buf_sync_(false),
-      raw_buf_(8192) {}
+      helper_(*this) {}
 
-void HttpMessage::MajorVersion(int version) {
-    major_version_ = version;
-    if (buf_sync_)
-        UpdateFirstLine();
+HttpMessage::SerializeHelper::SerializeHelper(HttpMessage &message)
+    : message_(message),
+      headers_serialized_(false),
+      body_serialized_(0) {}
+
+std::size_t HttpMessage::serialize(memory::ByteBuffer &buffer) {
+    return helper_.serialize(buffer);
 }
 
-void HttpMessage::MinorVersion(int version) {
-    minor_version_ = version;
-    if (buf_sync_)
-        UpdateFirstLine();
-}
-
-HttpMessage &HttpMessage::AddHeader(const std::string &name, const std::string &value) {
-    headers_[name] = value;
-    if (buf_sync_)
-        UpdateHeaders();
-    return *this;
-}
-
-bool HttpMessage::FindHeader(const std::string &name, std::string &value) const {
+bool HttpMessage::findHeader(const std::string &name, std::string &value) const {
     auto it = headers_.find(name);
     if (it == headers_.end())
         return false;
@@ -33,48 +27,60 @@ bool HttpMessage::FindHeader(const std::string &name, std::string &value) const 
     return true;
 }
 
-HttpMessage &HttpMessage::AppendBody(const std::string &str, bool new_seg) {
-    raw_buf_.append(str, new_seg);
+HttpMessage &HttpMessage::addHeader(const std::string &name, const std::string &value) {
+    headers_[name] = value;
     return *this;
 }
 
-HttpMessage &HttpMessage::AppendBody(const char *data, std::size_t size, bool new_seg) {
-    raw_buf_.append(data, size, new_seg);
+HttpMessage &HttpMessage::appendBody(const char *data, std::size_t size) {
+    body_ << ByteBuffer::wrap(data, size);
     return *this;
-}
-
-void HttpMessage::UpdateRawBuffer() {
-    UpdateFirstLine();
-    UpdateHeaders();
-}
-
-void HttpMessage::UpdateSegment(SegmentalByteBuffer::seg_id_type id, const ByteBuffer &buf) {
-    if (raw_buf_.SegmentCount() > id) { // the raw buf contains this segment already
-        auto ret = raw_buf_.replace(id, buf.data(), buf.size());
-        if (ret == ByteBuffer::npos) {
-            // TODO error handling here
-        }
-    } else if (raw_buf_.SegmentCount() == id) { // the raw buf is in correct state: ready for segment with id
-        raw_buf_.append(buf, true);
-    } else { // the raw buf is in incorrect state: need other segments to be inserted before this segment
-        // TODO error handling here
-    }
-}
-
-void HttpMessage::UpdateHeaders() {
-    ByteBuffer temp(headers_.size() * 100); // the size
-    for (auto it : headers_) {
-        temp << it.first << ": " << it.second << CRLF;
-    }
-    temp << CRLF;
-
-    UpdateSegment(1, temp);
 }
 
 void HttpMessage::reset() {
     major_version_ = 1;
     minor_version_ = 1;
     headers_.clear();
-    buf_sync_ = false;
-    raw_buf_.reset();
+    body_.clear();
+    helper_.reset();
 }
+
+std::size_t HttpMessage::serializeHeaders(memory::ByteBuffer &buffer) {
+    auto orig_size = buffer.size();
+    for (auto it : headers_) {
+        buffer << it.first << ": " << it.second << CRLF;
+    }
+    buffer << CRLF;
+    return buffer.size() - orig_size;
+}
+
+std::size_t HttpMessage::SerializeHelper::serialize(memory::ByteBuffer &buffer) {
+    std::size_t size = 0;
+    if (!headers_serialized_) {
+        assert(body_serialized_ == 0);
+
+        size += message_.serializeFirstLine(buffer);
+        size += message_.serializeHeaders(buffer);
+        headers_serialized_ = true;
+    }
+
+    assert(message_.body_.size() >= body_serialized_);
+
+    if (message_.body_.size() == body_serialized_)
+        return size;
+
+    buffer << memory::ByteBuffer::wrap(message_.body_.data() + body_serialized_,
+                                       message_.body_.size() - body_serialized_);
+    body_serialized_ = message_.body_.size();
+
+    return size + message_.body_.size() - body_serialized_;
+}
+
+void HttpMessage::SerializeHelper::reset() {
+    headers_serialized_ = false;
+    body_serialized_ = 0;
+}
+
+} // namespace http
+} // namespace message
+} // namespace xproxy
