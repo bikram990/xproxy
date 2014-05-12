@@ -1,59 +1,32 @@
 #ifndef HTTP_RESPONSE_HPP
 #define HTTP_RESPONSE_HPP
 
-#include "http_message.hpp"
+#include "message/http/http_message.hpp"
+
+namespace xproxy {
+namespace message {
+namespace http {
 
 class HttpResponse : public HttpMessage {
 public:
-    HttpResponse() = default;
-    virtual ~HttpResponse() = default;
+    DEFAULT_CTOR_AND_DTOR(HttpResponse);
 
-    virtual std::string GetField(FieldType type) const {
-        switch (type) {
-        case FieldType::kResponseStatus:
-            return std::to_string(status_);
-        case FieldType::kResponseMessage:
-            return message_;
-        case FieldType::kRequestMethod:
-        case FieldType::kRequestUri:
-        default:
-            ; // ignore
-        }
-        return std::string();
-    }
+    virtual std::string getField(FieldType type) const;
 
-    virtual void SetField(FieldType type, std::string&& value) {
-        switch (type) {
-        case FieldType::kResponseStatus:
-            status_ = std::stoi(value);
-            break;
-        case FieldType::kResponseMessage:
-            message_ = std::move(value);
-            break;
-        case FieldType::kRequestMethod:
-        case FieldType::kRequestUri:
-        default:
-            ; // ignore
-        }
-    }
+    virtual void setField(FieldType type, std::string&& value);
 
-    virtual void reset() {
-        HttpMessage::reset();
-        status_ = 0;
-        message_.clear();
-    }
+    virtual void reset();
 
 protected:
-    virtual std::size_t SerializeFirstLine(ByteBuffer& buffer) {
-        auto orig_size = buffer.size();
-        buffer << "HTTP/" << major_version_ << '.' << minor_version_ << ' '
-               << status_ << ' ' << message_ << CRLF;
-        return buffer.size() - orig_size;
-    }
+    virtual std::size_t serializeFirstLine(memory::ByteBuffer& buffer);
 
 private:
     int status_;
     std::string message_;
 };
+
+} // namespace http
+} // namespace message
+} // namespace xproxy
 
 #endif // HTTP_RESPONSE_HPP
