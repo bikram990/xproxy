@@ -1,53 +1,19 @@
 #ifndef HTTP_MESSAGE_HPP
 #define HTTP_MESSAGE_HPP
 
-#include "common.h"
-#include "memory/segmental_byte_buffer.hpp"
+#include "common.hpp"
+#include "message/message.hpp"
 
-class HttpMessage {
-private:
-    class SerializeHelper {
-    public:
-        SerializeHelper(HttpMessage& message)
-            : message_(message),
-              headers_serialized_(false),
-              body_serialized_(0) {}
+namespace xproxy {
+namespace message {
+namespace http {
 
-        ~SerializeHelper() = default;
-
-        std::size_t serialize(ByteBuffer& buffer) {
-            std::size_t size = 0;
-            if (!headers_serialized_) {
-                assert(body_serialized_ == 0);
-
-                size += message_.SerializeFirstLine(buffer);
-                size += message_.SerializeHeaders(buffer);
-                headers_serialized_ = true;
-            }
-
-            assert(message_.body_.size() >= body_serialized_);
-
-            if (message_.body_.size() == body_serialized_)
-                return size;
-
-            buffer << ByteBuffer.wrap(message_.body_.data() + body_serialized_,
-                                      message_.body_.size() - body_serialized_);
-            body_serialized_ = message_.body_.size();
-
-            return size + message_.body_.size() - body_serialized_;
-        }
-
-        void reset() {
-            headers_serialized_ = false;
-            body_serialized_ = 0;
-        }
-
-    private:
-        HttpMessage& message_;
-        bool headers_serialized_;
-        std::size_t body_serialized_;
-    };
-
+/**
+ * @brief The HttpMessage class
+ *
+ * This class represents a HTTP message, either request or response.
+ */
+class HttpMessage : public xproxy::message::Message {
 public:
     enum FieldType {
         kRequestMethod, kRequestUri,
@@ -120,7 +86,54 @@ private:
     SerializeHelper helper_;
 
 private:
-    DISABLE_COPY_AND_ASSIGNMENT(HttpMessage);
+    MAKE_NONCOPYABLE(HttpMessage);
+
+private:
+    class SerializeHelper {
+    public:
+        SerializeHelper(HttpMessage& message)
+            : message_(message),
+              headers_serialized_(false),
+              body_serialized_(0) {}
+
+        ~SerializeHelper() = default;
+
+        std::size_t serialize(ByteBuffer& buffer) {
+            std::size_t size = 0;
+            if (!headers_serialized_) {
+                assert(body_serialized_ == 0);
+
+                size += message_.SerializeFirstLine(buffer);
+                size += message_.SerializeHeaders(buffer);
+                headers_serialized_ = true;
+            }
+
+            assert(message_.body_.size() >= body_serialized_);
+
+            if (message_.body_.size() == body_serialized_)
+                return size;
+
+            buffer << ByteBuffer.wrap(message_.body_.data() + body_serialized_,
+                                      message_.body_.size() - body_serialized_);
+            body_serialized_ = message_.body_.size();
+
+            return size + message_.body_.size() - body_serialized_;
+        }
+
+        void reset() {
+            headers_serialized_ = false;
+            body_serialized_ = 0;
+        }
+
+    private:
+        HttpMessage& message_;
+        bool headers_serialized_;
+        std::size_t body_serialized_;
+    };
 };
+
+} // namespace http
+} // namespace message
+} // namespace xproxy
 
 #endif // HTTP_MESSAGE_HPP
