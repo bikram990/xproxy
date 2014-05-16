@@ -1,47 +1,64 @@
 #ifndef HTTP_PARSER_HPP
 #define HTTP_PARSER_HPP
 
-#include "common.h"
+#include <string>
+#include "common.hpp"
 #include "http_parser.h"
 
-class ConnectionAdapter;
+namespace xproxy {
+namespace message {
+namespace http {
+
 class HttpMessage;
+
+class HttpParserObserver {
+    DEFAULT_VIRTUAL_DTOR(HttpParserObserver);
+
+    virtual void onHeadersComplete(HttpMessage& message) = 0;
+    virtual void onBody(HttpMessage& message) = 0;
+    virtual void onMessageComplete(HttpMessage& message) = 0;
+};
 
 class HttpParser {
 public:
     std::size_t consume(const char* at, std::size_t length);
 
-    bool HeaderCompleted() const { return header_completed_; }
+    bool headersCompleted() const { return header_completed_; }
 
-    bool MessageCompleted() const { return message_completed_; }
+    bool messageCompleted() const { return message_completed_; }
 
-    bool KeepAlive() const;
+    bool keepAlive() const;
 
     void reset();
 
 public:
-    HttpParser(ConnectionAdapter *adapter, HttpMessage& message, http_parser_type type)
-        : adapter_(adapter), message_(message), header_completed_(false),
+    HttpParser(HttpMessage& message, http_parser_type type, HttpParserObserver *observer = nullptr)
+        : observer_(observer), message_(message), headers_completed_(false),
           message_completed_(false), chunked_(false) {
         ::http_parser_init(&parser_, type);
     }
 
-    virtual ~HttpParser() = default;
+    DEFAULT_VIRTUAL_DTOR(HttpParser);
 
-    static int OnMessageBegin(http_parser *parser);
-    static int OnUrl(http_parser *parser, const char *at, std::size_t length);
-    static int OnStatus(http_parser *parser, const char *at, std::size_t length);
-    static int OnHeaderField(http_parser *parser, const char *at, std::size_t length);
-    static int OnHeaderValue(http_parser *parser, const char *at, std::size_t length);
-    static int OnHeadersComplete(http_parser *parser);
-    static int OnBody(http_parser *parser, const char *at, std::size_t length);
-    static int OnMessageComplete(http_parser *parser);
+    static int onMessageBegin(http_parser *parser);
+    static int onUrl(http_parser *parser, const char *at, std::size_t length);
+    static int onStatus(http_parser *parser, const char *at, std::size_t length);
+    static int onHeaderField(http_parser *parser, const char *at, std::size_t length);
+    static int onHeaderValue(http_parser *parser, const char *at, std::size_t length);
+    static int onHeadersComplete(http_parser *parser);
+    static int onBody(http_parser *parser, const char *at, std::size_t length);
+    static int onMessageComplete(http_parser *parser);
 
 private:
-    ConnectionAdapter *adapter_;
+    const char *errorMessage() const {
+        return ::http_errno_description(static_cast<http_errno>(parser_.http_errno));
+    }
+
+private:
+    HttpParserObserver *observer_;
     HttpMessage& message_;
 
-    bool header_completed_;
+    bool headers_completed_;
     bool message_completed_;
     bool chunked_;
     std::string current_header_field_;
@@ -52,7 +69,11 @@ private:
 private:
     static http_parser_settings settings_;
 
-    DISABLE_COPY_AND_ASSIGNMENT(HttpParser);
+    MAKE_NONCOPYABLE(HttpParser);
 };
+
+} // namespace http
+} // namespace message
+} // namespace xproxy
 
 #endif // HTTP_PARSER_HPP
