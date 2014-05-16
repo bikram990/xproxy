@@ -128,8 +128,9 @@ public:
         return *this;
     }
 
-    ByteBuffer& operator<<(int num) {
-        return operator<<(std::to_string(num));
+    template<typename StringConvertibleType>
+    ByteBuffer& operator<<(const StringConvertibleType& t) {
+        return operator<<(std::to_string(t));
     }
 
     template<typename ContinuousByteSequence>
