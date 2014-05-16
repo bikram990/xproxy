@@ -69,11 +69,12 @@ std::size_t HttpMessage::SerializeHelper::serialize(memory::ByteBuffer &buffer) 
     if (message_.body_.size() == body_serialized_)
         return size;
 
-    buffer << memory::ByteBuffer::wrap(message_.body_.data() + body_serialized_,
-                                       message_.body_.size() - body_serialized_);
-    body_serialized_ = message_.body_.size();
+    auto inc = message_.body_.size() - body_serialized_;
+    buffer << memory::ByteBuffer::wrap(message_.body_.data(body_serialized_), inc);
+    body_serialized_ += inc;
+    size += inc;
 
-    return size + message_.body_.size() - body_serialized_;
+    return size;
 }
 
 void HttpMessage::SerializeHelper::reset() {
