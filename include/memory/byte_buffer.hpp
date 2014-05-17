@@ -160,6 +160,14 @@ public:
         return pos < size_ ? data_ + pos : nullptr;
     }
 
+    void erase(size_type first, size_type last) {
+        if (first >= last) return;
+        if (last > size_) return;
+
+        std::memmove(data_ + first, data_ + last, size_ - last);
+        size_ -= (last - first);
+    }
+
 private:
     void ensureSize(size_type size) {
         if (size_ + size <= capacity_)
