@@ -1,6 +1,9 @@
 #include "log.h"
 #include "message/http/http_message.hpp"
+#include "net/client_adapter.hpp"
 #include "net/connection.hpp"
+#include "net/server_adapter.hpp"
+#include "net/socket_facade.hpp"
 
 namespace xproxy {
 namespace net {
@@ -41,6 +44,9 @@ void Connection::write(const std::string& str) {
 
     doWrite();
 }
+
+Connection::Connection(boost::asio::io_service& service, SharedConnectionContext context)
+    : service_(service), socket_(SocketFacade::create(service)), context_(context) {}
 
 void Connection::doWrite() {
     auto& candidate = buf_out_.front();
@@ -89,6 +95,22 @@ void ConnectionManager::stopAll() {
         connection->stop();
     });
     connections_.clear();
+}
+
+ClientConnection::ClientConnection(boost::asio::io_service& service, SharedConnectionContext context)
+    : Connection(service, context), adapter_(new ClientAdapter(*this)) {}
+
+ServerConnection::ServerConnection(boost::asio::io_service &service, SharedConnectionContext context)
+    : Connection(service, context), adapter_(new ServerAdapter(*this)) {}
+
+ConnectionPtr createBridgedConnections(boost::asio::io_service& service) {
+    auto context(std::make_shared(new ConnectionContext));
+    auto client(std::make_shared(new ClientConnection(service, context)));
+    auto server(std::make_shared(new ServerConnection(service, context)));
+    client->setBridgeConnection(server);
+    server->setBridgeConnection(client);
+
+    return client;
 }
 
 } // namespace net

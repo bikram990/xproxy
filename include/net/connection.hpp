@@ -39,12 +39,20 @@ struct ConnectionContext {
 
 typedef std::shared_ptr<ConnectionContext> SharedConnectionContext;
 
+ConnectionPtr createBridgedConnections();
+
 class Connection : public util::Counter<Connection>, public std::enable_shared_from_this<Connection> {
 public:
     // typedef std::vector<char> buffer_type;
     typedef xproxy::memory::ByteBuffer buffer_type;
 
     boost::asio::io_service& service() const { return service_; }
+
+    SharedConnectionContext context() const { return context_; }
+
+    ConnectionPtr getBridgeConnection() const { return bridge_connection_; }
+
+    void setBridgeConnection(ConnectionPtr connection) { connection_ = connection; }
 
     void closeSocket();
 
@@ -58,8 +66,6 @@ public:
     virtual void write(const xproxy::message::Message& message);
     virtual void write(const std::string& str);
 
-    virtual ConnectionPtr bridgeConnection() = 0;
-
 protected:
     Connection(boost::asio::io_service& service,
                SharedConnectionContext context);
@@ -68,6 +74,10 @@ protected:
 protected:
     virtual void doWrite();
     virtual void doConnect() = 0;
+
+protected:
+    std::unique_ptr<ConnectionAdapter> adapter_;
+    ConnectionPtr bridge_connection_;
 
 private:
     enum { kBufferSize = 8192 };
@@ -78,33 +88,41 @@ private:
     std::array<char, kBufferSize> buffer_in_;
     std::list<std::shared_ptr<buffer_type>> buffer_out_;
 
-    std::unique_ptr<ConnectionAdapter> adapter_;
-
     SharedConnectionContext context_;
 };
 
 class ClientConnection : public Connection {
+    friend xproxy::net::createBridgedConnections();
 public:
     virtual void start();
     virtual void stop();
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
-    virtual ConnectionPtr bridgeConnection();
+
+    DEFAULT_VIRTUAL_DTOR(ClientConnection);
 
 protected:
     virtual void doConnect();
+
+protected:
+    ClientConnection(boost::asio::io_service& service, SharedConnectionContext context);
 };
 
 class ServerConnection : public Connection {
+    friend xproxy::net::createBridgedConnections();
 public:
     virtual void start();
     virtual void stop();
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
-    virtual ConnectionPtr bridgeConnection();
+
+    DEFAULT_VIRTUAL_DTOR(ServerConnection);
 
 protected:
     virtual void doConnect();
+
+protected:
+    ServerConnection(boost::asio::io_service& service, SharedConnectionContext context);
 };
 
 class ConnectionManager {
