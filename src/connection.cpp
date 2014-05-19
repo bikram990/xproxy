@@ -97,11 +97,89 @@ void ConnectionManager::stopAll() {
     connections_.clear();
 }
 
+void ClientConnection::start() {
+    XDEBUG_WITH_ID << "Starting client connection...";
+    // TODO add local_host, local_port in ConnectionContext, and set them here
+    read();
+}
+
+void ClientConnection::stop() {
+    XDEBUG_WITH_ID << "Stopping client conneciton...";
+    socket_->close();
+    // remove the reference-to-each-other here
+    bridge_connection_->bridge_connection_.reset();
+    bridge_connection_.reset();
+}
+
+void ClientConnection::connect(const std::string& host, const std::string& port) {
+    // do nothing here, a client connection is always connected
+}
+
+void ClientConnection::handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh) {
+    auto self(shared_from_this());
+    socket_->useSSL([self, this](const boost::system::error_code& e) {
+        if (adapter_)
+            adapter_->onHandshake(e);
+    }, SocketFacade::kServer, ca, dh);
+}
+
+void ClientConnection::doConnect() {
+    // do nothing here
+}
+
 ClientConnection::ClientConnection(boost::asio::io_service& service, SharedConnectionContext context)
     : Connection(service, context), adapter_(new ClientAdapter(*this)) {}
 
-ServerConnection::ServerConnection(boost::asio::io_service &service, SharedConnectionContext context)
-    : Connection(service, context), adapter_(new ServerAdapter(*this)) {}
+void ServerConnection::start() {
+    XDEBUG_WITH_ID << "Starting server connection...";
+    connect(context_->remote_host, context_->remote_port);
+}
+
+void ServerConnection::stop() {
+    XDEBUG_WITH_ID << "Stopping server connection...";
+    socket_->close();
+    // remove the reference-to-each-other here
+    bridge_connection_->bridge_connection_.reset();
+    bridge_connection_.reset();
+}
+
+void ServerConnection::connect(const std::string& host, const std::string& port) {
+    auto self(shared_from_this());
+    boost::asio::ip::tcp::resolver::query query(host, std::to_string(port));
+    resolver_.async_resolve(query, [self, this](const boost::system::error_code& e,
+                            boost::asio::ip::tcp::resolver::iterator it) {
+        if (e) {
+            XERROR_WITH_ID << "Resolve error: " << e.message();
+            // TODO enhance
+            stop();
+            return;
+        }
+
+        XDEBUG_WITH_ID << "Resolved, connecting, host: " << host
+                       << ", port: " << port
+                       << ", address: " << it->endpoint().address();
+
+        socket_->async_connect(it, [self, this](const boost::system::error_code& e) {
+            if (adapter_)
+                adapter_->onConnect(e);
+        });
+    });
+}
+
+void ServerConnection::handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh) {
+    auto self(shared_from_this());
+    socket_->useSSL([self, this](const boost::system::error_code& e) {
+        if (adapter_)
+            adapter_->onHandshake(e);
+    });
+}
+
+void ServerConnection::doConnect() {
+    // TODO do nothing here, however, we need to re-design the remote connecting mechanism
+}
+
+ServerConnection::ServerConnection(boost::asio::io_service& service, SharedConnectionContext context)
+    : Connection(service, context), adapter_(new ServerAdapter(*this)), resolver_(service) {}
 
 ConnectionPtr createBridgedConnections(boost::asio::io_service& service) {
     auto context(std::make_shared(new ConnectionContext));

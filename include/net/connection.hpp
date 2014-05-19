@@ -123,6 +123,9 @@ protected:
 
 protected:
     ServerConnection(boost::asio::io_service& service, SharedConnectionContext context);
+
+private:
+    boost::asio::ip::tcp::resolver resolver_;
 };
 
 class ConnectionManager {
