@@ -43,15 +43,15 @@ void ClientAdapter::onRead(const boost::system::error_code &e, const char *data,
         return;
     }
 
-    XDEBUG_WITH_ID << "Read, length: " << length << ", content:\n"
-                   << std::string(data, length);
-
     if (length <= 0) {
         XWARN_WITH_ID << "Read, no data.";
         // TODO enhance
         connection_.stop();
         return;
     }
+
+    XDEBUG_WITH_ID << "Read, length: " << length << ", content:\n"
+                   << std::string(data, length);
 
     if (parser_->MessageCompleted()) {
         XERROR_WITH_ID << "Read, message is already completed.";
