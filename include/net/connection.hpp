@@ -39,7 +39,7 @@ struct ConnectionContext {
 
 typedef std::shared_ptr<ConnectionContext> SharedConnectionContext;
 
-ConnectionPtr createBridgedConnections();
+ConnectionPtr createBridgedConnections(boost::asio::io_service& service);
 
 class Connection : public util::Counter<Connection>, public std::enable_shared_from_this<Connection> {
 public:
