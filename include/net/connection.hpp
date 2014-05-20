@@ -52,7 +52,7 @@ public:
 
     ConnectionPtr getBridgeConnection() const { return bridge_connection_; }
 
-    void setBridgeConnection(ConnectionPtr connection) { connection_ = connection; }
+    void setBridgeConnection(ConnectionPtr connection) { bridge_connection_ = connection; }
 
     void closeSocket();
 
@@ -92,7 +92,7 @@ private:
 };
 
 class ClientConnection : public Connection {
-    friend xproxy::net::createBridgedConnections();
+    friend ConnectionPtr createBridgedConnections(boost::asio::io_service& service);
 public:
     virtual void start();
     virtual void stop();
@@ -109,7 +109,7 @@ protected:
 };
 
 class ServerConnection : public Connection {
-    friend xproxy::net::createBridgedConnections();
+    friend ConnectionPtr createBridgedConnections(boost::asio::io_service& service);
 public:
     virtual void start();
     virtual void stop();
