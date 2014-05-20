@@ -1,18 +1,22 @@
 #include "CommonTestDefinition.hpp"
-#include "http_parser.hpp"
+#include "memory/byte_buffer.hpp"
+#include "message/http/http_parser.hpp"
+#include "message/http/http_request.hpp"
+
+using namespace xproxy::message::http;
+using namespace xproxy::memory;
 
 TEST(HttpParserTest, Request) {
-    std::shared_ptr<Connection> c;
-    HttpParser parser(c, HTTP_REQUEST);
+    HttpRequest request;
+    HttpParser parser(request, HTTP_REQUEST);
 
-    boost::asio::streambuf req1;
-    std::ostream out(&req1);
-    out << "GET http://github.com/kelvinh HTTP/1.1\r\n"
-        << "Host: github.com\r\n\r\n";
+    ByteBuffer req1;
+    req1 << "GET http://github.com/kelvinh HTTP/1.1\r\n"
+         << "Host: github.com\r\n\r\n";
 
     EXPECT_EQ(req1.size(), 60);
 
-    auto sz = parser.consume(req1);
+    auto sz = parser.consume(req1.data(), req1.size());
 
     EXPECT_EQ(sz, req1.size());
 }

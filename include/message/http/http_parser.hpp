@@ -23,7 +23,7 @@ class HttpParser {
 public:
     std::size_t consume(const char* at, std::size_t length);
 
-    bool headersCompleted() const { return header_completed_; }
+    bool headersCompleted() const { return headers_completed_; }
 
     bool messageCompleted() const { return message_completed_; }
 
