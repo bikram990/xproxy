@@ -3,9 +3,9 @@
 
 #include "message/http/http_parser.hpp"
 #include "net/connection.hpp"
+#include "util/timer.hpp"
 
 namespace xproxy {
-namespace util { class Timer; }
 namespace net {
 
 class ClientAdapter : public ConnectionAdapter, public message::http::HttpParserObserver {
