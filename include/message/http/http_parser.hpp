@@ -12,6 +12,7 @@ namespace http {
 class HttpMessage;
 
 class HttpParserObserver {
+public:
     DEFAULT_VIRTUAL_DTOR(HttpParserObserver);
 
     virtual void onHeadersComplete(HttpMessage& message) = 0;
