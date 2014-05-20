@@ -16,6 +16,22 @@ namespace http {
  * This class represents a HTTP message, either request or response.
  */
 class HttpMessage : public Message {
+private:
+    class SerializeHelper {
+    public:
+        SerializeHelper(HttpMessage& message);
+        DEFAULT_DTOR(SerializeHelper);
+
+        std::size_t serialize(memory::ByteBuffer& buffer);
+
+        void reset();
+
+    private:
+        HttpMessage& message_;
+        bool headers_serialized_;
+        std::size_t body_serialized_;
+    };
+
 public:
     enum FieldType {
         kRequestMethod, kRequestUri,
@@ -55,22 +71,6 @@ private:
     std::map<std::string, std::string> headers_;
     memory::ByteBuffer body_;
     SerializeHelper helper_;
-
-private:
-    class SerializeHelper {
-    public:
-        SerializeHelper(HttpMessage& message);
-        DEFAULT_DTOR(SerializeHelper);
-
-        std::size_t serialize(memory::ByteBuffer& buffer);
-
-        void reset();
-
-    private:
-        HttpMessage& message_;
-        bool headers_serialized_;
-        std::size_t body_serialized_;
-    };
 
 private:
     MAKE_NONCOPYABLE(HttpMessage);
