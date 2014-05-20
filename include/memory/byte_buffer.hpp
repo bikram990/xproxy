@@ -2,6 +2,7 @@
 #define BYTE_BUFFER_HPP
 
 #include <string>
+#include <cassert>
 
 namespace xproxy {
 namespace memory {
