@@ -5,10 +5,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <openssl/x509.h>
 #include "log.h"
-#include "singleton.h"
+#include "util/singleton.hpp"
 
 class ResourceManager : private boost::noncopyable {
-    friend class Singleton<ResourceManager>;
+    friend class xproxy::util::Singleton<ResourceManager>;
 public:
     class ServerConfig;
     class RuleConfig;
