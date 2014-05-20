@@ -1,14 +1,17 @@
-#ifndef SINGLETON_H
-#define SINGLETON_H
+#ifndef SINGLETON_HPP
+#define SINGLETON_HPP
 
 #include <mutex>
 #include <thread>
-#include "common.h"
+#include "common.hpp"
+
+namespace xproxy {
+namespace util {
 
 template<class R>
-class Singleton : private boost::noncopyable {
+class Singleton {
 public:
-    Singleton() : handle_(NULL) {}
+    Singleton() : handle_(nullptr) {}
     ~Singleton() { delete handle_; }
 
     R& get() {
@@ -25,4 +28,7 @@ private:
     R *handle_;
 };
 
-#endif // SINGLETON_H
+} // namespace util
+} // namespace xproxy
+
+#endif // SINGLETON_HPP
