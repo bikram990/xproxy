@@ -1,6 +1,8 @@
 #include "CommonTestDefinition.hpp"
 #include "memory/byte_buffer.hpp"
 
+using namespace xproxy::memory;
+
 TEST(ByteBufferTest, OperatorEqual) {
     ByteBuffer bb1;
     ByteBuffer bb2;

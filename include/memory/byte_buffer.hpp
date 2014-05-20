@@ -109,9 +109,17 @@ public:
     ByteBuffer& operator<<(const std::string& str) {
         ensureSize(str.size());
         for (auto it : str) {
-            data_[size_++] = *it;
+            data_[size_++] = it;
         }
         return *this;
+    }
+
+    ByteBuffer& operator<<(const char *cstr) {
+        return operator<<(std::string(cstr));
+    }
+
+    ByteBuffer& operator<<(int num) {
+        return operator<<(std::to_string(num));
     }
 
     ByteBuffer& operator<<(const ByteBuffer& buffer) {
@@ -128,12 +136,7 @@ public:
         return *this;
     }
 
-    template<typename StringConvertibleType>
-    ByteBuffer& operator<<(const StringConvertibleType& t) {
-        return operator<<(std::to_string(t));
-    }
-
-    template<typename ContinuousByteSequence>
+    template<class ContinuousByteSequence>
     ByteBuffer& operator<<(const ContinuousByteSequence& sequence) {
         ensureSize(sequence.size());
         std::memcpy(data_ + size_, sequence.data(), sequence.size());
