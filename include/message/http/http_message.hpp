@@ -55,9 +55,10 @@ public:
 
     virtual void reset();
 
+    DEFAULT_VIRTUAL_DTOR(HttpMessage);
+
 protected:
     HttpMessage();
-    DEFAULT_VIRTUAL_DTOR(HttpMessage);
 
     virtual std::size_t serializeFirstLine(memory::ByteBuffer& buffer) = 0;
 
