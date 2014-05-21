@@ -1,4 +1,3 @@
-#include "xproxy/memory/byte_buffer.hpp"
 #include "xproxy/message/http/http_message.hpp"
 
 namespace xproxy {

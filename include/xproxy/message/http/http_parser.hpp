@@ -1,7 +1,6 @@
 #ifndef HTTP_PARSER_HPP
 #define HTTP_PARSER_HPP
 
-#include <string>
 #include "xproxy/common.hpp"
 #include "http_parser.h"
 

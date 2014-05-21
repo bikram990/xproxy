@@ -14,7 +14,7 @@ class Message {
 public:
     virtual ~Message() {}
 
-    virtual std::size_t serialize(xproxy::memory::ByteBuffer& buffer) const = 0;
+    virtual std::size_t serialize(memory::ByteBuffer& buffer) const = 0;
 };
 
 }

@@ -112,8 +112,8 @@ public:
                     char subject_name[256];
                     X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
                     X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-                    XDEBUG << "Verify remote certificate, subject name: " << subject_name
-                           << ", pre_verified value: " << preverified;
+                    XDEBUG << "Verifying server certificate, subject name: " << subject_name
+                           << ", pre-verified value: " << preverified;
 
                     return true;
             });
@@ -127,7 +127,7 @@ public:
             // if error occurred, we disable ssl read/write here
             if (e) {
                 use_ssl_ = false;
-                XERROR << "handshake error: " + e.message();
+                XERROR << "Handshake error: " + e.message();
             }
             handler(e);
         });
@@ -180,7 +180,7 @@ private:
     MAKE_NONCOPYABLE(SocketFacade);
 };
 
-}
-}
+} // namespace net
+} // namespace xproxy
 
 #endif // SOCKET_FACADE_HPP

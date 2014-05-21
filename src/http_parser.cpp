@@ -48,7 +48,6 @@ void HttpParser::reset() {
     chunked_ = false;
     current_header_field_.clear();
     current_header_value_.clear();
-    // message_.reset(); // TODO should we reset the message here?
 }
 
 int HttpParser::onMessageBegin(http_parser *parser) {
@@ -170,4 +169,3 @@ int HttpParser::onMessageComplete(http_parser *parser) {
 } // namespace http
 } // namespace message
 } // namespace xproxy
-
