@@ -1,6 +1,7 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
+#include <list>
 #include <boost/asio.hpp>
 #include "xproxy/common.hpp"
 #include "xproxy/net/socket_facade.hpp"
@@ -137,7 +138,7 @@ private:
 class ConnectionManager {
 public:
     void start(ConnectionPtr& connection);
-    void erase(ConnectionPtr& connection);
+    void erase(const ConnectionPtr& connection);
     void stopAll();
 
     DEFAULT_CTOR_AND_DTOR(ConnectionManager);

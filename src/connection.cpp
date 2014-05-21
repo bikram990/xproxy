@@ -128,7 +128,7 @@ void ConnectionManager::start(ConnectionPtr& connection) {
     connection->start();
 }
 
-void ConnectionManager::erase(ConnectionPtr& connection) {
+void ConnectionManager::erase(const ConnectionPtr& connection) {
     auto it = std::find(connections_.begin(), connections_.end(), connection);
     if (it == connections_.end()) {
         XWARN << "Connection not found, id: " << connection->id();
