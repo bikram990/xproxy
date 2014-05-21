@@ -4,7 +4,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include "common.hpp"
-#include "log.h"
+#include "log/log.hpp"
 
 namespace xproxy {
 namespace net {
@@ -52,7 +52,7 @@ public:
         if (is_open()) {
             try {
                 socket_->shutdown(socket_type::shutdown_both);
-                socket_->.close();
+                socket_->close();
             } catch(boost::system::system_error& e) {
                 XERROR << "socket close: " << e.what();
             } catch(...) {} //ignore exceptions
@@ -144,9 +144,9 @@ public:
     }
 
 private:
-    Socket(boost::asio::io_service& service)
+    SocketFacade(boost::asio::io_service& service)
         : service_(service),
-          use_ssl_(false), ssl_mode_(kClient),
+          use_ssl_(false),
           socket_(new socket_type(service)) {}
 
     bool verifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
