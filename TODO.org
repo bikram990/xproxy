@@ -18,7 +18,9 @@
 
 7. we may use normal type instead of pointer of the =ByteBuffer= member in =SegmentalByteBuffer=
 
-8. remove =#include<boost/asio.hpp>= in "common.h", just define simple things there
+8. +remove =#include<boost/asio.hpp>= in "common.h", just define simple things there+
+
+9. consider to remove certs in =CertManager= after some time
 
 -------------------------------------------------------------------------------
 
