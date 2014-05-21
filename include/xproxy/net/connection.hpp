@@ -1,11 +1,6 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
-#include <array>
-#include <list>
-#include <memory>
-#include <set>
-#include <vector>
 #include <boost/asio.hpp>
 #include "xproxy/common.hpp"
 #include "xproxy/net/socket_facade.hpp"
@@ -18,6 +13,7 @@ namespace message { class Message; }
 namespace net {
 
 class Connection;
+class ConnectionManager;
 typedef std::shared_ptr<Connection> ConnectionPtr;
 
 class ConnectionAdapter {
@@ -33,13 +29,19 @@ struct ConnectionContext {
 
     bool https;
     bool proxied;
+    std::string local_host;
+    std::string local_port;
     std::string remote_host;
     std::string remote_port;
 };
 
 typedef std::shared_ptr<ConnectionContext> SharedConnectionContext;
 
-ConnectionPtr createBridgedConnections(boost::asio::io_service& service);
+ConnectionPtr createBridgedConnections(
+    boost::asio::io_service& service,
+    ConnectionManager *client_manager,
+    ConnectionManager *server_manager
+);
 
 class Connection : public util::Counter<Connection>, public std::enable_shared_from_this<Connection> {
 public:
@@ -59,11 +61,12 @@ public:
     void closeSocket();
 
     virtual void start() = 0;
-    virtual void stop() = 0;
+    virtual void stop();
 
     virtual void connect(const std::string& host, const std::string& port) = 0;
     virtual void handshake(ResourceManager::CertManager::CAPtr ca = nullptr,
                            ResourceManager::CertManager::DHParametersPtr dh = nullptr) = 0;
+
     virtual void read();
     virtual void write(const xproxy::message::Message& message);
     virtual void write(const std::string& str);
@@ -71,18 +74,17 @@ public:
 
 protected:
     Connection(boost::asio::io_service& service,
+               ConnectionAdapter *adapter,
                SharedConnectionContext context,
-               ConnectionAdapter *adapter);
+               ConnectionManager *manager);
     DEFAULT_VIRTUAL_DTOR(Connection);
-
-protected:
-    virtual void doConnect() = 0;
 
 protected:
     std::unique_ptr<SocketFacade> socket_;
     std::unique_ptr<ConnectionAdapter> adapter_;
-    ConnectionPtr bridge_connection_;
     SharedConnectionContext context_;
+    ConnectionPtr bridge_connection_;
+    ConnectionManager *manager_;
 
 private:
     enum { kBufferSize = 8192 };
@@ -91,40 +93,42 @@ private:
 
     std::array<char, kBufferSize> buffer_in_;
     std::list<std::shared_ptr<buffer_type>> buffer_out_;
+
+    bool writing_;
 };
 
 class ClientConnection : public Connection {
-    friend ConnectionPtr createBridgedConnections(boost::asio::io_service& service);
+    friend ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
+                                                  ConnectionManager *client_manager,
+                                                  ConnectionManager *server_manager);
 public:
     virtual void start();
-    virtual void stop();
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
 
     DEFAULT_VIRTUAL_DTOR(ClientConnection);
 
 protected:
-    virtual void doConnect();
-
-protected:
-    ClientConnection(boost::asio::io_service& service, SharedConnectionContext context);
+    ClientConnection(boost::asio::io_service& service,
+                     SharedConnectionContext context,
+                     ConnectionManager *manager);
 };
 
 class ServerConnection : public Connection {
-    friend ConnectionPtr createBridgedConnections(boost::asio::io_service& service);
+    friend ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
+                                                  ConnectionManager *client_manager,
+                                                  ConnectionManager *server_manager);
 public:
     virtual void start();
-    virtual void stop();
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
 
     DEFAULT_VIRTUAL_DTOR(ServerConnection);
 
 protected:
-    virtual void doConnect();
-
-protected:
-    ServerConnection(boost::asio::io_service& service, SharedConnectionContext context);
+    ServerConnection(boost::asio::io_service& service,
+                     SharedConnectionContext context,
+                     ConnectionManager *manager);
 
 private:
     boost::asio::ip::tcp::resolver resolver_;
@@ -133,7 +137,7 @@ private:
 class ConnectionManager {
 public:
     void start(ConnectionPtr& connection);
-    void stop(ConnectionPtr& connection);
+    void erase(ConnectionPtr& connection);
     void stopAll();
 
     DEFAULT_CTOR_AND_DTOR(ConnectionManager);
