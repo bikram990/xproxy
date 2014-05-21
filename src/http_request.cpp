@@ -18,7 +18,7 @@ std::string HttpRequest::getField(HttpMessage::FieldType type) const {
     return std::string();
 }
 
-void HttpRequest::setField(HttpMessage::FieldType type, std::string &value) {
+void HttpRequest::setField(HttpMessage::FieldType type, std::string&& value) {
     switch (type) {
     case FieldType::kRequestMethod:
         method_ = std::move(value);

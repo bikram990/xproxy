@@ -1,12 +1,12 @@
-#include "proxy_server.h"
+#include "proxy_server.hpp"
 #include "resource_manager.h"
 
 #ifdef WIN32
 #include "openssl/applink.c"
 #endif
 
-int main(int argc, char* argv[]) {
-    xproxy::log::InitLogging();
+int main(int, char**) {
+    xproxy::log::initLogging();
     XINFO << "xProxy is starting...";
 
     if(!ResourceManager::Init()) {
@@ -20,12 +20,13 @@ int main(int argc, char* argv[]) {
                                      << "google-analytics.com"
                                      << "twitter.com";
 
+    xproxy::ProxyServer s(ResourceManager::GetServerConfig().GetProxyPort());
     for(;;) {
         try {
-            ProxyServer::Start();
+            s.start();
             break;
         } catch(std::exception& e) {
-            XERROR << "Exception occurred: " << e.what();
+            XERROR << "xProxy exception: " << e.what();
         }
     }
 

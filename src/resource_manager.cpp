@@ -10,7 +10,7 @@ const std::string ResourceManager::ServerConfig::kConfGAEAppIdKey("proxy_gae.app
 const std::string ResourceManager::ServerConfig::kConfGAEDomainKey("proxy_gae.domain");
 
 namespace {
-    static Singleton<ResourceManager> manager_;
+    static xproxy::util::Singleton<ResourceManager> manager_;
 }
 
 ResourceManager& ResourceManager::instance() {

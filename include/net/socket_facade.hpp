@@ -40,7 +40,17 @@ public:
         return *socket_;
     }
 
+    socket_type& socket() {
+        if (use_ssl_)
+            assert(&ssl_socket_->next_layer() == socket_.get());
+        return *socket_;
+    }
+
     const socket_type::lowest_layer_type& lowest_layer() const {
+        return socket_->lowest_layer();
+    }
+
+    socket_type::lowest_layer_type& lowest_layer() {
         return socket_->lowest_layer();
     }
 
@@ -65,7 +75,7 @@ public:
     }
 
 public:
-    template<typename HandshakeHandler, typename SharedCAPtr, typename SharedDHPtr>
+    template<typename SharedCAPtr, typename SharedDHPtr, typename HandshakeHandler>
     void useSSL(HandshakeHandler&& handler, SSLMode mode = kClient,
                 SharedCAPtr ca = nullptr, SharedDHPtr dh = nullptr) {
         if (use_ssl_) {
@@ -97,7 +107,16 @@ public:
 
         if (mode == kClient) {
             ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
-            ssl_socket_->set_verify_callback(std::bind(&this_type::verifyCertificate, this, _1, _2));
+            ssl_socket_->set_verify_callback([this] (bool preverified, boost::asio::ssl::verify_context& ctx) {
+                    // TODO enhance this function
+                    char subject_name[256];
+                    X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+                    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+                    XDEBUG << "Verify remote certificate, subject name: " << subject_name
+                           << ", pre_verified value: " << preverified;
+
+                    return true;
+            });
         }
 
         use_ssl_ = true;
@@ -108,7 +127,7 @@ public:
             // if error occurred, we disable ssl read/write here
             if (e) {
                 use_ssl_ = false;
-                XERROR << "handshake error: " + e.what();
+                XERROR << "handshake error: " + e.message();
             }
             handler(e);
         });
@@ -148,17 +167,6 @@ private:
         : service_(service),
           use_ssl_(false),
           socket_(new socket_type(service)) {}
-
-    bool verifyCertificate(bool pre_verified, boost::asio::ssl::verify_context& ctx) {
-        // TODO enhance this function
-        char subject_name[256];
-        X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-        X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-        XDEBUG << "Verify remote certificate, subject name: " << subject_name
-               << ", pre_verified value: " << pre_verified;
-
-        return true;
-    }
 
 private:
     boost::asio::io_service& service_;

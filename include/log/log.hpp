@@ -9,7 +9,7 @@ namespace log {
 
 static log4cpp::Category& logger = log4cpp::Category::getRoot();
 
-void initLogging(const std::string& conf_file = "xproxy.conf") {
+inline void initLogging(const std::string& conf_file = "xproxy.conf") {
     log4cpp::PropertyConfigurator::configure(conf_file);
 }
 

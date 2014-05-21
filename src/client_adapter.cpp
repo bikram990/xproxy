@@ -3,6 +3,7 @@
 #include "memory/byte_buffer.hpp"
 #include "message/http/http_request.hpp"
 #include "net/client_adapter.hpp"
+#include "net/socket_facade.hpp"
 #include "util/timer.hpp"
 
 namespace xproxy {

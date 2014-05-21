@@ -1,4 +1,4 @@
-#include "log.h"
+#include "log/log.hpp"
 #include "net/server_adapter.hpp"
 #include "message/http/http_response.hpp"
 #include "util/timer.hpp"
@@ -15,7 +15,7 @@ ServerAdapter::ServerAdapter(Connection& connection)
 
 void ServerAdapter::onConnect(const boost::system::error_code& e) {
     if (e) {
-        XERROR_WITH_ID << "Connect error: " << e.message();
+        XERROR_ID_WITH(connection_) << "Connect error: " << e.message();
         // TODO enhance
         connection_.stop();
         return;
@@ -29,7 +29,7 @@ void ServerAdapter::onConnect(const boost::system::error_code& e) {
 
 void ServerAdapter::onHandshake(const boost::system::error_code& e) {
     if (e) {
-        XERROR_WITH_ID << "Handshake error: " << e.message();
+        XERROR_ID_WITH(connection_) << "Handshake error: " << e.message();
         // TODO enhance
         connection_.stop();
         return;
@@ -41,11 +41,11 @@ void ServerAdapter::onHandshake(const boost::system::error_code& e) {
 void ServerAdapter::onRead(const boost::system::error_code& e, const char *data, std::size_t length) {
     if (e) {
         if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
-            XDEBUG_WITH_ID << "EOF in socket.";
+            XDEBUG_ID_WITH(connection_) << "EOF in socket.";
             connected_ = false;
-            connection_.socket_->close();
+            connection_.closeSocket();
         } else {
-            XERROR_WITH_ID << "Read error: " << e.message();
+            XERROR_ID_WITH(connection_) << "Read error: " << e.message();
             // TODO enhance
             connection_.stop();
             return;
@@ -53,17 +53,17 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
     }
 
     if(length <= 0) {
-        XWARN_WITH_ID << "Read, no data.";
+        XWARN_ID_WITH(connection_) << "Read, no data.";
         // TODO enhance
         connection_.stop();
         return;
     }
 
-    XDEBUG_WITH_ID << "Read, length: " << length << ", content:\n"
+    XDEBUG_ID_WITH(connection_) << "Read, length: " << length << ", content:\n"
                    << std::string(data, length);
 
-    if (parser_->MessageCompleted()) {
-        XERROR_WITH_ID << "Read, message is already completed.";
+    if (parser_->messageCompleted()) {
+        XERROR_ID_WITH(connection_) << "Read, message is already completed.";
         // TODO enhance
         connection_.stop();
         return;
@@ -71,19 +71,19 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
 
     auto consumed = parser_->consume(data, length);
     if (consumed <= 0) {
-        XERROR_WITH_ID << "Read, message parsing failure.";
+        XERROR_ID_WITH(connection_) << "Read, message parsing failure.";
         // TODO enhance
         connection_.stop();
         return;
     }
 
-    if (!parser_->MessageCompleted())
+    if (!parser_->messageCompleted())
         connection_.read();
 }
 
 void ServerAdapter::onWrite(const boost::system::error_code& e) {
     if (e) {
-        XERROR_WITH_ID << "Write error: " << e.message();
+        XERROR_ID_WITH(connection_) << "Write error: " << e.message();
         // TODO enhance
         connection_.stop();
         return;
@@ -97,9 +97,9 @@ void ServerAdapter::onHeadersComplete(message::http::HttpMessage& message) {
 }
 
 void ServerAdapter::onBody(message::http::HttpMessage& message) {
-    auto bridge = connection_.bridgeConnection();
+    auto bridge = connection_.getBridgeConnection();
     if (!bridge) {
-        XERROR_WITH_ID << "No bridge connection.";
+        XERROR_ID_WITH(connection_) << "No bridge connection.";
         // TODO enhance
         connection_.stop();
         return;

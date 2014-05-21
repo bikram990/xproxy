@@ -1,4 +1,4 @@
-#include "log.h"
+#include "log/log.hpp"
 #include "message/http/http_message.hpp"
 #include "net/client_adapter.hpp"
 #include "net/connection.hpp"
@@ -15,10 +15,10 @@ void Connection::closeSocket() {
 
 void Connection::read() {
     auto self(shared_from_this());
-    boost::asio::async_read(*socket,
-                            buffer_in_,
+    boost::asio::async_read(*socket_,
+                            boost::asio::buffer(buffer_in_),
                             boost::asio::transfer_at_least(1),
-                            [self, this](const boost::system::error_code& e, std::size_t length) {
+                            [self, this] (const boost::system::error_code& e, std::size_t length) {
         if (adapter_)
             adapter_->onRead(e, buffer_in_.data(), length);
     });
@@ -45,15 +45,15 @@ void Connection::write(const std::string& str) {
     doWrite();
 }
 
-Connection::Connection(boost::asio::io_service& service, SharedConnectionContext context)
-    : service_(service), socket_(SocketFacade::create(service)), context_(context) {}
+Connection::Connection(boost::asio::io_service& service, SharedConnectionContext context, ConnectionAdapter *adapter)
+    : service_(service), socket_(SocketFacade::create(service)), adapter_(adapter), context_(context) {}
 
 void Connection::doWrite() {
-    auto& candidate = buf_out_.front();
+    auto& candidate = buffer_out_.front();
     auto buf = boost::asio::buffer(candidate->data(), candidate->size());
     auto self(shared_from_this());
     socket_->async_write_some(buf,
-                              [self, this](const boost::system::error_code& e, std::size_t length) {
+                              [self, candidate, this] (const boost::system::error_code& e, std::size_t length) {
         if (length < candidate->size()) {
             XWARN_WITH_ID << "Write incomplete, continue.";
             candidate->erase(0, length);
@@ -91,7 +91,7 @@ void ConnectionManager::stop(ConnectionPtr &connection) {
 
 void ConnectionManager::stopAll() {
     std::for_each(connections_.begin(), connections_.end(),
-                  [](ConnectionPtr& connection) {
+                  [](const ConnectionPtr& connection) {
         connection->stop();
     });
     connections_.clear();
@@ -107,7 +107,7 @@ void ClientConnection::stop() {
     XDEBUG_WITH_ID << "Stopping client conneciton...";
     socket_->close();
     // remove the reference-to-each-other here
-    bridge_connection_->bridge_connection_.reset();
+    bridge_connection_->setBridgeConnection(nullptr);
     bridge_connection_.reset();
 }
 
@@ -117,7 +117,7 @@ void ClientConnection::connect(const std::string& host, const std::string& port)
 
 void ClientConnection::handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh) {
     auto self(shared_from_this());
-    socket_->useSSL([self, this](const boost::system::error_code& e) {
+    socket_->useSSL([self, this] (const boost::system::error_code& e) {
         if (adapter_)
             adapter_->onHandshake(e);
     }, SocketFacade::kServer, ca, dh);
@@ -128,7 +128,7 @@ void ClientConnection::doConnect() {
 }
 
 ClientConnection::ClientConnection(boost::asio::io_service& service, SharedConnectionContext context)
-    : Connection(service, context), adapter_(new ClientAdapter(*this)) {}
+    : Connection(service, context, new ClientAdapter(*this)) {}
 
 void ServerConnection::start() {
     XDEBUG_WITH_ID << "Starting server connection...";
@@ -139,15 +139,16 @@ void ServerConnection::stop() {
     XDEBUG_WITH_ID << "Stopping server connection...";
     socket_->close();
     // remove the reference-to-each-other here
-    bridge_connection_->bridge_connection_.reset();
+    bridge_connection_->setBridgeConnection(nullptr);
     bridge_connection_.reset();
 }
 
 void ServerConnection::connect(const std::string& host, const std::string& port) {
+    using namespace boost::asio::ip;
+
     auto self(shared_from_this());
-    boost::asio::ip::tcp::resolver::query query(host, std::to_string(port));
-    resolver_.async_resolve(query, [self, this](const boost::system::error_code& e,
-                            boost::asio::ip::tcp::resolver::iterator it) {
+    resolver_.async_resolve(tcp::resolver::query(host, port),
+                            [self, this, host, port] (const boost::system::error_code& e, tcp::resolver::iterator it) {
         if (e) {
             XERROR_WITH_ID << "Resolve error: " << e.message();
             // TODO enhance
@@ -159,7 +160,7 @@ void ServerConnection::connect(const std::string& host, const std::string& port)
                        << ", port: " << port
                        << ", address: " << it->endpoint().address();
 
-        socket_->async_connect(it, [self, this](const boost::system::error_code& e) {
+        socket_->async_connect(it, [self, this] (const boost::system::error_code& e, tcp::resolver::iterator) {
             if (adapter_)
                 adapter_->onConnect(e);
         });
@@ -168,7 +169,8 @@ void ServerConnection::connect(const std::string& host, const std::string& port)
 
 void ServerConnection::handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh) {
     auto self(shared_from_this());
-    socket_->useSSL([self, this](const boost::system::error_code& e) {
+    socket_->useSSL<ResourceManager::CertManager::CAPtr,
+            ResourceManager::CertManager::DHParametersPtr>([self, this] (const boost::system::error_code& e) {
         if (adapter_)
             adapter_->onHandshake(e);
     });
@@ -179,12 +181,12 @@ void ServerConnection::doConnect() {
 }
 
 ServerConnection::ServerConnection(boost::asio::io_service& service, SharedConnectionContext context)
-    : Connection(service, context), adapter_(new ServerAdapter(*this)), resolver_(service) {}
+    : Connection(service, context, new ServerAdapter(*this)), resolver_(service) {}
 
 ConnectionPtr createBridgedConnections(boost::asio::io_service& service) {
-    auto context(std::make_shared(new ConnectionContext));
-    auto client(std::make_shared(new ClientConnection(service, context)));
-    auto server(std::make_shared(new ServerConnection(service, context)));
+    SharedConnectionContext context(new ConnectionContext);
+    ConnectionPtr client(new ClientConnection(service, context));
+    ConnectionPtr server(new ServerConnection(service, context));
     client->setBridgeConnection(server);
     server->setBridgeConnection(client);
 

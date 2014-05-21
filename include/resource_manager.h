@@ -4,7 +4,7 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <openssl/x509.h>
-#include "log.h"
+#include "log/log.hpp"
 #include "util/singleton.hpp"
 
 class ResourceManager : private boost::noncopyable {

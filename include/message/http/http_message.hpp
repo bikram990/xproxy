@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include "common.hpp"
+#include "memory/byte_buffer.hpp"
 #include "message/message.hpp"
 
 namespace xproxy {
@@ -43,11 +44,12 @@ public:
     void setMajorVersion(int version) { major_version_ = version; }
     void setMinorVersion(int version) { minor_version_ = version; }
 
-    virtual std::size_t serialize(memory::ByteBuffer& buffer);
+    virtual std::size_t serialize(memory::ByteBuffer& buffer) const;
 
     bool findHeader(const std::string& name, std::string& value) const;
     HttpMessage& addHeader(const std::string& name, const std::string& value);
     HttpMessage& appendBody(const char *data, std::size_t size);
+    HttpMessage& appendBody(const std::string& data);
 
 public:
     virtual std::string getField(FieldType type) const = 0;
@@ -71,7 +73,7 @@ protected:
 private:
     std::map<std::string, std::string> headers_;
     memory::ByteBuffer body_;
-    SerializeHelper helper_;
+    mutable SerializeHelper helper_;
 
 private:
     MAKE_NONCOPYABLE(HttpMessage);

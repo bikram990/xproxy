@@ -15,7 +15,7 @@ HttpMessage::SerializeHelper::SerializeHelper(HttpMessage &message)
       headers_serialized_(false),
       body_serialized_(0) {}
 
-std::size_t HttpMessage::serialize(memory::ByteBuffer &buffer) {
+std::size_t HttpMessage::serialize(memory::ByteBuffer &buffer) const {
     return helper_.serialize(buffer);
 }
 
@@ -33,7 +33,12 @@ HttpMessage &HttpMessage::addHeader(const std::string &name, const std::string &
 }
 
 HttpMessage &HttpMessage::appendBody(const char *data, std::size_t size) {
-    body_ << ByteBuffer::wrap(data, size);
+    body_ << memory::ByteBuffer::wrap(data, size);
+    return *this;
+}
+
+HttpMessage &HttpMessage::appendBody(const std::string& data) {
+    body_ << data;
     return *this;
 }
 

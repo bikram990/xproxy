@@ -18,7 +18,7 @@ std::string HttpResponse::getField(HttpMessage::FieldType type) const {
     return std::string();
 }
 
-void HttpResponse::setField(HttpMessage::FieldType type, std::string &value) {
+void HttpResponse::setField(HttpMessage::FieldType type, std::string&& value) {
     switch (type) {
     case FieldType::kResponseStatus:
         status_ = std::stoi(value);

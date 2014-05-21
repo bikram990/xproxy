@@ -18,7 +18,7 @@ private:
     void startAccept();
 
 private:
-    std::string port_;
+    unsigned short port_;
 
     boost::asio::io_service service_;
     boost::asio::signal_set signals_;

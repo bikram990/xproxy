@@ -8,6 +8,7 @@
 #include <vector>
 #include <boost/asio.hpp>
 #include "common.hpp"
+#include "net/socket_facade.hpp"
 #include "resource_manager.h"
 #include "util/counter.hpp"
 
@@ -16,7 +17,6 @@ namespace memory { class ByteBuffer; }
 namespace message { class Message; }
 namespace net {
 
-class SocketFacade;
 class Connection;
 typedef std::shared_ptr<Connection> ConnectionPtr;
 
@@ -48,6 +48,8 @@ public:
 
     boost::asio::io_service& service() const { return service_; }
 
+    SocketFacade::socket_type& socket() const { return socket_->socket(); }
+
     SharedConnectionContext context() const { return context_; }
 
     ConnectionPtr getBridgeConnection() const { return bridge_connection_; }
@@ -65,30 +67,30 @@ public:
     virtual void read();
     virtual void write(const xproxy::message::Message& message);
     virtual void write(const std::string& str);
+    virtual void doWrite();
 
 protected:
     Connection(boost::asio::io_service& service,
-               SharedConnectionContext context);
+               SharedConnectionContext context,
+               ConnectionAdapter *adapter);
     DEFAULT_VIRTUAL_DTOR(Connection);
 
 protected:
-    virtual void doWrite();
     virtual void doConnect() = 0;
 
 protected:
+    std::unique_ptr<SocketFacade> socket_;
     std::unique_ptr<ConnectionAdapter> adapter_;
     ConnectionPtr bridge_connection_;
+    SharedConnectionContext context_;
 
 private:
     enum { kBufferSize = 8192 };
 
     boost::asio::io_service& service_;
-    std::unique_ptr<SocketFacade> socket_;
 
     std::array<char, kBufferSize> buffer_in_;
     std::list<std::shared_ptr<buffer_type>> buffer_out_;
-
-    SharedConnectionContext context_;
 };
 
 class ClientConnection : public Connection {
