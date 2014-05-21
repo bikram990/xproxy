@@ -1,9 +1,9 @@
-#include "log/log.hpp"
-#include "message/http/http_message.hpp"
-#include "net/client_adapter.hpp"
-#include "net/connection.hpp"
-#include "net/server_adapter.hpp"
-#include "net/socket_facade.hpp"
+#include "xproxy/log/log.hpp"
+#include "xproxy/message/http/http_message.hpp"
+#include "xproxy/net/client_adapter.hpp"
+#include "xproxy/net/connection.hpp"
+#include "xproxy/net/server_adapter.hpp"
+#include "xproxy/net/socket_facade.hpp"
 
 namespace xproxy {
 namespace net {

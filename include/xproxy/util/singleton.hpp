@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include <thread>
-#include "common.hpp"
+#include "xproxy/common.hpp"
 
 namespace xproxy {
 namespace util {

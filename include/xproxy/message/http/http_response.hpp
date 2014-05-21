@@ -1,7 +1,7 @@
 #ifndef HTTP_RESPONSE_HPP
 #define HTTP_RESPONSE_HPP
 
-#include "message/http/http_message.hpp"
+#include "xproxy/message/http/http_message.hpp"
 
 namespace xproxy {
 namespace message {

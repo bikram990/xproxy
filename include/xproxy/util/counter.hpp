@@ -2,7 +2,7 @@
 #define COUNTER_HPP
 
 #include <atomic>
-#include "common.hpp"
+#include "xproxy/common.hpp"
 
 namespace xproxy {
 namespace util {

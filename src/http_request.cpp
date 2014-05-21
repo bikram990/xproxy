@@ -1,4 +1,4 @@
-#include "message/http/http_request.hpp"
+#include "xproxy/message/http/http_request.hpp"
 
 namespace xproxy {
 namespace message {

@@ -3,9 +3,9 @@
 
 #include <string>
 #include <map>
-#include "common.hpp"
-#include "memory/byte_buffer.hpp"
-#include "message/message.hpp"
+#include "xproxy/common.hpp"
+#include "xproxy/memory/byte_buffer.hpp"
+#include "xproxy/message/message.hpp"
 
 namespace xproxy {
 namespace message {

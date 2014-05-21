@@ -1,5 +1,5 @@
-#include "memory/byte_buffer.hpp"
-#include "message/http/http_message.hpp"
+#include "xproxy/memory/byte_buffer.hpp"
+#include "xproxy/message/http/http_message.hpp"
 
 namespace xproxy {
 namespace message {

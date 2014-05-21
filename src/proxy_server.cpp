@@ -1,5 +1,5 @@
-#include "net/socket_facade.hpp"
-#include "proxy_server.hpp"
+#include "xproxy/net/socket_facade.hpp"
+#include "xproxy/proxy_server.hpp"
 
 namespace xproxy {
 

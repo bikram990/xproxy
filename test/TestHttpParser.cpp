@@ -1,7 +1,7 @@
 #include "CommonTestDefinition.hpp"
-#include "memory/byte_buffer.hpp"
-#include "message/http/http_parser.hpp"
-#include "message/http/http_request.hpp"
+#include "xproxy/memory/byte_buffer.hpp"
+#include "xproxy/message/http/http_parser.hpp"
+#include "xproxy/message/http/http_request.hpp"
 
 using namespace xproxy::message::http;
 using namespace xproxy::memory;

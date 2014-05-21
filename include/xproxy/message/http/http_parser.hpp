@@ -2,7 +2,7 @@
 #define HTTP_PARSER_HPP
 
 #include <string>
-#include "common.hpp"
+#include "xproxy/common.hpp"
 #include "http_parser.h"
 
 namespace xproxy {

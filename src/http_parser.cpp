@@ -1,6 +1,6 @@
-#include "log/log.hpp"
-#include "message/http/http_message.hpp"
-#include "message/http/http_parser.hpp"
+#include "xproxy/log/log.hpp"
+#include "xproxy/message/http/http_message.hpp"
+#include "xproxy/message/http/http_parser.hpp"
 
 namespace xproxy {
 namespace message {

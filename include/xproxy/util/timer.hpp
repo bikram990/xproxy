@@ -2,7 +2,7 @@
 #define TIMER_HPP
 
 #include <boost/asio.hpp>
-#include "log/log.hpp"
+#include "xproxy/log/log.hpp"
 
 namespace xproxy {
 namespace util {

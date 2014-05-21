@@ -3,8 +3,8 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include "common.hpp"
-#include "log/log.hpp"
+#include "xproxy/common.hpp"
+#include "xproxy/log/log.hpp"
 
 namespace xproxy {
 namespace net {

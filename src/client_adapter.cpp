@@ -1,10 +1,10 @@
 #include <boost/asio/ssl.hpp>
-#include "log/log.hpp"
-#include "memory/byte_buffer.hpp"
-#include "message/http/http_request.hpp"
-#include "net/client_adapter.hpp"
-#include "net/socket_facade.hpp"
-#include "util/timer.hpp"
+#include "xproxy/log/log.hpp"
+#include "xproxy/memory/byte_buffer.hpp"
+#include "xproxy/message/http/http_request.hpp"
+#include "xproxy/net/client_adapter.hpp"
+#include "xproxy/net/socket_facade.hpp"
+#include "xproxy/util/timer.hpp"
 
 namespace xproxy {
 namespace net {

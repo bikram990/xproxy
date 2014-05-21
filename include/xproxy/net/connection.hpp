@@ -7,10 +7,10 @@
 #include <set>
 #include <vector>
 #include <boost/asio.hpp>
-#include "common.hpp"
-#include "net/socket_facade.hpp"
+#include "xproxy/common.hpp"
+#include "xproxy/net/socket_facade.hpp"
 #include "resource_manager.h"
-#include "util/counter.hpp"
+#include "xproxy/util/counter.hpp"
 
 namespace xproxy {
 namespace memory { class ByteBuffer; }

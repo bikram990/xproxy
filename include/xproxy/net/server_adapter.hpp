@@ -1,17 +1,17 @@
-#ifndef CLIENT_ADAPTER_HPP
-#define CLIENT_ADAPTER_HPP
+#ifndef SERVER_ADAPTER_HPP
+#define SERVER_ADAPTER_HPP
 
-#include "message/http/http_parser.hpp"
-#include "net/connection.hpp"
-#include "util/timer.hpp"
+#include "xproxy/message/http/http_parser.hpp"
+#include "xproxy/net/connection.hpp"
+#include "xproxy/util/timer.hpp"
 
 namespace xproxy {
 namespace net {
 
-class ClientAdapter : public ConnectionAdapter, public message::http::HttpParserObserver {
+class ServerAdapter : public ConnectionAdapter, public message::http::HttpParserObserver {
 public:
-    ClientAdapter(Connection& connection);
-    DEFAULT_VIRTUAL_DTOR(ClientAdapter);
+    ServerAdapter(Connection& connection);
+    DEFAULT_VIRTUAL_DTOR(ServerAdapter);
 
     virtual void onConnect(const boost::system::error_code& e);
     virtual void onHandshake(const boost::system::error_code& e);
@@ -23,21 +23,15 @@ public:
     virtual void onMessageComplete(message::http::HttpMessage& message);
 
 private:
-    bool ParseRemotePeer();
-
-private:
     Connection& connection_;
     util::Timer timer_;
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
 
+    bool connected_;
     bool https_;
-    bool ssl_built_;
-    std::string remote_host_;
-    std::string remote_port_;
 };
 
 } // namespace net
 } // namespace xproxy
-
-#endif // CLIENT_ADAPTER_HPP
+#endif // SERVER_ADAPTER_HPP

@@ -1,5 +1,5 @@
 #include "CommonTestDefinition.hpp"
-#include "memory/byte_buffer.hpp"
+#include "xproxy/memory/byte_buffer.hpp"
 
 using namespace xproxy::memory;
 

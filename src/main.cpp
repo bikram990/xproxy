@@ -1,4 +1,4 @@
-#include "proxy_server.hpp"
+#include "xproxy/proxy_server.hpp"
 #include "resource_manager.h"
 
 #ifdef WIN32
