@@ -1,16 +1,20 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef LOG_HPP
+#define LOG_HPP
 
 #include <log4cpp/Category.hh>
 #include <log4cpp/PropertyConfigurator.hh>
 
-namespace xproxy { namespace log {
+namespace xproxy {
+namespace log {
 
 static log4cpp::Category& logger = log4cpp::Category::getRoot();
 
-void InitLogging(const std::string& conf_file = "xproxy.conf");
+void initLogging(const std::string& conf_file = "xproxy.conf") {
+    log4cpp::PropertyConfigurator::configure(conf_file);
+}
 
-}}
+} // namespace log
+} // namespace xproxy
 
 
 #define META_INFO "[" << __FILE__ << ":" << __FUNCTION__ << "():L" << __LINE__ << "] "
@@ -27,6 +31,12 @@ void InitLogging(const std::string& conf_file = "xproxy.conf");
 #define XERROR_WITH_ID xproxy::log::logger << log4cpp::Priority::ERROR << META_INFO << "[id: " << id() << "] "
 #define XFATAL_WITH_ID xproxy::log::logger << log4cpp::Priority::FATAL << META_INFO << "[id: " << id() << "] "
 
+#define XDEBUG_ID_WITH(klass) xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO << "[id: " << klass.id() << "] "
+#define XINFO_ID_WITH(klass)  xproxy::log::logger << log4cpp::Priority::INFO  << META_INFO << "[id: " << klass.id() << "] "
+#define XWARN_ID_WITH(klass)  xproxy::log::logger << log4cpp::Priority::WARN  << META_INFO << "[id: " << klass.id() << "] "
+#define XERROR_ID_WITH(klass) xproxy::log::logger << log4cpp::Priority::ERROR << META_INFO << "[id: " << klass.id() << "] "
+#define XFATAL_ID_WITH(klass) xproxy::log::logger << log4cpp::Priority::FATAL << META_INFO << "[id: " << klass.id() << "] "
+
 #define XDEBUG_X if (xproxy::log::logger.isDebugEnabled()) \
     xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO
 
@@ -34,4 +44,4 @@ void InitLogging(const std::string& conf_file = "xproxy.conf");
     xproxy::log::logger << log4cpp::Priority::DEBUG << META_INFO << "[id: " << id() << "] "
 
 
-#endif // LOG_H
+#endif // LOG_HPP
