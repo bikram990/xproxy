@@ -122,7 +122,8 @@ public:
 
     virtual void initAdapter();
 
-    DEFAULT_VIRTUAL_DTOR(ClientConnection);
+    // DEFAULT_VIRTUAL_DTOR(ClientConnection);
+    virtual ~ClientConnection() { XDEBUG_WITH_ID << "~ClientConnection"; }
 
 protected:
     ClientConnection(boost::asio::io_service& service,
@@ -143,7 +144,8 @@ public:
 
     virtual void initAdapter();
 
-    DEFAULT_VIRTUAL_DTOR(ServerConnection);
+    // DEFAULT_VIRTUAL_DTOR(ServerConnection);
+    virtual ~ServerConnection() { XDEBUG_WITH_ID << "~ServerConnection"; }
 
 protected:
     ServerConnection(boost::asio::io_service& service,
