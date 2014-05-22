@@ -1,5 +1,4 @@
 #include "xproxy/log/log.hpp"
-#include "xproxy/memory/byte_buffer.hpp"
 #include "xproxy/message/http/http_request.hpp"
 #include "xproxy/net/client_adapter.hpp"
 #include "xproxy/net/socket_facade.hpp"
