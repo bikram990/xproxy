@@ -20,9 +20,9 @@ void ServerAdapter::onConnect(const boost::system::error_code& e) {
         return;
     }
 
-    auto context = connection_.context();
-    context->server_connected = true;
+    connection_.setConnected(true);
 
+    auto context = connection_.context();
     if (context->https && !context->server_ssl_setup) {
         XDEBUG_ID_WITH(connection_) << "SSL, handshaking...";
         connection_.handshake();
@@ -52,8 +52,10 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
     if (e) {
         if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_ID_WITH(connection_) << "EOF in socket.";
-            connection_.context()->server_connected = false;
-            connection_.closeSocket();
+            connection_.setConnected(false);
+            // Note: no need to close socket here, as it has been closed
+            // by the remote peer(EOF).
+            // connection_.closeSocket();
         } else {
             XERROR_ID_WITH(connection_) << "Read error: " << e.message();
             // TODO enhance
@@ -95,8 +97,8 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
             message_->reset();
             timer_.start(kDefaultServerTimeout, [this] (const boost::system::error_code&) {
                 XDEBUG_ID_WITH(connection_) << "Server connection timed out, close.";
+                connection_.setConnected(false);
                 auto context = connection_.context();
-                context->server_connected = false;
                 if (context->https)
                     context->server_ssl_setup = false;
                 connection_.closeSocket();
@@ -107,8 +109,8 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
             XDEBUG_ID_WITH(connection_) << "No keep-alive, closing.";
             parser_->reset();
             message_->reset();
+            connection_.setConnected(false);
             auto context = connection_.context();
-            context->server_connected = false;
             if (context->https)
                 context->server_ssl_setup = false;
             connection_.closeSocket();

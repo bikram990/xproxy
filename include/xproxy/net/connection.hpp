@@ -29,14 +29,12 @@ struct ConnectionContext {
     ConnectionContext()
         : https(false),
           proxied(false),
-          server_connected(false),
           client_ssl_setup(false),
           server_ssl_setup(false),
           message_exchange_completed(false) {}
 
     bool https;
     bool proxied;
-    bool server_connected;
     bool client_ssl_setup;
     bool server_ssl_setup;
     bool message_exchange_completed;
@@ -62,6 +60,10 @@ public:
     boost::asio::io_service& service() const { return service_; }
 
     SocketFacade::socket_type& socket() const { return socket_->socket(); }
+
+    bool connected() const { return connected_; }
+
+    void setConnected(bool connected) { connected_ = connected; }
 
     SharedConnectionContext context() const { return context_; }
 
@@ -94,6 +96,7 @@ protected:
     virtual bool beforeWrite() = 0;
 
 protected:
+    bool connected_;
     std::unique_ptr<SocketFacade> socket_;
     std::unique_ptr<ConnectionAdapter> adapter_;
     SharedConnectionContext context_;

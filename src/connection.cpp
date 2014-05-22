@@ -16,7 +16,8 @@ void Connection::closeSocket() {
 void Connection::stop() {
     XDEBUG_WITH_ID << "Stopping conneciton...";
     // 1. close socket
-    closeSocket();
+    if (connected_)
+        closeSocket();
 
     // 2. close socket of bridge connection
     if (bridge_connection_)
@@ -75,7 +76,8 @@ Connection::Connection(boost::asio::io_service& service,
       socket_(SocketFacade::create(service)),
       context_(context),
       manager_(manager),
-      writing_(false) {}
+      writing_(false),
+      connected_(false) {}
 
 void Connection::doWrite() {
     if (writing_) {
@@ -158,6 +160,7 @@ void ConnectionManager::stopAll() {
 
 void ClientConnection::start() {
     XDEBUG_WITH_ID << "Starting client connection...";
+    connected_ = true;
     context_->local_host = socket_->socket().remote_endpoint().address().to_string();
     context_->local_port = std::to_string(socket_->socket().remote_endpoint().port());
     read();
@@ -242,7 +245,7 @@ ServerConnection::ServerConnection(boost::asio::io_service& service,
     : Connection(service, context, manager), resolver_(service) {}
 
 bool ServerConnection::beforeWrite() {
-    if (context_->server_connected)
+    if (connected_)
         return true;
     start();
     return false;
