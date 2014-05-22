@@ -69,12 +69,10 @@ void Connection::write(const std::string& str) {
 }
 
 Connection::Connection(boost::asio::io_service& service,
-                       ConnectionAdapter *adapter,
                        SharedConnectionContext context,
                        ConnectionManager *manager)
     : service_(service),
       socket_(SocketFacade::create(service)),
-      adapter_(adapter),
       context_(context),
       manager_(manager),
       writing_(false) {}
@@ -182,10 +180,15 @@ void ClientConnection::handshake(ResourceManager::CertManager::CAPtr ca, Resourc
 ClientConnection::ClientConnection(boost::asio::io_service& service,
                                    SharedConnectionContext context,
                                    ConnectionManager *manager)
-    : Connection(service, new ClientAdapter(*this), context, manager) {}
+    : Connection(service, context, manager) {}
 
 bool ClientConnection::beforeWrite() {
     return true; // we don't need any preparation work here
+}
+
+void ClientConnection::initAdapter() {
+    if (!adapter_)
+        adapter_.reset(new ClientAdapter(*this));
 }
 
 void ServerConnection::start() {
@@ -236,7 +239,7 @@ void ServerConnection::handshake(ResourceManager::CertManager::CAPtr ca, Resourc
 ServerConnection::ServerConnection(boost::asio::io_service& service,
                                    SharedConnectionContext context,
                                    ConnectionManager *manager)
-    : Connection(service, new ServerAdapter(*this), context, manager), resolver_(service) {}
+    : Connection(service, context, manager), resolver_(service) {}
 
 bool ServerConnection::beforeWrite() {
     if (context_->server_connected)
@@ -245,12 +248,19 @@ bool ServerConnection::beforeWrite() {
     return false;
 }
 
+void ServerConnection::initAdapter() {
+    if (!adapter_)
+        adapter_.reset(new ServerAdapter(*this));
+}
+
 ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
                                        ConnectionManager *client_manager,
                                        ConnectionManager *server_manager) {
     SharedConnectionContext context(new ConnectionContext);
     ConnectionPtr client(new ClientConnection(service, context, client_manager));
     ConnectionPtr server(new ServerConnection(service, context, server_manager));
+    client->initAdapter();
+    server->initAdapter();
     client->setBridgeConnection(server);
     server->setBridgeConnection(client);
 

@@ -71,6 +71,8 @@ public:
 
     void closeSocket();
 
+    virtual void initAdapter() = 0;
+
     virtual void start() = 0;
     virtual void stop();
 
@@ -85,7 +87,6 @@ public:
 
 protected:
     Connection(boost::asio::io_service& service,
-               ConnectionAdapter *adapter,
                SharedConnectionContext context,
                ConnectionManager *manager);
     DEFAULT_VIRTUAL_DTOR(Connection);
@@ -119,6 +120,8 @@ public:
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
 
+    virtual void initAdapter();
+
     DEFAULT_VIRTUAL_DTOR(ClientConnection);
 
 protected:
@@ -137,6 +140,8 @@ public:
     virtual void start();
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
+
+    virtual void initAdapter();
 
     DEFAULT_VIRTUAL_DTOR(ServerConnection);
 
