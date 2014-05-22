@@ -27,9 +27,6 @@ private:
     util::Timer timer_;
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
-
-    bool connected_;
-    bool https_;
 };
 
 } // namespace net

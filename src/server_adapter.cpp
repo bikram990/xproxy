@@ -10,10 +10,10 @@ ServerAdapter::ServerAdapter(Connection& connection)
     : connection_(connection),
       timer_(connection.service()),
       message_(new message::http::HttpResponse),
-      parser_(new message::http::HttpParser(*message_, HTTP_RESPONSE, this)),
-      connected_(false), https_(false) {}
+      parser_(new message::http::HttpParser(*message_, HTTP_RESPONSE, this)) {}
 
 void ServerAdapter::onConnect(const boost::system::error_code& e) {
+    XDEBUG_ID_WITH(connection_) << "=> onConnect()";
     if (e) {
         XERROR_ID_WITH(connection_) << "Connect error: " << e.message();
         // TODO enhance
@@ -21,13 +21,21 @@ void ServerAdapter::onConnect(const boost::system::error_code& e) {
         return;
     }
 
-    if (https_) {
+    auto context = connection_.context();
+    context->server_connected = true;
+
+    if (context->https && !context->server_ssl_setup) {
+        XDEBUG_ID_WITH(connection_) << "SSL, handshaking...";
         connection_.handshake();
         return;
     }
+
+    connection_.doWrite();
+    XDEBUG_ID_WITH(connection_) << "<= onConnect()";
 }
 
 void ServerAdapter::onHandshake(const boost::system::error_code& e) {
+    XDEBUG_ID_WITH(connection_) << "=> onHandshake()";
     if (e) {
         XERROR_ID_WITH(connection_) << "Handshake error: " << e.message();
         // TODO enhance
@@ -35,14 +43,17 @@ void ServerAdapter::onHandshake(const boost::system::error_code& e) {
         return;
     }
 
+    connection_.context()->server_ssl_setup = true;
     connection_.doWrite();
+    XDEBUG_ID_WITH(connection_) << "<= onHandshake()";
 }
 
 void ServerAdapter::onRead(const boost::system::error_code& e, const char *data, std::size_t length) {
+    XDEBUG_ID_WITH(connection_) << "=> onRead()";
     if (e) {
         if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_ID_WITH(connection_) << "EOF in socket.";
-            connected_ = false;
+            connection_.context()->server_connected = false;
             connection_.closeSocket();
         } else {
             XERROR_ID_WITH(connection_) << "Read error: " << e.message();
@@ -79,9 +90,12 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
 
     if (!parser_->messageCompleted())
         connection_.read();
+
+    XDEBUG_ID_WITH(connection_) << "<= onRead()";
 }
 
 void ServerAdapter::onWrite(const boost::system::error_code& e) {
+    XDEBUG_ID_WITH(connection_) << "=> onWrite()";
     if (e) {
         XERROR_ID_WITH(connection_) << "Write error: " << e.message();
         // TODO enhance
@@ -90,13 +104,16 @@ void ServerAdapter::onWrite(const boost::system::error_code& e) {
     }
 
     connection_.read();
+    XDEBUG_ID_WITH(connection_) << "<= onWrite()";
 }
 
-void ServerAdapter::onHeadersComplete(message::http::HttpMessage& message) {
+void ServerAdapter::onHeadersComplete(message::http::HttpMessage&) {
     // do nothing here currently
+    XDEBUG_ID_WITH(connection_) << "onHeadersComplete(), no action.";
 }
 
 void ServerAdapter::onBody(message::http::HttpMessage& message) {
+    XDEBUG_ID_WITH(connection_) << "=> onBody()";
     auto bridge = connection_.getBridgeConnection();
     if (!bridge) {
         XERROR_ID_WITH(connection_) << "No bridge connection.";
@@ -106,6 +123,7 @@ void ServerAdapter::onBody(message::http::HttpMessage& message) {
     }
 
     bridge->write(message);
+    XDEBUG_ID_WITH(connection_) << "<= onBody()";
 }
 
 void ServerAdapter::onMessageComplete(message::http::HttpMessage& message) {
