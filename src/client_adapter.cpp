@@ -1,7 +1,6 @@
 #include "xproxy/log/log.hpp"
 #include "xproxy/message/http/http_request.hpp"
 #include "xproxy/net/client_adapter.hpp"
-#include "xproxy/net/socket_facade.hpp"
 
 namespace xproxy {
 namespace net {
