@@ -36,6 +36,7 @@ public:
         : observer_(observer), message_(message), headers_completed_(false),
           message_completed_(false), chunked_(false) {
         ::http_parser_init(&parser_, type);
+        parser_.data = this;
     }
 
     DEFAULT_VIRTUAL_DTOR(HttpParser);
