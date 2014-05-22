@@ -24,6 +24,11 @@ void Connection::startTimer(long timeout) {
 }
 
 void Connection::stop() {
+    if (stopped_) {
+        XWARN_WITH_ID << "Connection is already stopped.";
+        return;
+    }
+
     XDEBUG_WITH_ID << "Stopping connection...";
     // 1. cancel timer
     if (timer_.running())
@@ -54,6 +59,9 @@ void Connection::stop() {
     // 6. remove reference in manager
     if (manager_)
         manager_->erase(shared_from_this());
+
+    // 7. set the stopped_ flag to true
+    stopped_ = true;
 }
 
 void Connection::read() {
@@ -97,6 +105,7 @@ Connection::Connection(boost::asio::io_service& service,
                        SharedConnectionContext context,
                        ConnectionManager *manager)
     : connected_(false),
+      stopped_(false),
       socket_(SocketFacade::create(service)),
       context_(context),
       manager_(manager),

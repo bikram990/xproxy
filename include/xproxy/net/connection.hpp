@@ -101,6 +101,7 @@ protected:
 
 protected:
     bool connected_;
+    bool stopped_;
     std::unique_ptr<SocketFacade> socket_;
     std::unique_ptr<ConnectionAdapter> adapter_;
     SharedConnectionContext context_;
