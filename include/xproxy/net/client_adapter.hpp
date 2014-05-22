@@ -23,18 +23,13 @@ public:
     virtual void onMessageComplete(message::http::HttpMessage& message);
 
 private:
-    bool ParseRemotePeer();
+    bool ParseRemotePeer(std::string& remote_host, std::string& remote_port);
 
 private:
     Connection& connection_;
     util::Timer timer_;
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
-
-    bool https_;
-    bool ssl_built_;
-    std::string remote_host_;
-    std::string remote_port_;
 };
 
 } // namespace net

@@ -1,10 +1,8 @@
-#include <boost/asio/ssl.hpp>
 #include "xproxy/log/log.hpp"
 #include "xproxy/memory/byte_buffer.hpp"
 #include "xproxy/message/http/http_request.hpp"
 #include "xproxy/net/client_adapter.hpp"
 #include "xproxy/net/socket_facade.hpp"
-#include "xproxy/util/timer.hpp"
 
 namespace xproxy {
 namespace net {
@@ -13,14 +11,15 @@ ClientAdapter::ClientAdapter(Connection& connection)
     : connection_(connection),
       timer_(connection.service()),
       message_(new message::http::HttpRequest),
-      parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)),
-      https_(false), ssl_built_(false) {}
+      parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)) {}
 
 void ClientAdapter::onConnect(const boost::system::error_code& e) {
     // do nothing here, a client connection is always connected
+    XERROR << "Should NEVER be called.";
 }
 
 void ClientAdapter::onHandshake(const boost::system::error_code& e) {
+    XDEBUG_ID_WITH(connection_) << "=> onHandshake()";
     if (e) {
         XERROR_ID_WITH(connection_) << "Handshake error: " << e.message();
         // TODO enhance
@@ -28,13 +27,16 @@ void ClientAdapter::onHandshake(const boost::system::error_code& e) {
         return;
     }
 
-    ssl_built_ = true;
+    connection_.context()->client_ssl_setup = true;
     message_->reset();
     parser_->reset();
     connection_.read();
+    XDEBUG_ID_WITH(connection_) << "<= onHandshake()";
 }
 
 void ClientAdapter::onRead(const boost::system::error_code &e, const char *data, std::size_t length) {
+    XDEBUG_ID_WITH(connection_) << "=> onRead()";
+
     if (e) {
         if(e == boost::asio::error::eof || SSL_SHORT_READ(e))
             XDEBUG_ID_WITH(connection_) << "EOF in socket, stop.";
@@ -72,37 +74,47 @@ void ClientAdapter::onRead(const boost::system::error_code &e, const char *data,
 
     if (!parser_->messageCompleted())
         connection_.read();
+
+    XDEBUG_ID_WITH(connection_) << "<= onRead()";
 }
 
 void ClientAdapter::onWrite(const boost::system::error_code& e) {
+    XDEBUG_ID_WITH(connection_) << "=> onWrite()";
     if (e) {
         XERROR_ID_WITH(connection_) << "Write error: " << e.message();
         connection_.stop();
         return;
     }
 
-    if (https_ && !ssl_built_) {
+    auto context = connection_.context();
+    if (context->https && !context->client_ssl_setup) {
         XDEBUG_ID_WITH(connection_) << "SSL reply written.";
-        auto ca = ResourceManager::GetCertManager().GetCertificate(remote_host_);
+        assert(!context->remote_host.empty());
+        auto ca = ResourceManager::GetCertManager().GetCertificate(context->remote_host);
         auto dh = ResourceManager::GetCertManager().GetDHParameters();
         connection_.handshake(ca, dh);
         return;
     }
 
     XDEBUG_ID_WITH(connection_) << "Response data written.";
+    XDEBUG_ID_WITH(connection_) << "<= onWrite()";
 }
 
 void ClientAdapter::onHeadersComplete(message::http::HttpMessage&) {
     // do nothing here currently
+    XDEBUG_ID_WITH(connection_) << "onHeadersComplete(), no action.";
 }
 
 void ClientAdapter::onBody(message::http::HttpMessage&) {
     // do nothing here currently
+    XDEBUG_ID_WITH(connection_) << "onBody(), no action.";
 }
 
 void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
-    if (!https_) { // a normal HTTP request or a CONNECT request
-        if (!ParseRemotePeer()) {
+    XDEBUG_ID_WITH(connection_) << "=> onMessageComplete()";
+    auto context = connection_.context();
+    if (!context->https) { // a normal HTTP request or a CONNECT request
+        if (!ParseRemotePeer(context->remote_host, context->remote_port)) {
             XERROR_ID_WITH(connection_) << "Remote host/port parsing failure.";
             // TODO enhance
             connection_.stop();
@@ -111,7 +123,8 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
     }
 
     // a CONNECT request, and the SSL has not been setup
-    if (https_ && !ssl_built_) {
+    if (context->https && !context->client_ssl_setup) {
+        XDEBUG_ID_WITH(connection_) << "SSL CONNECT request.";
         const static std::string ssl_response("HTTP/1.1 200 Connection Established\r\n"
                                               "Content-Length: 0\r\n"
                                               "Connection: keep-alive\r\n"
@@ -129,9 +142,10 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
     }
 
     bridge->write(*message_);
+    XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
 }
 
-bool ClientAdapter::ParseRemotePeer() {
+bool ClientAdapter::ParseRemotePeer(std::string& remote_host, std::string& remote_port) {
     if (!parser_->headersCompleted()) {
         XERROR_ID_WITH(connection_) << "Incomplete header.";
         return false;
@@ -139,25 +153,25 @@ bool ClientAdapter::ParseRemotePeer() {
 
     auto method = message_->getField(message::http::HttpMessage::kRequestMethod);
     if (method.length() == 7 && method[0] == 'C' && method[1] == 'O') {
-        remote_host_ = message_->getField(message::http::HttpMessage::kRequestUri);
-        remote_port_ = "443";
+        remote_host = message_->getField(message::http::HttpMessage::kRequestUri);
+        remote_port = "443";
 
-        auto sep = remote_host_.find(':');
+        auto sep = remote_host.find(':');
         if (sep != std::string::npos) {
-            remote_port_ = remote_host_.substr(sep + 1);
-            remote_host_ = remote_host_.substr(0, sep);
+            remote_port = remote_host.substr(sep + 1);
+            remote_host = remote_host.substr(0, sep);
         }
     } else {
-        remote_port_ = "80";
-        if (!message_->findHeader("Host", remote_host_)) {
+        remote_port = "80";
+        if (!message_->findHeader("Host", remote_host)) {
             XERROR_ID_WITH(connection_) << "Header \"Host\" not found.";
             return false;
         }
 
-        auto sep = remote_host_.find(':');
+        auto sep = remote_host.find(':');
         if (sep != std::string::npos) {
-            remote_port_ = remote_host_.substr(sep + 1);
-            remote_host_ = remote_host_.substr(0, sep);
+            remote_port = remote_host.substr(sep + 1);
+            remote_host = remote_host.substr(0, sep);
         }
     }
 
