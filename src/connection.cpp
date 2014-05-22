@@ -49,7 +49,7 @@ void Connection::write(const message::Message &message) {
     std::shared_ptr<memory::ByteBuffer> buf(new memory::ByteBuffer);
     auto size = message.serialize(*buf);
     if (size <= 0) {
-        XERROR_WITH_ID << "Write, no content.";
+        XWARN_WITH_ID << "Write, no content.";
         return;
     }
 
