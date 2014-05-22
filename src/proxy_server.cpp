@@ -13,6 +13,7 @@ void ProxyServer::start() {
     startAccept();
     XINFO << "xProxy is listening at port " << port_
           << ", Press Ctrl-C to stop.";
+    service_.run();
 }
 
 void ProxyServer::init() {
