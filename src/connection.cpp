@@ -55,7 +55,7 @@ void Connection::write(const message::Message &message) {
 
     buffer_out_.push_back(buf);
     doWrite();
-    XDEBUG_WITH_ID << "=> write(message)";
+    XDEBUG_WITH_ID << "<= write(message)";
 }
 
 void Connection::write(const std::string& str) {
