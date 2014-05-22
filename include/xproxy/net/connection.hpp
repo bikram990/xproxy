@@ -26,10 +26,18 @@ public:
 };
 
 struct ConnectionContext {
-    ConnectionContext() : https(false), proxied(false) {}
+    ConnectionContext()
+        : https(false),
+          proxied(false),
+          server_connected(false),
+          client_ssl_setup(false),
+          server_ssl_setup(false) {}
 
     bool https;
     bool proxied;
+    bool server_connected;
+    bool client_ssl_setup;
+    bool server_ssl_setup;
     std::string local_host;
     std::string local_port;
     std::string remote_host;
@@ -80,6 +88,8 @@ protected:
                ConnectionManager *manager);
     DEFAULT_VIRTUAL_DTOR(Connection);
 
+    virtual bool beforeWrite() = 0;
+
 protected:
     std::unique_ptr<SocketFacade> socket_;
     std::unique_ptr<ConnectionAdapter> adapter_;
@@ -113,6 +123,8 @@ protected:
     ClientConnection(boost::asio::io_service& service,
                      SharedConnectionContext context,
                      ConnectionManager *manager);
+
+    virtual bool beforeWrite();
 };
 
 class ServerConnection : public Connection {
@@ -130,6 +142,8 @@ protected:
     ServerConnection(boost::asio::io_service& service,
                      SharedConnectionContext context,
                      ConnectionManager *manager);
+
+    virtual bool beforeWrite();
 
 private:
     boost::asio::ip::tcp::resolver resolver_;

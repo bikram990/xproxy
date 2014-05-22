@@ -22,6 +22,8 @@
 
 9. consider to remove certs in =CertManager= after some time
 
+10. remove unnecessary "virtual" function definitions, especially in class =Connection=
+
 -------------------------------------------------------------------------------
 
 1. consider to design a more better buffering system

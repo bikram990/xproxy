@@ -80,8 +80,20 @@ Connection::Connection(boost::asio::io_service& service,
       writing_(false) {}
 
 void Connection::doWrite() {
-    if (writing_)
+    if (writing_) {
+        XWARN_WITH_ID << "Connection is writing.";
         return;
+    }
+
+    if (buffer_out_.empty()) {
+        XWARN_WITH_ID << "Empty out buffer.";
+        return;
+    }
+
+    if (!beforeWrite()) {
+        XWARN_WITH_ID << "beforeWrite() hook returns false.";
+        return;
+    }
 
     XDEBUG_WITH_ID << "=> doWrite()";
     writing_ = true;
@@ -172,6 +184,10 @@ ClientConnection::ClientConnection(boost::asio::io_service& service,
                                    ConnectionManager *manager)
     : Connection(service, new ClientAdapter(*this), context, manager) {}
 
+bool ClientConnection::beforeWrite() {
+    return true; // we don't need any preparation work here
+}
+
 void ServerConnection::start() {
     XDEBUG_WITH_ID << "Starting server connection...";
     assert(!context_->remote_host.empty());
@@ -221,6 +237,13 @@ ServerConnection::ServerConnection(boost::asio::io_service& service,
                                    SharedConnectionContext context,
                                    ConnectionManager *manager)
     : Connection(service, new ServerAdapter(*this), context, manager), resolver_(service) {}
+
+bool ServerConnection::beforeWrite() {
+    if (context_->server_connected)
+        return true;
+    start();
+    return false;
+}
 
 ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
                                        ConnectionManager *client_manager,
