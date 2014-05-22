@@ -9,7 +9,7 @@ namespace xproxy {
 namespace net {
 
 void Connection::closeSocket() {
-    if (socket_)
+    if (socket_ && connected_)
         socket_->close();
 }
 
@@ -32,12 +32,16 @@ void Connection::stop() {
     }
 
     // 2. close socket of bridge connection
-    if (bridge_connection_)
+    if (bridge_connection_ && bridge_connection_->connected()) {
         bridge_connection_->closeSocket();
+        bridge_connection_->setConnected(false);
+    }
 
     // 3. remove the reference-to-each-other
-    bridge_connection_->setBridgeConnection(nullptr);
-    bridge_connection_.reset();
+    if (bridge_connection_) {
+        bridge_connection_->setBridgeConnection(nullptr);
+        bridge_connection_.reset();
+    }
 
     // 4. remove reference in manager
     if (manager_)
