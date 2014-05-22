@@ -26,8 +26,10 @@ void Connection::startTimer(long timeout) {
 void Connection::stop() {
     XDEBUG_WITH_ID << "Stopping conneciton...";
     // 1. close socket
-    if (connected_)
+    if (connected_) {
         closeSocket();
+        connected_ = false;
+    }
 
     // 2. close socket of bridge connection
     if (bridge_connection_)
