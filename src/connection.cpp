@@ -25,25 +25,33 @@ void Connection::startTimer(long timeout) {
 
 void Connection::stop() {
     XDEBUG_WITH_ID << "Stopping connection...";
-    // 1. close socket
+    // 1. cancel timer
+    if (timer_.running())
+        timer_.cancel();
+
+    // 2. cancel bridge connection's timer
+    if (bridge_connection_ && bridge_connection_->timer_.running())
+        bridge_connection_->timer_.cancel();
+
+    // 3. close socket
     if (connected_) {
         closeSocket();
         connected_ = false;
     }
 
-    // 2. close socket of bridge connection
+    // 4. close socket of bridge connection
     if (bridge_connection_ && bridge_connection_->connected()) {
         bridge_connection_->closeSocket();
         bridge_connection_->setConnected(false);
     }
 
-    // 3. remove the reference-to-each-other
+    // 5. remove the reference-to-each-other
     if (bridge_connection_) {
         bridge_connection_->setBridgeConnection(nullptr);
         bridge_connection_.reset();
     }
 
-    // 4. remove reference in manager
+    // 6. remove reference in manager
     if (manager_)
         manager_->erase(shared_from_this());
 }
