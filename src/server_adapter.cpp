@@ -126,9 +126,36 @@ void ServerAdapter::onBody(message::http::HttpMessage& message) {
 }
 
 void ServerAdapter::onMessageComplete(message::http::HttpMessage& message) {
+    XDEBUG_ID_WITH(connection_) << "=> onMessageComplete()";
     onBody(message);
 
-    // TODO do cleanup job here
+    connection_.context()->message_exchange_completed = true;
+    if (parser_->keepAlive()) {
+        parser_->reset();
+        message_->reset();
+        timer_.start(kDefaultServerTimeout, [this] (const boost::system::error_code&) {
+            XDEBUG_ID_WITH(connection_) << "Server connection timed out, close.";
+            auto context =  connection_.context();
+            context->server_connected = false;
+            if (context->https)
+                context->server_ssl_setup = false;
+            connection_.closeSocket();
+            // TODO do we need to create a new socket to replace the old one?
+            // can we use the old one, and reconnect it?
+        });
+    } else {
+        XDEBUG_ID_WITH(connection_) << "No keep-alive, closing.";
+        parser_->reset();
+        message_->reset();
+        auto context =  connection_.context();
+        context->server_connected = false;
+        if (context->https)
+            context->server_ssl_setup = false;
+        connection_.closeSocket();
+        // TODO do we need to create a new socket to replace the old one?
+        // can we use the old one, and reconnect it?
+    }
+    XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
 }
 
 } // namespace net

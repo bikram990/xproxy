@@ -31,13 +31,15 @@ struct ConnectionContext {
           proxied(false),
           server_connected(false),
           client_ssl_setup(false),
-          server_ssl_setup(false) {}
+          server_ssl_setup(false),
+          message_exchange_completed(false) {}
 
     bool https;
     bool proxied;
     bool server_connected;
     bool client_ssl_setup;
     bool server_ssl_setup;
+    bool message_exchange_completed;
     std::string local_host;
     std::string local_port;
     std::string remote_host;

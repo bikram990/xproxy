@@ -95,6 +95,24 @@ void ClientAdapter::onWrite(const boost::system::error_code& e) {
     }
 
     XDEBUG_ID_WITH(connection_) << "Response data written.";
+
+    if (context->message_exchange_completed) {
+        if (parser_->keepAlive()) {
+            parser_->reset();
+            message_->reset();
+            timer_.start(kDefaultClientTimeout, [this] (const boost::system::error_code&) {
+                XDEBUG_ID_WITH(connection_) << "Client connection timed out, stop.";
+                // TODO enhance
+                connection_.stop();
+            });
+            connection_.read();
+        } else {
+            XDEBUG_ID_WITH(connection_) << "No keep-alive, closing.";
+            // TODO enhance
+            connection_.stop();
+        }
+    }
+
     XDEBUG_ID_WITH(connection_) << "<= onWrite()";
 }
 

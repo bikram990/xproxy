@@ -10,6 +10,8 @@ namespace net {
 
 class ClientAdapter : public ConnectionAdapter, public message::http::HttpParserObserver {
 public:
+    enum { kDefaultClientTimeout = 30 }; // 30 seconds
+
     ClientAdapter(Connection& connection);
     DEFAULT_VIRTUAL_DTOR(ClientAdapter);
 
