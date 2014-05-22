@@ -21,6 +21,7 @@ public:
 
     ~Timer() = default;
 
+    bool running() const { return running_; }
     bool triggered() const { return triggered_; }
 
     template<typename TimeoutHandler>
@@ -40,6 +41,7 @@ public:
                 handler(e);
             }
         });
+        running_ = true;
     }
 
     void cancel() {
