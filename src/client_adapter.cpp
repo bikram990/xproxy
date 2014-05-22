@@ -169,6 +169,7 @@ bool ClientAdapter::ParseRemotePeer(std::string& remote_host, std::string& remot
 
     auto method = message_->getField(message::http::HttpMessage::kRequestMethod);
     if (method.length() == 7 && method[0] == 'C' && method[1] == 'O') {
+        connection_.context()->https = true;
         remote_host = message_->getField(message::http::HttpMessage::kRequestUri);
         remote_port = "443";
 
