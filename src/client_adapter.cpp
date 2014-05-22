@@ -7,7 +7,6 @@ namespace net {
 
 ClientAdapter::ClientAdapter(Connection& connection)
     : connection_(connection),
-      timer_(connection.service()),
       message_(new message::http::HttpRequest),
       parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)) {}
 
@@ -101,11 +100,7 @@ void ClientAdapter::onWrite(const boost::system::error_code& e) {
         if (parser_->keepAlive()) {
             parser_->reset();
             message_->reset();
-            timer_.start(kDefaultClientTimeout, [this] (const boost::system::error_code&) {
-                XDEBUG_ID_WITH(connection_) << "Client connection timed out, stop.";
-                // TODO enhance
-                connection_.stop();
-            });
+            connection_.startTimer(kDefaultClientTimeout);
             connection_.read();
         } else {
             XDEBUG_ID_WITH(connection_) << "No keep-alive, closing.";
@@ -115,6 +110,12 @@ void ClientAdapter::onWrite(const boost::system::error_code& e) {
     }
 
     XDEBUG_ID_WITH(connection_) << "<= onWrite()";
+}
+
+void ClientAdapter::onTimeout(const boost::system::error_code&) {
+    XDEBUG_ID_WITH(connection_) << "Client connection timed out, stop.";
+    // TODO enhance
+    connection_.stop();
 }
 
 void ClientAdapter::onHeadersComplete(message::http::HttpMessage&) {

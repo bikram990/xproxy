@@ -13,6 +13,16 @@ void Connection::closeSocket() {
         socket_->close();
 }
 
+void Connection::startTimer(long timeout) {
+    XDEBUG_WITH_ID << "=> startTimer()";
+    auto self(shared_from_this());
+    timer_.start(timeout, [self, this] (const boost::system::error_code& e) {
+        if (adapter_)
+            adapter_->onTimeout(e);
+    });
+    XDEBUG_WITH_ID << "<= startTimer()";
+}
+
 void Connection::stop() {
     XDEBUG_WITH_ID << "Stopping conneciton...";
     // 1. close socket
@@ -72,12 +82,13 @@ void Connection::write(const std::string& str) {
 Connection::Connection(boost::asio::io_service& service,
                        SharedConnectionContext context,
                        ConnectionManager *manager)
-    : service_(service),
+    : connected_(false),
       socket_(SocketFacade::create(service)),
       context_(context),
       manager_(manager),
-      writing_(false),
-      connected_(false) {}
+      service_(service),
+      timer_(service),
+      writing_(false) {}
 
 void Connection::doWrite() {
     if (writing_) {

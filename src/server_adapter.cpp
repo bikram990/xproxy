@@ -7,7 +7,6 @@ namespace net {
 
 ServerAdapter::ServerAdapter(Connection& connection)
     : connection_(connection),
-      timer_(connection.service()),
       message_(new message::http::HttpResponse),
       parser_(new message::http::HttpParser(*message_, HTTP_RESPONSE, this)) {}
 
@@ -95,16 +94,7 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
         if (parser_->keepAlive()) {
             parser_->reset();
             message_->reset();
-            timer_.start(kDefaultServerTimeout, [this] (const boost::system::error_code&) {
-                XDEBUG_ID_WITH(connection_) << "Server connection timed out, close.";
-                connection_.setConnected(false);
-                auto context = connection_.context();
-                if (context->https)
-                    context->server_ssl_setup = false;
-                connection_.closeSocket();
-                // TODO do we need to create a new socket to replace the old one?
-                // can we use the old one, and reconnect it?
-            });
+            connection_.startTimer(kDefaultServerTimeout);
         } else {
             XDEBUG_ID_WITH(connection_) << "No keep-alive, closing.";
             parser_->reset();
@@ -133,6 +123,17 @@ void ServerAdapter::onWrite(const boost::system::error_code& e) {
 
     connection_.read();
     XDEBUG_ID_WITH(connection_) << "<= onWrite()";
+}
+
+void ServerAdapter::onTimeout(const boost::system::error_code &e) {
+    XDEBUG_ID_WITH(connection_) << "Server connection timed out, close.";
+    connection_.closeSocket();
+    auto context = connection_.context();
+    if (context->https)
+        context->server_ssl_setup = false;
+    connection_.setConnected(false);
+    // TODO do we need to create a new socket to replace the old one?
+    // can we use the old one, and reconnect it?
 }
 
 void ServerAdapter::onHeadersComplete(message::http::HttpMessage&) {

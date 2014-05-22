@@ -7,6 +7,7 @@
 #include "xproxy/net/socket_facade.hpp"
 #include "resource_manager.h"
 #include "xproxy/util/counter.hpp"
+#include "xproxy/util/timer.hpp"
 
 namespace xproxy {
 namespace memory { class ByteBuffer; }
@@ -23,6 +24,7 @@ public:
     virtual void onHandshake(const boost::system::error_code& e) = 0;
     virtual void onRead(const boost::system::error_code& e, const char *data, std::size_t length) = 0;
     virtual void onWrite(const boost::system::error_code& e) = 0;
+    virtual void onTimeout(const boost::system::error_code& e) = 0;
 };
 
 struct ConnectionContext {
@@ -73,6 +75,8 @@ public:
 
     void closeSocket();
 
+    void startTimer(long timeout);
+
     virtual void initAdapter() = 0;
 
     virtual void start() = 0;
@@ -107,6 +111,8 @@ private:
     enum { kBufferSize = 8192 };
 
     boost::asio::io_service& service_;
+
+    util::Timer timer_;
 
     std::array<char, kBufferSize> buffer_in_;
     std::list<std::shared_ptr<buffer_type>> buffer_out_;
