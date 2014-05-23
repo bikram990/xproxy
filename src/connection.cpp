@@ -300,6 +300,9 @@ ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
     client->setBridgeConnection(server);
     server->setBridgeConnection(client);
 
+    XDEBUG << "Connections bridged, client[id: " << client->id()
+           << "] <=> server[id: " << server->id() << "].";
+
     return client;
 }
 
