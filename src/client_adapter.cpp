@@ -39,6 +39,11 @@ void ClientAdapter::onRead(const boost::system::error_code &e, const char *data,
         return;
     }
 
+    if (connection_.timerRunning()) {
+        XDEBUG_ID_WITH(connection_) << "Cancel running timer.";
+        connection_.cancelTimer();
+    }
+
     if (e) {
         if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_ID_WITH(connection_) << "EOF in socket, stop.";
@@ -165,6 +170,10 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
         return;
     }
 
+    if (bridge->timerRunning()) {
+        XDEBUG_ID_WITH(connection_) << "Cancel bridge's running timer.";
+        bridge->cancelTimer();
+    }
     bridge->write(*message_);
     XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
 }

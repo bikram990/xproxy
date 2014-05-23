@@ -80,6 +80,12 @@ public:
 
     void startTimer(long timeout);
 
+    void cancelTimer() { if (timer_.running()) timer_.cancel(); }
+
+    bool timerRunning() const { return timer_.running(); }
+
+    bool timerTriggered() const { return timer_.triggered(); }
+
     virtual void initAdapter() = 0;
 
     virtual void start() = 0;
