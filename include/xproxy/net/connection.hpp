@@ -34,6 +34,10 @@ struct ConnectionContext {
           server_ssl_setup(false),
           message_exchange_completed(false) {}
 
+    void reset() {
+        message_exchange_completed = false;
+    }
+
     bool https;
     bool proxied;
     bool client_ssl_setup;

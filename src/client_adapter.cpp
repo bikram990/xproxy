@@ -103,6 +103,7 @@ void ClientAdapter::onWrite(const boost::system::error_code& e) {
 
     if (context->message_exchange_completed) {
         if (parser_->keepAlive()) {
+            context->reset();
             parser_->reset();
             message_->reset();
             connection_.startTimer(kDefaultClientTimeout);
