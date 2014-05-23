@@ -34,8 +34,13 @@ void ClientAdapter::onHandshake(const boost::system::error_code& e) {
 void ClientAdapter::onRead(const boost::system::error_code &e, const char *data, std::size_t length) {
     XDEBUG_ID_WITH(connection_) << "=> onRead()";
 
+    if (!connection_.socket().is_open()) {
+        XDEBUG_ID_WITH(connection_) << "Socket closed.";
+        return;
+    }
+
     if (e) {
-        if(e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
+        if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_ID_WITH(connection_) << "EOF in socket, stop.";
             connection_.setConnected(false);
         } else

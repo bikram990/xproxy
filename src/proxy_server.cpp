@@ -39,6 +39,11 @@ void ProxyServer::startAccept() {
     current_client_connection_ = net::createBridgedConnections(service_, &client_connection_manager_, nullptr);
     acceptor_.async_accept(current_client_connection_->socket(),
                            [this] (const boost::system::error_code& e) {
+        if (!acceptor_.is_open()) {
+            XDEBUG << "Acceptor closed.";
+            return;
+        }
+
         if (e) {
             XERROR << "Accept error: " << e.message();
             return;
