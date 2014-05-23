@@ -1,26 +1,41 @@
+#include "xproxy/conf/server_config.hpp"
 #include "xproxy/proxy_server.hpp"
-#include "resource_manager.h"
+#include "xproxy/ssl/certificate_manager.hpp"
 
 #ifdef WIN32
 #include "openssl/applink.c"
 #endif
 
 int main(int, char**) {
-    xproxy::log::initLogging();
+    using namespace xproxy;
+    using namespace xproxy::conf;
+    using namespace xproxy::log;
+    using namespace xproxy::ssl;
+
+    initLogging();
     XINFO << "xProxy is starting...";
 
-    if(!ResourceManager::Init()) {
-        XFATAL << "Failed to init resource, exit.";
+    if(!CertificateManager::init()) {
+        XFATAL << "Unable to init certificate manager, exit.";
         return -1;
     }
 
-    ResourceManager::GetRuleConfig() << "youtube.com"
-                                     << "ytimg.com"
-                                     << "facebook.com"
-                                     << "google-analytics.com"
-                                     << "twitter.com";
+    if (!ServerConfig::init()) {
+        XFATAL << "Unable to init server configuration, exit.";
+        return -1;
+    }
 
-    xproxy::ProxyServer s(ResourceManager::GetServerConfig().GetProxyPort());
+//    ResourceManager::GetRuleConfig() << "youtube.com"
+//                                     << "ytimg.com"
+//                                     << "facebook.com"
+//                                     << "google-analytics.com"
+//                                     << "twitter.com";
+
+    unsigned short port;
+    if (!ServerConfig::instance().getConfig("basic.port", port))
+        port = 7077;
+
+    ProxyServer s(port);
     for(;;) {
         try {
             s.start();

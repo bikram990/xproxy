@@ -5,6 +5,7 @@
 #include <boost/asio/ssl.hpp>
 #include "xproxy/common.hpp"
 #include "xproxy/log/log.hpp"
+#include "xproxy/ssl/certificate_manager.hpp"
 
 namespace xproxy {
 namespace net {
@@ -75,9 +76,9 @@ public:
     }
 
 public:
-    template<typename SharedCAPtr, typename SharedDHPtr, typename HandshakeHandler>
+    template<typename HandshakeHandler>
     void useSSL(HandshakeHandler&& handler, SSLMode mode = kClient,
-                SharedCAPtr ca = nullptr, SharedDHPtr dh = nullptr) {
+                ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr) {
         if (use_ssl_) {
             // if the ssl socket is already set up, we generate an error here
             // TODO could we use move in capture here?
@@ -90,7 +91,7 @@ public:
         ssl_context_.reset(new ssl_context_type(ssl_context_type::sslv23));
 
         if (mode == kServer) {
-            if (!ca || !dh) {
+            if (!ca.key() || !ca.certificate() || !dh) {
                 // TODO add logic here
                 use_ssl_ = false;
                 return;
@@ -98,9 +99,9 @@ public:
             ssl_context_->set_options(ssl_context_type::default_workarounds
                                       | ssl_context_type::no_sslv2
                                       | ssl_context_type::single_dh_use);
-            ::SSL_CTX_use_certificate(ssl_context_->native_handle(), ca->cert);
-            ::SSL_CTX_use_PrivateKey(ssl_context_->native_handle(), ca->key);
-            ::SSL_CTX_set_tmp_dh(ssl_context_->native_handle(), dh->dh);
+            ::SSL_CTX_use_certificate(ssl_context_->native_handle(), ca.certificate());
+            ::SSL_CTX_use_PrivateKey(ssl_context_->native_handle(), ca.key());
+            ::SSL_CTX_set_tmp_dh(ssl_context_->native_handle(), dh);
         }
 
         ssl_socket_.reset(new ssl_socket_ref_type(*socket_, *ssl_context_));

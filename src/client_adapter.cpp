@@ -88,8 +88,8 @@ void ClientAdapter::onWrite(const boost::system::error_code& e) {
     if (context->https && !context->client_ssl_setup) {
         XDEBUG_ID_WITH(connection_) << "SSL reply written.";
         assert(!context->remote_host.empty());
-        auto ca = ResourceManager::GetCertManager().GetCertificate(context->remote_host);
-        auto dh = ResourceManager::GetCertManager().GetDHParameters();
+        auto ca = ssl::CertificateManager::instance().getCertificate(context->remote_host);
+        auto dh = ssl::CertificateManager::instance().getDHParameters();
         connection_.handshake(ca, dh);
         return;
     }

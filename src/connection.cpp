@@ -204,7 +204,7 @@ void ClientConnection::connect(const std::string&, const std::string&) {
     XERROR_WITH_ID << "Should NEVER be called.";
 }
 
-void ClientConnection::handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh) {
+void ClientConnection::handshake(ssl::Certificate ca, DH *dh) {
     XDEBUG_WITH_ID << "=> handshake()";
     auto self(shared_from_this());
     socket_->useSSL([self, this] (const boost::system::error_code& e) {
@@ -262,11 +262,10 @@ void ServerConnection::connect(const std::string& host, const std::string& port)
     XDEBUG_WITH_ID << "<= connect()";
 }
 
-void ServerConnection::handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh) {
+void ServerConnection::handshake(ssl::Certificate, DH*) {
     XDEBUG_WITH_ID << "=> handshake()";
     auto self(shared_from_this());
-    socket_->useSSL<ResourceManager::CertManager::CAPtr,
-            ResourceManager::CertManager::DHParametersPtr>([self, this] (const boost::system::error_code& e) {
+    socket_->useSSL([self, this] (const boost::system::error_code& e) {
         if (adapter_)
             adapter_->onHandshake(e);
     });

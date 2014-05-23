@@ -5,7 +5,6 @@
 #include <boost/asio.hpp>
 #include "xproxy/common.hpp"
 #include "xproxy/net/socket_facade.hpp"
-#include "resource_manager.h"
 #include "xproxy/util/counter.hpp"
 #include "xproxy/util/timer.hpp"
 
@@ -83,8 +82,7 @@ public:
     virtual void stop();
 
     virtual void connect(const std::string& host, const std::string& port) = 0;
-    virtual void handshake(ResourceManager::CertManager::CAPtr ca = nullptr,
-                           ResourceManager::CertManager::DHParametersPtr dh = nullptr) = 0;
+    virtual void handshake(ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr) = 0;
 
     virtual void read();
     virtual void write(const xproxy::message::Message& message);
@@ -128,7 +126,7 @@ class ClientConnection : public Connection {
 public:
     virtual void start();
     virtual void connect(const std::string& host, const std::string& port);
-    virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
+    virtual void handshake(ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr);
 
     virtual void initAdapter();
 
@@ -150,7 +148,7 @@ class ServerConnection : public Connection {
 public:
     virtual void start();
     virtual void connect(const std::string& host, const std::string& port);
-    virtual void handshake(ResourceManager::CertManager::CAPtr ca, ResourceManager::CertManager::DHParametersPtr dh);
+    virtual void handshake(ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr);
 
     virtual void initAdapter();
 
