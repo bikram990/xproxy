@@ -16,7 +16,7 @@ public:
     static ServerConfig& instance();
 
     template<typename TypeT>
-    bool GetConfig(const std::string& path, TypeT& return_value) {
+    bool getConfig(const std::string& path, TypeT& return_value) {
         try {
             return_value = conf_tree_.get<TypeT>(path);
         } catch(boost::property_tree::ptree_error& e) {
@@ -32,7 +32,7 @@ public:
 private:
     ServerConfig() = default;
 
-    bool LoadConfig(const std::string& conf_file);
+    bool loadConfig(const std::string& conf_file);
 
 private:
     boost::property_tree::ptree conf_tree_;
