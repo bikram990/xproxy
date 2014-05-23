@@ -24,6 +24,8 @@
 
 10. remove unnecessary "virtual" function definitions, especially in class =Connection=
 
+11. find a more efficient way to do reading/writing, currently, it reads a little piece of data, then writes, then little piece, then writes, it is really not that efficient
+
 -------------------------------------------------------------------------------
 
 1. consider to design a more better buffering system
