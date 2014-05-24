@@ -26,6 +26,8 @@
 
 11. find a more efficient way to do reading/writing, currently, it reads a little piece of data, then writes, then little piece, then writes, it is really not that efficient
 
+12. define a level in config file, to determine the what to be logged of a request/response: the first line, the headers, of the whole message
+
 -------------------------------------------------------------------------------
 
 1. consider to design a more better buffering system
