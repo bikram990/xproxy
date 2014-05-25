@@ -70,8 +70,7 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
         return;
     }
 
-    XDEBUG_ID_WITH(connection_) << "Read, length: " << length << ", content:\n"
-                   << std::string(data, length);
+    XDEBUG_ID_WITH(connection_) << "Read, length: " << length;
 
     if (parser_->messageCompleted()) {
         XERROR_ID_WITH(connection_) << "Read, message is already completed.";
