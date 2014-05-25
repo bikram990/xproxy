@@ -187,6 +187,12 @@ void ConnectionManager::erase(const ConnectionPtr& connection) {
 void ConnectionManager::stopAll() {
     std::for_each(connections_.begin(), connections_.end(),
                   [](const ConnectionPtr& connection) {
+        // Note: we have to set the manager_ to null here, as in
+        // function stop(), it will call manager_.erase(...) to
+        // remove the connection if manager_ is not null, erase
+        // an element in looping a STL container without change
+        // the iterator? Yeah, the program will crash
+        connection->setConnectionManager(nullptr);
         connection->stop();
     });
     connections_.clear();

@@ -76,6 +76,8 @@ public:
 
     void setBridgeConnection(ConnectionPtr connection) { bridge_connection_ = connection; }
 
+    void setConnectionManager(ConnectionManager *manager) { manager_ = manager; }
+
     void closeSocket();
 
     void startTimer(long timeout);
