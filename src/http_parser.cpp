@@ -69,8 +69,30 @@ int HttpParser::onUrl(http_parser *parser, const char *at, std::size_t length) {
     auto method = ::http_method_str(static_cast<http_method>(parser->method));
     p->message_.setField(HttpMessage::kRequestMethod,
                          std::move(std::string(method)));
-    p->message_.setField(HttpMessage::kRequestUri,
-                         std::move(std::string(at, length)));
+
+    // Note: a request sent proxy contains the first line as below:
+    //       => GET http://example.com/some/resource HTTP/1.1
+    // so, we should convert it into the following before sending it
+    // to server:
+    //       => GET /some/resource HTTP/1.1
+    std::string uri(at, length);
+    if (parser->method != HTTP_CONNECT) {
+        if (uri[0] != '/') {
+            const static std::string http("http://");
+            auto end = std::string::npos;
+            if(uri.compare(0, http.length(), http) != 0)
+                end = uri.find('/');
+            else
+                end = uri.find('/', http.length());
+
+            if(end == std::string::npos) {
+                uri = '/';
+            } else {
+                uri.erase(0, end);
+            }
+        }
+    }
+    p->message_.setField(HttpMessage::kRequestUri, std::move(uri));
     return 0;
 }
 
