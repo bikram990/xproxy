@@ -168,6 +168,11 @@ public:
         if (first >= last) return;
         if (last > size_) return;
 
+        if (last == size_) {
+            size_ = first;
+            return;
+        }
+
         std::memmove(data_ + first, data_ + last, size_ - last);
         size_ -= (last - first);
     }
