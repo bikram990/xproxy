@@ -8,7 +8,8 @@ namespace net {
 ClientAdapter::ClientAdapter(Connection& connection)
     : connection_(connection),
       message_(new message::http::HttpRequest),
-      parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)) {}
+      parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)),
+      cache_(new memory::ByteBuffer(1024)) {} // TODO determine a proper value here
 
 void ClientAdapter::onConnect(const boost::system::error_code& e) {
     // do nothing here, a client connection is always connected
@@ -27,6 +28,7 @@ void ClientAdapter::onHandshake(const boost::system::error_code& e) {
     connection_.context()->client_ssl_setup = true;
     message_->reset();
     parser_->reset();
+    cache_->clear();
     connection_.read();
     XDEBUG_ID_WITH(connection_) << "<= onHandshake()";
 }
@@ -128,9 +130,15 @@ void ClientAdapter::onTimeout(const boost::system::error_code&) {
     connection_.stop();
 }
 
-void ClientAdapter::onHeadersComplete(message::http::HttpMessage&) {
-    // do nothing here currently
-    XDEBUG_ID_WITH(connection_) << "onHeadersComplete(), no action.";
+void ClientAdapter::onHeadersComplete(message::http::HttpMessage& message) {
+    XDEBUG_ID_WITH(connection_) << "=> onHeadersComplete()";
+
+    auto size = message.serialize(*cache_);
+    assert(size > 0);
+    XDEBUG_ID_WITH(connection_) << "Dump request headers:\n"
+                                << std::string(cache_->data(), cache_->size());
+
+    XDEBUG_ID_WITH(connection_) << "<= onHeadersComplete()";
 }
 
 void ClientAdapter::onBody(message::http::HttpMessage&) {
@@ -174,9 +182,9 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
         bridge->cancelTimer();
     }
 
-    std::shared_ptr<memory::ByteBuffer> buf(new memory::ByteBuffer);
-    if (message.serialize(*buf) > 0)
-        bridge->write(buf);
+    message.serialize(*cache_);
+    bridge->write(cache_);
+    cache_.reset(new memory::ByteBuffer);
 
     XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
 }

@@ -25,9 +25,13 @@ public:
     virtual void onMessageComplete(message::http::HttpMessage& message);
 
 private:
+    void flushCache();
+
+private:
     Connection& connection_;
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
+    std::shared_ptr<memory::ByteBuffer> cache_;
 };
 
 } // namespace net

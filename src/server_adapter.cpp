@@ -8,7 +8,8 @@ namespace net {
 ServerAdapter::ServerAdapter(Connection& connection)
     : connection_(connection),
       message_(new message::http::HttpResponse),
-      parser_(new message::http::HttpParser(*message_, HTTP_RESPONSE, this)) {}
+      parser_(new message::http::HttpParser(*message_, HTTP_RESPONSE, this)),
+      cache_(new memory::ByteBuffer(1024)) {} // TODO determine a proper value here
 
 void ServerAdapter::onConnect(const boost::system::error_code& e) {
     XDEBUG_ID_WITH(connection_) << "=> onConnect()";
@@ -135,9 +136,15 @@ void ServerAdapter::onTimeout(const boost::system::error_code &e) {
     // can we use the old one, and reconnect it?
 }
 
-void ServerAdapter::onHeadersComplete(message::http::HttpMessage&) {
-    // do nothing here currently
-    XDEBUG_ID_WITH(connection_) << "onHeadersComplete(), no action.";
+void ServerAdapter::onHeadersComplete(message::http::HttpMessage& message) {
+    XDEBUG_ID_WITH(connection_) << "=> onHeadersComplete()";
+
+    auto size = message.serialize(*cache_);
+    assert(size > 0);
+    XDEBUG_ID_WITH(connection_) << "Dump response headers:\n"
+                                << std::string(cache_->data(), cache_->size());
+
+    XDEBUG_ID_WITH(connection_) << "<= onHeadersComplete()";
 }
 
 void ServerAdapter::onBody(message::http::HttpMessage& message) {
@@ -150,9 +157,11 @@ void ServerAdapter::onBody(message::http::HttpMessage& message) {
         return;
     }
 
-    std::shared_ptr<memory::ByteBuffer> buf(new memory::ByteBuffer);
-    if (message.serialize(*buf) > 0)
-        bridge->write(buf);
+    message.serialize(*cache_);
+    if (cache_->size() >= 4096) { // TODO determine a proper value here
+        bridge->write(cache_);
+        cache_.reset(new memory::ByteBuffer);
+    }
 
     XDEBUG_ID_WITH(connection_) << "<= onBody()";
 }
@@ -163,8 +172,28 @@ void ServerAdapter::onMessageComplete(message::http::HttpMessage& message) {
     // unwanted behavior, consider to define a method like
     // onMessageExchangeComplete() to call
     connection_.context()->message_exchange_completed = true;
-    onBody(message);
+    message.serialize(*cache_);
+    flushCache();
     XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
+}
+
+void ServerAdapter::flushCache() {
+    if (cache_->size() <= 0)
+        return;
+
+    XDEBUG_ID_WITH(connection_) << "=> flushCache()";
+
+    auto bridge = connection_.getBridgeConnection();
+    if (!bridge) {
+        XERROR_ID_WITH(connection_) << "No bridge connection.";
+        // TODO enhance
+        connection_.stop();
+        return;
+    }
+    bridge->write(cache_);
+    cache_.reset(new memory::ByteBuffer);
+
+    XDEBUG_ID_WITH(connection_) << "<= flushCache()";
 }
 
 } // namespace net
