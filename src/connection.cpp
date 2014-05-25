@@ -77,18 +77,16 @@ void Connection::read() {
     XDEBUG_WITH_ID << "<= read()";
 }
 
-void Connection::write(const message::Message &message) {
-    XDEBUG_WITH_ID << "=> write(message)";
-    std::shared_ptr<memory::ByteBuffer> buf(new memory::ByteBuffer);
-    auto size = message.serialize(*buf);
-    if (size <= 0) {
-        XWARN_WITH_ID << "Write, no content.";
+void Connection::write(const std::shared_ptr<memory::ByteBuffer>& buffer) {
+    XDEBUG_WITH_ID << "=> write(buffer)";
+    if (!buffer || buffer->size() <= 0) {
+        XDEBUG_WITH_ID << "Write, no content.";
         return;
     }
 
-    buffer_out_.push_back(buf);
+    buffer_out_.push_back(buffer);
     doWrite();
-    XDEBUG_WITH_ID << "<= write(message)";
+    XDEBUG_WITH_ID << "<= write(buffer)";
 }
 
 void Connection::write(const std::string& str) {

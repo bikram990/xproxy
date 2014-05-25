@@ -97,7 +97,7 @@ public:
     virtual void handshake(ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr) = 0;
 
     virtual void read();
-    virtual void write(const xproxy::message::Message& message);
+    virtual void write(const std::shared_ptr<buffer_type>& buffer);
     virtual void write(const std::string& str);
     virtual void doWrite();
 

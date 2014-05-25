@@ -174,7 +174,11 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
         XDEBUG_ID_WITH(connection_) << "Cancel bridge's running timer.";
         bridge->cancelTimer();
     }
-    bridge->write(*message_);
+
+    std::shared_ptr<memory::ByteBuffer> buf(new memory::ByteBuffer);
+    if (message.serialize(*buf) > 0)
+        bridge->write(buf);
+
     XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
 }
 
