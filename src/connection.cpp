@@ -25,7 +25,7 @@ void Connection::startTimer(long timeout) {
 
 void Connection::stop() {
     if (stopped_) {
-        XWARN_WITH_ID << "Connection is already stopped.";
+        XDEBUG_WITH_ID << "Connection is already stopped.";
         return;
     }
 
@@ -113,17 +113,17 @@ Connection::Connection(boost::asio::io_service& service,
 
 void Connection::doWrite() {
     if (writing_) {
-        XWARN_WITH_ID << "Connection is writing.";
+        XDEBUG_WITH_ID << "Connection is writing.";
         return;
     }
 
     if (buffer_out_.empty()) {
-        XWARN_WITH_ID << "Empty out buffer.";
+        XDEBUG_WITH_ID << "Empty out buffer.";
         return;
     }
 
     if (!beforeWrite()) {
-        XWARN_WITH_ID << "beforeWrite() hook returns false.";
+        XDEBUG_WITH_ID << "beforeWrite() hook returns false.";
         return;
     }
 
@@ -146,7 +146,7 @@ void Connection::doWrite() {
 
         // 3. no error, we check if all data in the buffer has been written
         if (length < candidate->size()) {
-            XWARN_WITH_ID << "Write incomplete, continue.";
+            XDEBUG_WITH_ID << "Write incomplete, continue.";
             candidate->erase(0, length);
             doWrite();
             return;
