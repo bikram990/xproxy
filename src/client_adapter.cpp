@@ -50,6 +50,9 @@ void ClientAdapter::onRead(const boost::system::error_code &e, const char *data,
         if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
             XDEBUG_ID_WITH(connection_) << "EOF in socket, stop.";
             connection_.setConnected(false);
+        } else if (e == boost::asio::error::connection_reset) {
+            XDEBUG_ID_WITH(connection_) << "Connection reset, stop.";
+            connection_.setConnected(false);
         } else
             XERROR_ID_WITH(connection_) << "Read error: " << e.message();
         // TODO enhance
