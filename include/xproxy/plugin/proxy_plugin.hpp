@@ -12,11 +12,12 @@ public:
         return MessagePluginPtr(new ProxyPlugin);
     }
 
-    virtual void onRequestHeaders(message::http::HttpMessage &request, net::SharedConnectionContext context);
-    virtual std::shared_ptr<message::http::HttpMessage> onRequestMessage(message::http::HttpMessage &request, net::SharedConnectionContext context);
-    virtual void onResponseHeaders(message::http::HttpMessage &response, net::SharedConnectionContext context);
-    virtual void onResponseMessage(message::http::HttpMessage &response, net::SharedConnectionContext context);
-    virtual int priority();
+    virtual void onRequestHeaders(message_type& request, net::SharedConnectionContext context);
+    virtual message_ptr onRequestMessage(message_type& request, net::SharedConnectionContext context);
+    virtual void onResponseHeaders(message_type& response, net::SharedConnectionContext context);
+    virtual void onResponseMessage(message_type& response, net::SharedConnectionContext context);
+    virtual int requestPriority();
+    virtual int responsePriority();
 
     DEFAULT_VIRTUAL_DTOR(ProxyPlugin);
 

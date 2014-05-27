@@ -43,19 +43,19 @@ void PluginManager::registerPlugin(PluginManager::plugin_creator_type creator) {
 }
 
 void PluginChain::onRequestHeaders(message::http::HttpMessage& request, net::SharedConnectionContext context) {
-    if (plugins_.empty())
+    if (request_plugins_.empty())
         return;
 
-    for (auto it = plugins_.begin(); it != plugins_.end(); ++it) {
+    for (auto it = request_plugins_.begin(); it != request_plugins_.end(); ++it) {
         (*it)->onRequestHeaders(request, context);
     }
 }
 
 std::shared_ptr<message::http::HttpMessage> PluginChain::onRequestMessage(message::http::HttpMessage& request, net::SharedConnectionContext context) {
-    if (plugins_.empty())
+    if (request_plugins_.empty())
         return nullptr;
 
-    for (auto it = plugins_.begin(); it != plugins_.end(); ++it) {
+    for (auto it = request_plugins_.begin(); it != request_plugins_.end(); ++it) {
         auto resp = (*it)->onRequestMessage(request, context);
         if (resp)
             return resp;
@@ -65,26 +65,28 @@ std::shared_ptr<message::http::HttpMessage> PluginChain::onRequestMessage(messag
 }
 
 void PluginChain::onResponseHeaders(message::http::HttpMessage& response, net::SharedConnectionContext context) {
-    if (plugins_.empty())
+    if (response_plugins_.empty())
         return;
 
-    for (auto it = plugins_.begin(); it != plugins_.end(); ++it) {
+    for (auto it = response_plugins_.begin(); it != response_plugins_.end(); ++it) {
         (*it)->onResponseHeaders(response, context);
     }
 }
 
 void PluginChain::onResponseMessage(message::http::HttpMessage& response, net::SharedConnectionContext context) {
-    if (plugins_.empty())
+    if (response_plugins_.empty())
         return;
 
-    for (auto it = plugins_.begin(); it != plugins_.end(); ++it) {
+    for (auto it = response_plugins_.begin(); it != response_plugins_.end(); ++it) {
         (*it)->onResponseMessage(response, context);
     }
 }
 
 void PluginChain::addPlugin(MessagePluginPtr plugin) {
-    if (plugin)
-        plugins_.push_back(plugin);
+    if (plugin) {
+        request_plugins_.insert(plugin);
+        response_plugins_.insert(plugin);
+    }
 }
 
 } // namespace plugin

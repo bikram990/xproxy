@@ -5,11 +5,12 @@
 namespace xproxy {
 namespace plugin {
 
-void ProxyPlugin::onRequestHeaders(message::http::HttpMessage& request, net::SharedConnectionContext context) {
+void ProxyPlugin::onRequestHeaders(message_type& request, net::SharedConnectionContext context) {
     // do nothing here
 }
 
-std::shared_ptr<message::http::HttpMessage> ProxyPlugin::onRequestMessage(message::http::HttpMessage& request, net::SharedConnectionContext context) {
+ProxyPlugin::message_ptr ProxyPlugin::onRequestMessage(message_type& request,
+                                                       net::SharedConnectionContext context) {
     // TODO enhance this function, remove the hard coded strings
     std::string host;
     if (request.findHeader("Host", host)) {
@@ -48,7 +49,7 @@ std::shared_ptr<message::http::HttpMessage> ProxyPlugin::onRequestMessage(messag
     return nullptr;
 }
 
-void ProxyPlugin::onResponseHeaders(message::http::HttpMessage& response, net::SharedConnectionContext context) {
+void ProxyPlugin::onResponseHeaders(message_type& response, net::SharedConnectionContext context) {
     if (!proxied_)
         return;
 
@@ -56,12 +57,16 @@ void ProxyPlugin::onResponseHeaders(message::http::HttpMessage& response, net::S
     response.serialize(buf); // remove the proxy headers
 }
 
-void ProxyPlugin::onResponseMessage(message::http::HttpMessage& response, net::SharedConnectionContext context) {
+void ProxyPlugin::onResponseMessage(message_type& response, net::SharedConnectionContext context) {
     // do nothing here currently
 }
 
-int ProxyPlugin::priority() {
-    return 1000;
+int ProxyPlugin::requestPriority() {
+    return kLowest;
+}
+
+int ProxyPlugin::responsePriority() {
+    return kHighest;
 }
 
 } // namespace plugin
