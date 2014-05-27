@@ -9,8 +9,7 @@ ClientAdapter::ClientAdapter(Connection& connection, std::shared_ptr<plugin::Plu
     : connection_(connection),
       message_(new message::http::HttpRequest),
       parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)),
-      chain_(chain),
-      cache_(new memory::ByteBuffer(1024)) {} // TODO determine a proper value here
+      chain_(chain) {}
 
 void ClientAdapter::onConnect(const boost::system::error_code& e) {
     // do nothing here, a client connection is always connected
@@ -29,7 +28,6 @@ void ClientAdapter::onHandshake(const boost::system::error_code& e) {
     connection_.context()->client_ssl_setup = true;
     message_->reset();
     parser_->reset();
-    cache_->clear();
     connection_.read();
     XDEBUG_ID_WITH(connection_) << "<= onHandshake()";
 }
@@ -136,12 +134,7 @@ void ClientAdapter::onTimeout(const boost::system::error_code&) {
 
 void ClientAdapter::onHeadersComplete(message::http::HttpMessage& message) {
     XDEBUG_ID_WITH(connection_) << "=> onHeadersComplete()";
-
-    auto size = message.serialize(*cache_);
-    assert(size > 0);
-    XDEBUG_ID_WITH(connection_) << "Dump request headers:\n"
-                                << std::string(cache_->data(), cache_->size());
-
+    chain_->onRequestHeaders(message, connection_.context());
     XDEBUG_ID_WITH(connection_) << "<= onHeadersComplete()";
 }
 
@@ -186,9 +179,18 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
         bridge->cancelTimer();
     }
 
-    message.serialize(*cache_);
-    bridge->write(cache_);
-    cache_.reset(new memory::ByteBuffer);
+    std::shared_ptr<memory::ByteBuffer> buf(new memory::ByteBuffer);
+
+    auto resp = chain_->onRequestMessage(message, context);
+    if (resp) {
+        context->message_exchange_completed = true;
+        resp->serialize(*buf);
+        connection_.write(buf);
+        return;
+    }
+
+    message.serialize(*buf);
+    bridge->write(buf);
 
     XDEBUG_ID_WITH(connection_) << "<= onMessageComplete()";
 }

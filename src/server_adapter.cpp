@@ -139,12 +139,7 @@ void ServerAdapter::onTimeout(const boost::system::error_code &e) {
 
 void ServerAdapter::onHeadersComplete(message::http::HttpMessage& message) {
     XDEBUG_ID_WITH(connection_) << "=> onHeadersComplete()";
-
-    auto size = message.serialize(*cache_);
-    assert(size > 0);
-    XDEBUG_ID_WITH(connection_) << "Dump response headers:\n"
-                                << std::string(cache_->data(), cache_->size());
-
+    chain_->onResponseHeaders(message, connection_.context());
     XDEBUG_ID_WITH(connection_) << "<= onHeadersComplete()";
 }
 
@@ -172,6 +167,7 @@ void ServerAdapter::onMessageComplete(message::http::HttpMessage& message) {
     // TODO: if the client's onWrite() is called before this, it will lead to
     // unwanted behavior, consider to define a method like
     // onMessageExchangeComplete() to call
+    chain_->onResponseMessage(message, connection_.context());
     connection_.context()->message_exchange_completed = true;
     message.serialize(*cache_);
     flushCache();

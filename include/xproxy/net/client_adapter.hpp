@@ -33,7 +33,6 @@ private:
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
     std::shared_ptr<plugin::PluginChain> chain_;
-    std::shared_ptr<memory::ByteBuffer> cache_;
 };
 
 } // namespace net
