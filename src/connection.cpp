@@ -4,6 +4,7 @@
 #include "xproxy/net/connection.hpp"
 #include "xproxy/net/server_adapter.hpp"
 #include "xproxy/net/socket_facade.hpp"
+#include "xproxy/plugin/plugin_manager.hpp"
 
 namespace xproxy {
 namespace net {
@@ -227,9 +228,9 @@ bool ClientConnection::beforeWrite() {
     return true; // we don't need any preparation work here
 }
 
-void ClientConnection::initAdapter() {
+void ClientConnection::initAdapter(plugin::PluginChain *chain) {
     if (!adapter_)
-        adapter_.reset(new ClientAdapter(*this));
+        adapter_.reset(new ClientAdapter(*this, chain));
 }
 
 void ServerConnection::start() {
@@ -288,9 +289,9 @@ bool ServerConnection::beforeWrite() {
     return false;
 }
 
-void ServerConnection::initAdapter() {
+void ServerConnection::initAdapter(plugin::PluginChain *chain) {
     if (!adapter_)
-        adapter_.reset(new ServerAdapter(*this));
+        adapter_.reset(new ServerAdapter(*this, chain));
 }
 
 ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
@@ -299,8 +300,11 @@ ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
     SharedConnectionContext context(new ConnectionContext);
     ConnectionPtr client(new ClientConnection(service, context, client_manager));
     ConnectionPtr server(new ServerConnection(service, context, server_manager));
-    client->initAdapter();
-    server->initAdapter();
+    plugin::PluginChain *cpc = nullptr;
+    plugin::PluginChain *spc = nullptr;
+    plugin::PluginChain::create(&cpc, &spc);
+    client->initAdapter(cpc);
+    server->initAdapter(spc);
     client->setBridgeConnection(server);
     server->setBridgeConnection(client);
 

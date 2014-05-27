@@ -3,6 +3,7 @@
 
 #include "xproxy/message/http/http_parser.hpp"
 #include "xproxy/net/connection.hpp"
+#include "xproxy/plugin/plugin_manager.hpp"
 
 namespace xproxy {
 namespace net {
@@ -11,7 +12,7 @@ class ServerAdapter : public ConnectionAdapter, public message::http::HttpParser
 public:
     enum { kDefaultServerTimeout = 15 }; // 15 seconds
 
-    ServerAdapter(Connection& connection);
+    ServerAdapter(Connection& connection, plugin::PluginChain *chain);
     DEFAULT_VIRTUAL_DTOR(ServerAdapter);
 
     virtual void onConnect(const boost::system::error_code& e);
@@ -31,6 +32,7 @@ private:
     Connection& connection_;
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
+    std::unique_ptr<plugin::PluginChain> chain_;
     std::shared_ptr<memory::ByteBuffer> cache_;
 };
 

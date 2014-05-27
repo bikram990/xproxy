@@ -5,10 +5,11 @@
 namespace xproxy {
 namespace net {
 
-ServerAdapter::ServerAdapter(Connection& connection)
+ServerAdapter::ServerAdapter(Connection& connection, plugin::PluginChain *chain)
     : connection_(connection),
       message_(new message::http::HttpResponse),
       parser_(new message::http::HttpParser(*message_, HTTP_RESPONSE, this)),
+      chain_(chain),
       cache_(new memory::ByteBuffer(1024)) {} // TODO determine a proper value here
 
 void ServerAdapter::onConnect(const boost::system::error_code& e) {
