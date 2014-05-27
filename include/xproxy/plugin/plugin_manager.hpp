@@ -11,26 +11,49 @@ namespace http { class HttpMessage; }
 
 namespace plugin {
 
-enum PluginMode {
-    kRequest,
-    kResponse,
-    kBoth
-};
-
 class MessagePlugin {
 public:
     DEFAULT_VIRTUAL_DTOR(MessagePlugin);
 
-    virtual void onHeaders(message::http::HttpMessage& message,
-                           net::SharedConnectionContext context) = 0;
+    virtual void onRequestHeaders(message::http::HttpMessage& request,
+                                  net::SharedConnectionContext context) = 0;
 
-    virtual void onMessage(message::http::HttpMessage& message,
-                           net::SharedConnectionContext context) = 0;
+    virtual std::shared_ptr<message::http::HttpMessage> onRequestMessage(message::http::HttpMessage& request,
+                                                                         net::SharedConnectionContext context) = 0;
+
+    virtual void onResponseHeaders(message::http::HttpMessage& response,
+                                   net::SharedConnectionContext context) = 0;
+
+    virtual void onResponseMessage(message::http::HttpMessage& response,
+                                   net::SharedConnectionContext context) = 0;
 
     virtual int priority() = 0;
 };
 
 typedef std::shared_ptr<MessagePlugin> MessagePluginPtr;
+
+class PluginChain {
+public:
+    void onRequestHeaders(message::http::HttpMessage& request, net::SharedConnectionContext context);
+
+    std::shared_ptr<message::http::HttpMessage> onRequestMessage(message::http::HttpMessage& request,
+                                                                 net::SharedConnectionContext context);
+
+    void onResponseHeaders(message::http::HttpMessage& response, net::SharedConnectionContext context);
+
+    void onResponseMessage(message::http::HttpMessage& response, net::SharedConnectionContext context);
+
+    void addPlugin(MessagePluginPtr plugin);
+
+    DEFAULT_CTOR(PluginChain);
+    DEFAULT_DTOR(PluginChain);
+
+private:
+    std::list<MessagePluginPtr> plugins_;
+
+private:
+    MAKE_NONCOPYABLE(PluginChain);
+};
 
 class PluginManager {
     friend class util::Singleton<PluginManager>;
@@ -43,63 +66,27 @@ public:
 
     static PluginManager& instance();
 
-    static void registerPlugin(MessagePluginPtr global_plugin, PluginMode mode);
+    static void registerPlugin(MessagePluginPtr global_plugin);
 
-    static void registerPlugin(plugin_creator_type creator, PluginMode mode);
+    static void registerPlugin(plugin_creator_type creator);
 
-    const plugin_container_type& requestGlobalPlugins() const { return request_global_plugins_; }
-
-    const plugin_container_type& responseGlobalPlugins() const { return response_global_plugins_; }
-
-    const creator_container_type& pluginCreators(PluginMode mode) {
-        switch (mode) {
-        case kRequest:
-            return request_plugin_creators_;
-        case kResponse:
-            return response_plugin_creators_;
-        case kBoth:
-            return shared_plugin_creators_;
-        }
+    static std::shared_ptr<PluginChain> createChain() {
+        return instance().create();
     }
 
     DEFAULT_DTOR(PluginManager);
 
 private:
-    PluginManager() = default;
+    DEFAULT_CTOR(PluginManager);
+
+    std::shared_ptr<PluginChain> create();
 
 private:
-    plugin_container_type request_global_plugins_;
-    plugin_container_type response_global_plugins_;
-    creator_container_type request_plugin_creators_;
-    creator_container_type response_plugin_creators_;
-    creator_container_type shared_plugin_creators_;
+    plugin_container_type global_plugins_;
+    creator_container_type plugin_creators_;
 
 private:
     MAKE_NONCOPYABLE(PluginManager);
-};
-
-class PluginChain {
-public:
-    static void create(PluginChain **request_chain, PluginChain **response_chain);
-
-    void onHeaders(message::http::HttpMessage& message,
-                   net::SharedConnectionContext context);
-
-    void onMessage(message::http::HttpMessage& message,
-                   net::SharedConnectionContext context);
-
-    void addPlugin(MessagePluginPtr plugin);
-
-    DEFAULT_DTOR(PluginChain);
-
-private:
-    PluginChain() = default;
-
-private:
-    PluginManager::plugin_container_type plugins_;
-
-private:
-    MAKE_NONCOPYABLE(PluginChain);
 };
 
 } // namespace plugin
