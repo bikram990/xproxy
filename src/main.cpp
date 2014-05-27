@@ -1,4 +1,6 @@
 #include "xproxy/conf/server_config.hpp"
+#include "xproxy/plugin/plugin_manager.hpp"
+#include "xproxy/plugin/proxy_plugin.hpp"
 #include "xproxy/proxy_server.hpp"
 #include "xproxy/ssl/certificate_manager.hpp"
 
@@ -11,6 +13,7 @@ int main(int, char**) {
     using namespace xproxy::conf;
     using namespace xproxy::log;
     using namespace xproxy::ssl;
+    using namespace xproxy::plugin;
 
     initLogging();
     XINFO << "xProxy is starting...";
@@ -30,6 +33,8 @@ int main(int, char**) {
 //                                     << "facebook.com"
 //                                     << "google-analytics.com"
 //                                     << "twitter.com";
+
+    PluginManager::registerPlugin(&ProxyPlugin::create);
 
     unsigned short port;
     if (!ServerConfig::instance().getConfig("basic.port", port))
