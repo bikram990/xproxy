@@ -12,7 +12,7 @@ class ClientAdapter : public ConnectionAdapter, public message::http::HttpParser
 public:
     enum { kDefaultClientTimeout = 30 }; // 30 seconds
 
-    ClientAdapter(Connection& connection, plugin::PluginChain *chain);
+    ClientAdapter(Connection& connection, std::shared_ptr<plugin::PluginChain> chain);
     DEFAULT_VIRTUAL_DTOR(ClientAdapter);
 
     virtual void onConnect(const boost::system::error_code& e);
@@ -32,7 +32,7 @@ private:
     Connection& connection_;
     std::unique_ptr<message::http::HttpMessage> message_;
     std::unique_ptr<message::http::HttpParser> parser_;
-    std::unique_ptr<plugin::PluginChain> chain_;
+    std::shared_ptr<plugin::PluginChain> chain_;
     std::shared_ptr<memory::ByteBuffer> cache_;
 };
 

@@ -89,7 +89,7 @@ public:
 
     bool timerTriggered() const { return timer_.triggered(); }
 
-    virtual void initAdapter(plugin::PluginChain *chain) = 0;
+    virtual void initAdapter(std::shared_ptr<plugin::PluginChain> chain) = 0;
 
     virtual void start() = 0;
     virtual void stop();
@@ -141,7 +141,7 @@ public:
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr);
 
-    virtual void initAdapter(plugin::PluginChain *chain);
+    virtual void initAdapter(std::shared_ptr<plugin::PluginChain> chain);
 
     // DEFAULT_VIRTUAL_DTOR(ClientConnection);
     virtual ~ClientConnection() { XDEBUG_WITH_ID << "~ClientConnection"; }
@@ -163,7 +163,7 @@ public:
     virtual void connect(const std::string& host, const std::string& port);
     virtual void handshake(ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr);
 
-    virtual void initAdapter(plugin::PluginChain *chain);
+    virtual void initAdapter(std::shared_ptr<plugin::PluginChain> chain);
 
     // DEFAULT_VIRTUAL_DTOR(ServerConnection);
     virtual ~ServerConnection() { XDEBUG_WITH_ID << "~ServerConnection"; }

@@ -5,7 +5,7 @@
 namespace xproxy {
 namespace net {
 
-ClientAdapter::ClientAdapter(Connection& connection, plugin::PluginChain *chain)
+ClientAdapter::ClientAdapter(Connection& connection, std::shared_ptr<plugin::PluginChain> chain)
     : connection_(connection),
       message_(new message::http::HttpRequest),
       parser_(new message::http::HttpParser(*message_, HTTP_REQUEST, this)),

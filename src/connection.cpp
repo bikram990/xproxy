@@ -228,7 +228,7 @@ bool ClientConnection::beforeWrite() {
     return true; // we don't need any preparation work here
 }
 
-void ClientConnection::initAdapter(plugin::PluginChain *chain) {
+void ClientConnection::initAdapter(std::shared_ptr<plugin::PluginChain> chain) {
     if (!adapter_)
         adapter_.reset(new ClientAdapter(*this, chain));
 }
@@ -289,7 +289,7 @@ bool ServerConnection::beforeWrite() {
     return false;
 }
 
-void ServerConnection::initAdapter(plugin::PluginChain *chain) {
+void ServerConnection::initAdapter(std::shared_ptr<plugin::PluginChain> chain) {
     if (!adapter_)
         adapter_.reset(new ServerAdapter(*this, chain));
 }
@@ -300,11 +300,9 @@ ConnectionPtr createBridgedConnections(boost::asio::io_service& service,
     SharedConnectionContext context(new ConnectionContext);
     ConnectionPtr client(new ClientConnection(service, context, client_manager));
     ConnectionPtr server(new ServerConnection(service, context, server_manager));
-    plugin::PluginChain *cpc = nullptr;
-    plugin::PluginChain *spc = nullptr;
-    plugin::PluginChain::create(&cpc, &spc);
-    client->initAdapter(cpc);
-    server->initAdapter(spc);
+    auto chain =  plugin::PluginManager::createChain();
+    client->initAdapter(chain);
+    server->initAdapter(chain);
     client->setBridgeConnection(server);
     server->setBridgeConnection(client);
 
