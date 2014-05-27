@@ -4,6 +4,8 @@
 #define DEFAULT_CTOR_AND_DTOR(T) T() = default; \
     virtual ~T() = default
 
+#define DEFAULT_CTOR(T) T() = default
+
 #define DEFAULT_DTOR(T) ~T() = default
 
 #define DEFAULT_VIRTUAL_DTOR(T) virtual ~T() = default
