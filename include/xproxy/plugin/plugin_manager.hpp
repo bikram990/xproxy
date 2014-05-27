@@ -12,8 +12,9 @@ namespace http { class HttpMessage; }
 namespace plugin {
 
 enum PluginMode {
-    kShared,
-    kindividual
+    kRequest,
+    kResponse,
+    kBoth
 };
 
 class MessagePlugin {
@@ -29,18 +30,37 @@ public:
     virtual int priority() = 0;
 };
 
+typedef std::shared_ptr<MessagePlugin> MessagePluginPtr;
+
 class PluginManager {
     friend class util::Singleton<PluginManager>;
 public:
-    typedef std::list<std::shared_ptr<MessagePlugin>> plugin_container_type;
+    typedef MessagePluginPtr (*plugin_creator_type)();
+    typedef std::list<MessagePluginPtr> plugin_container_type;
+    typedef std::list<plugin_creator_type> creator_container_type;
 
     static bool init();
 
     static PluginManager& instance();
 
-    void registerPlugin(std::shared_ptr<MessagePlugin> shared_plugin);
+    static void registerPlugin(MessagePluginPtr global_plugin, PluginMode mode);
 
-    void registerPlugin(std::shared_ptr<MessagePlugin> (*creator)());
+    static void registerPlugin(plugin_creator_type creator, PluginMode mode);
+
+    const plugin_container_type& requestGlobalPlugins() const { return request_global_plugins_; }
+
+    const plugin_container_type& responseGlobalPlugins() const { return response_global_plugins_; }
+
+    const creator_container_type& pluginCreators(PluginMode mode) {
+        switch (mode) {
+        case kRequest:
+            return request_plugin_creators_;
+        case kResponse:
+            return response_plugin_creators_;
+        case kBoth:
+            return shared_plugin_creators_;
+        }
+    }
 
     DEFAULT_DTOR(PluginManager);
 
@@ -48,8 +68,11 @@ private:
     PluginManager() = default;
 
 private:
-    plugin_container_type shared_plugins_;
-    std::list<std::shared_ptr<MessagePlugin>(*)()> plugin_creators_;
+    plugin_container_type request_global_plugins_;
+    plugin_container_type response_global_plugins_;
+    creator_container_type request_plugin_creators_;
+    creator_container_type response_plugin_creators_;
+    creator_container_type shared_plugin_creators_;
 
 private:
     MAKE_NONCOPYABLE(PluginManager);
@@ -57,14 +80,20 @@ private:
 
 class PluginChain {
 public:
+    static void create(PluginChain **request_chain, PluginChain **response_chain);
+
     void onHeaders(message::http::HttpMessage& message,
                    net::SharedConnectionContext context);
 
     void onMessage(message::http::HttpMessage& message,
                    net::SharedConnectionContext context);
 
-    PluginChain();
+    void addPlugin(MessagePluginPtr plugin);
+
     DEFAULT_DTOR(PluginChain);
+
+private:
+    PluginChain() = default;
 
 private:
     PluginManager::plugin_container_type plugins_;
