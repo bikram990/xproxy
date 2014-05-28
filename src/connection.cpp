@@ -10,8 +10,10 @@ namespace xproxy {
 namespace net {
 
 void Connection::closeSocket() {
-    if (socket_ && connected_)
+    if (socket_ && connected_) {
         socket_->close();
+        connected_ = false;
+    }
 }
 
 void Connection::startTimer(long timeout) {
@@ -40,16 +42,12 @@ void Connection::stop() {
         bridge_connection_->timer_.cancel();
 
     // 3. close socket
-    if (connected_) {
+    if (connected_)
         closeSocket();
-        connected_ = false;
-    }
 
     // 4. close socket of bridge connection
-    if (bridge_connection_ && bridge_connection_->connected()) {
+    if (bridge_connection_ && bridge_connection_->connected())
         bridge_connection_->closeSocket();
-        bridge_connection_->setConnected(false);
-    }
 
     // 5. remove the reference-to-each-other
     if (bridge_connection_) {

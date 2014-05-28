@@ -100,7 +100,6 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
             XDEBUG_ID_WITH(connection_) << "No keep-alive, closing.";
             parser_->reset();
             message_->reset();
-            connection_.setConnected(false);
             auto context = connection_.context();
             if (context->server_https)
                 context->server_ssl_setup = false;
@@ -132,7 +131,6 @@ void ServerAdapter::onTimeout(const boost::system::error_code &e) {
     auto context = connection_.context();
     if (context->server_https)
         context->server_ssl_setup = false;
-    connection_.setConnected(false);
     // TODO do we need to create a new socket to replace the old one?
     // can we use the old one, and reconnect it?
 }
