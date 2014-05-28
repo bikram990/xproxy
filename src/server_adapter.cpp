@@ -24,7 +24,7 @@ void ServerAdapter::onConnect(const boost::system::error_code& e) {
     connection_.setConnected(true);
 
     auto context = connection_.context();
-    if (context->https && !context->server_ssl_setup) {
+    if (context->server_https && !context->server_ssl_setup) {
         XDEBUG_ID_WITH(connection_) << "SSL, handshaking...";
         connection_.handshake();
         return;
@@ -102,7 +102,7 @@ void ServerAdapter::onRead(const boost::system::error_code& e, const char *data,
             message_->reset();
             connection_.setConnected(false);
             auto context = connection_.context();
-            if (context->https)
+            if (context->server_https)
                 context->server_ssl_setup = false;
             connection_.closeSocket();
             // TODO do we need to create a new socket to replace the old one?
@@ -130,7 +130,7 @@ void ServerAdapter::onTimeout(const boost::system::error_code &e) {
     XDEBUG_ID_WITH(connection_) << "Server connection timed out, close.";
     connection_.closeSocket();
     auto context = connection_.context();
-    if (context->https)
+    if (context->server_https)
         context->server_ssl_setup = false;
     connection_.setConnected(false);
     // TODO do we need to create a new socket to replace the old one?

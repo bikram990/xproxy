@@ -98,7 +98,7 @@ void ClientAdapter::onWrite(const boost::system::error_code& e) {
     }
 
     auto context = connection_.context();
-    if (context->https && !context->client_ssl_setup) {
+    if (context->client_https && !context->client_ssl_setup) {
         XDEBUG_ID_WITH(connection_) << "SSL reply written.";
         assert(!context->remote_host.empty());
         auto ca = ssl::CertificateManager::instance().getCertificate(context->remote_host);
@@ -146,7 +146,7 @@ void ClientAdapter::onBody(message::http::HttpMessage&) {
 void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
     XDEBUG_ID_WITH(connection_) << "=> onMessageComplete()";
     auto context = connection_.context();
-    if (!context->https) { // a normal HTTP request or a CONNECT request
+    if (!context->client_https) { // a normal HTTP request or a CONNECT request
         if (!ParseRemotePeer(context->remote_host, context->remote_port)) {
             XERROR_ID_WITH(connection_) << "Remote host/port parsing failure.";
             // TODO enhance
@@ -156,7 +156,7 @@ void ClientAdapter::onMessageComplete(message::http::HttpMessage& message) {
     }
 
     // a CONNECT request, and the SSL has not been setup
-    if (context->https && !context->client_ssl_setup) {
+    if (context->client_https && !context->client_ssl_setup) {
         XDEBUG_ID_WITH(connection_) << "SSL CONNECT request.";
         const static std::string ssl_response("HTTP/1.1 200 Connection Established\r\n"
                                               "Content-Length: 0\r\n"
@@ -203,7 +203,8 @@ bool ClientAdapter::ParseRemotePeer(std::string& remote_host, std::string& remot
 
     auto method = message_->getField(message::http::HttpMessage::kRequestMethod);
     if (method.length() == 7 && method[0] == 'C' && method[1] == 'O') {
-        connection_.context()->https = true;
+        connection_.context()->client_https = true;
+        connection_.context()->server_https = true;
         remote_host = message_->getField(message::http::HttpMessage::kRequestUri);
         remote_port = "443";
 

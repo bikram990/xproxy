@@ -36,12 +36,12 @@ ProxyPlugin::message_ptr ProxyPlugin::onRequestMessage(message_type& request,
            .addHeader("Connection", "keep-alive")
            .addHeader("User-Agent", "xProxy/0.01")
            .addHeader("Content-Length", std::to_string(buf.size()));
-    if (context->https)
+    if (context->client_https)
         request.addHeader("XProxy-Schema", "https://");
 
     request.appendBody(buf.data(), buf.size());
 
-    context->https = true;
+    context->server_https = true;
     // context->remote_host = "google.com.hk";
     context->remote_host = "google.org";
     context->remote_port = "443";

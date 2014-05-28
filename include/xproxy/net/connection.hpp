@@ -29,20 +29,22 @@ public:
 
 struct ConnectionContext {
     ConnectionContext()
-        : https(false),
-          proxied(false),
+        : client_https(false),
+          server_https(false),
           client_ssl_setup(false),
           server_ssl_setup(false),
+          proxied(false),
           message_exchange_completed(false) {}
 
     void reset() {
         message_exchange_completed = false;
     }
 
-    bool https;
-    bool proxied;
+    bool client_https;
+    bool server_https;
     bool client_ssl_setup;
     bool server_ssl_setup;
+    bool proxied;
     bool message_exchange_completed;
     std::string local_host;
     std::string local_port;
