@@ -195,7 +195,7 @@ private:
     size_type capacity_;
 };
 
-}
-}
+} // namespace memory
+} // namespace xproxy
 
 #endif // BYTE_BUFFER_HPP
