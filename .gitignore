@@ -22,3 +22,6 @@ GTAGS
 
 # mac
 .DS_Store
+
+# clion
+.idea/
