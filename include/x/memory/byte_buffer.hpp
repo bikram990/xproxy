@@ -4,15 +4,10 @@
 #include <string>
 #include <cassert>
 
-namespace xproxy {
+namespace x {
 namespace memory {
 
-/**
- * @brief The ByteBuffer class
- *
- * The ByteBuffer is a buffer for binary content.
- */
-class ByteBuffer {
+class byte_buffer {
 public:
     typedef std::size_t size_type;
     typedef char* pointer_type;
@@ -25,8 +20,8 @@ public:
 
     static const size_type npos = -1;
 
-    // TODO proper value here
-    enum { kDefaultSize = 1024, kGrowFactor = 2 };
+    #warning proper value here
+    enum { DEFAULT_SIZE = 1024, GROW_FACTOR = 2 };
 
     struct wrapper {
         const_pointer_type data;
@@ -37,30 +32,30 @@ public:
         return wrapper{data, size};
     }
 
-    virtual ~ByteBuffer() {
+    virtual ~byte_buffer() {
         if(data_) delete [] data_;
     }
 
-    explicit ByteBuffer(size_type size = 0)
-        : data_(new char[size ? size : kDefaultSize]), size_(0),
-          capacity_(size ? size : kDefaultSize) {}
+    explicit byte_buffer(size_type size = 0)
+        : data_(new char[size ? size : DEFAULT_SIZE]), size_(0),
+          capacity_(size ? size : DEFAULT_SIZE) {}
 
-    ByteBuffer(const void *data, size_type size) : ByteBuffer(size) {
+    byte_buffer(const void *data, size_type size) : byte_buffer(size) {
         assert(data);
         std::memcpy(data_, data, size);
         size_ = size;
     }
 
-    ByteBuffer(const ByteBuffer& buffer) : ByteBuffer(buffer.data_, buffer.size_) {}
+    byte_buffer(const byte_buffer& buffer) : byte_buffer(buffer.data_, buffer.size_) {}
 
-    ByteBuffer(ByteBuffer&& buffer)
+    byte_buffer(byte_buffer&& buffer)
         : data_(buffer.data_), size_(buffer.size_), capacity_(buffer.capacity_) {
         buffer.data_ = nullptr;
         buffer.size_ = 0;
         buffer.capacity_ = 0;
     }
 
-    ByteBuffer& operator=(const ByteBuffer& buffer) {
+    byte_buffer& operator=(const byte_buffer& buffer) {
         if(this->capacity_ < buffer.size_) {
             delete [] data_;
             capacity_ = buffer.size_;
@@ -73,7 +68,7 @@ public:
         return *this;
     }
 
-    ByteBuffer& operator=(ByteBuffer&& buffer) {
+    byte_buffer& operator=(byte_buffer&& buffer) {
         delete [] data_;
 
         data_ = buffer.data_;
@@ -86,7 +81,7 @@ public:
         return *this;
     }
 
-    bool operator==(const ByteBuffer& buffer) const {
+    bool operator==(const byte_buffer& buffer) const {
         if (this == &buffer)
             return true;
 
@@ -101,45 +96,45 @@ public:
         return true;
     }
 
-    ByteBuffer& operator<<(char c) {
-        ensureSize(1);
+    byte_buffer& operator<<(char c) {
+        ensure_size(1);
         data_[size_++] = c;
         return *this;
     }
 
-    ByteBuffer& operator<<(const std::string& str) {
-        ensureSize(str.size());
+    byte_buffer& operator<<(const std::string& str) {
+        ensure_size(str.size());
         for (auto it : str) {
             data_[size_++] = it;
         }
         return *this;
     }
 
-    ByteBuffer& operator<<(const char *cstr) {
+    byte_buffer& operator<<(const char *cstr) {
         return operator<<(std::string(cstr));
     }
 
-    ByteBuffer& operator<<(int num) {
+    byte_buffer& operator<<(int num) {
         return operator<<(std::to_string(num));
     }
 
-    ByteBuffer& operator<<(const ByteBuffer& buffer) {
-        ensureSize(buffer.size());
+    byte_buffer& operator<<(const byte_buffer& buffer) {
+        ensure_size(buffer.size());
         std::memcpy(data_ + size_, buffer.data(), buffer.size());
         size_ += buffer.size();
         return *this;
     }
 
-    ByteBuffer& operator<<(const wrapper& w) {
-        ensureSize(w.size);
+    byte_buffer& operator<<(const wrapper& w) {
+        ensure_size(w.size);
         std::memcpy(data_ + size_, w.data, w.size);
         size_ += w.size;
         return *this;
     }
 
     template<class ContinuousByteSequence>
-    ByteBuffer& operator<<(const ContinuousByteSequence& sequence) {
-        ensureSize(sequence.size());
+    byte_buffer& operator<<(const ContinuousByteSequence& sequence) {
+        ensure_size(sequence.size());
         std::memcpy(data_ + size_, sequence.data(), sequence.size());
         size_ += sequence.size();
         return *this;
@@ -154,7 +149,8 @@ public:
     size_type          size()     const { return size_; }
     bool               empty()    const { return size_ == 0; }
     size_type          capacity() const { return capacity_; }
-    void               clear()          { size_ = 0; } // TODO shrink job here?
+    #warning shrink job here?
+    void               clear()          { size_ = 0; }
 
     pointer_type data(size_type pos) {
         return pos < size_ ? data_ + pos : nullptr;
@@ -178,13 +174,13 @@ public:
     }
 
 private:
-    void ensureSize(size_type size) {
+    void ensure_size(size_type size) {
         if (size_ + size <= capacity_)
             return;
 
         char *tmp = data_;
-        // TODO the allocation algorithm here could be refined
-        capacity_ = capacity_ * kGrowFactor + size;
+        #warning the allocation algorithm here could be refined
+        capacity_ = capacity_ * GROW_FACTOR + size;
         data_ = new char[capacity_];
         std::memcpy(data_, tmp, size_);
         delete [] tmp;
@@ -196,6 +192,6 @@ private:
 };
 
 } // namespace memory
-} // namespace xproxy
+} // namespace x
 
 #endif // BYTE_BUFFER_HPP
