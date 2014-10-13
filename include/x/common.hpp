@@ -6,13 +6,10 @@
 
 #define DEFAULT_CTOR(T) T() = default
 
-#define DEFAULT_DTOR(T) ~T() = default
-
-#define DEFAULT_VIRTUAL_DTOR(T) virtual ~T() = default
+#define DEFAULT_DTOR(T) virtual ~T() = default
 
 #define MAKE_NONCOPYABLE(T) T(const T&) = delete; \
     T& operator=(const T&) = delete
-
 
 /*
  * Some handy definitions for HTTP message processing.
