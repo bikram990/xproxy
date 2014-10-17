@@ -1,73 +1,13 @@
 #include <boost/date_time.hpp>
 #include <openssl/pem.h>
-#include "xproxy/log/log.hpp"
-#include "xproxy/ssl/certificate_manager.hpp"
+#include "x/log/log.hpp"
+#include "x/ssl/certificate_manager.hpp"
 
-namespace xproxy {
+namespace x {
 namespace ssl {
 
-namespace {
-    static util::Singleton<CertificateManager> manager_;
-}
-
-bool CertificateManager::init() {
-    auto& cm = instance();
-    if (!cm.loadRootCA()) {
-        if (!cm.generateRootCA())
-            return false;
-
-        cm.saveRootCA(); // ignore the operation result
-    }
-
-    if (!cm.loadDHParameters()) {
-        if (!cm.generateDHParameters())
-            return false;
-
-        cm.saveDHParameters(); // ignore the operation result
-    }
-
-    return true;
-}
-
-CertificateManager &CertificateManager::instance() {
-    return manager_.get();
-}
-
-Certificate CertificateManager::getCertificate(const std::string& host) {
-    auto common_name = parseCommonName(host);
-
-    auto it = certificates_.find(common_name);
-    if (it != certificates_.end())
-        return it->second;
-
-    XDEBUG << "Certificate for " << host << " not found in cache.";
-
-    Certificate cert;
-
-    auto filename = getCertificateFileName(common_name);
-    if (loadCertificate(filename, cert)) {
-        XDEBUG << "Certificate for host " << host << " loaded from file.";
-        certificates_.insert(std::make_pair(common_name, cert));
-        return cert;
-    }
-
-    XDEBUG << "Generating certificate for " << host << "...";
-
-    if (!generateCertificate(common_name, cert)) {
-        XERROR << "Certificate generation error, host: " << host;
-        return cert;
-    }
-
-    XDEBUG << "Certificate for " << host << " generated.";
-
-    certificates_.insert(std::make_pair(common_name, cert));
-    if (!saveCertificate(filename, cert))
-        XERROR << "Certificate saving error, host: " << host;
-    return cert;
-}
-
-bool CertificateManager::loadRootCA(const std::string& file) {
-    if (!loadCertificate(file, root_)) {
+bool certificate_manager::load_root_ca(const std::string& file) {
+    if (!load_certificate(file, root_)) {
         XWARN << "Root CA loading error.";
         return false;
     }
@@ -76,8 +16,8 @@ bool CertificateManager::loadRootCA(const std::string& file) {
     return true;
 }
 
-bool CertificateManager::saveRootCA(const std::string& file) {
-    if (!saveCertificate(file, root_)) {
+bool certificate_manager::save_root_ca(const std::string& file) {
+    if (!save_certificate(file, root_)) {
         XWARN << "Root CA saving error.";
         return false;
     }
@@ -86,9 +26,8 @@ bool CertificateManager::saveRootCA(const std::string& file) {
     return true;
 }
 
-bool CertificateManager::generateRootCA() {
-    X509 *x509 = nullptr;
-    x509 = X509_new();
+bool certificate_manager::generate_root_ca() {
+    X509 *x509 = X509_new();
     if(!x509) {
         XERROR << "X509 creation error.";
         return false;
@@ -103,7 +42,7 @@ bool CertificateManager::generateRootCA() {
     X509_gmtime_adj(X509_get_notAfter(x509), 60 * 60 * 24 * 365 * 10);
 
     EVP_PKEY *key = nullptr;
-    if(!generateKey(&key)) {
+    if(!generate_key(&key)) {
         XERROR << "Error generating root CA private key.";
         X509_free(x509);
         return false;
@@ -111,12 +50,12 @@ bool CertificateManager::generateRootCA() {
     X509_set_pubkey(x509, key);
 
     X509_NAME *name = X509_get_subject_name(x509);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Root CA"), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy CA"),      -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy"),         -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Lan"),            -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Internet"),       -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("CN"),             -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, static_cast<const unsigned char *>("xProxy Root CA"), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, static_cast<const unsigned char *>("xProxy CA"),      -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, static_cast<const unsigned char *>("xProxy"),         -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, static_cast<const unsigned char *>("Lan"),            -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, static_cast<const unsigned char *>("Internet"),       -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, static_cast<const unsigned char *>("CN"),             -1, -1, 0);
 
     X509_set_issuer_name(x509, name); //self signed
 
@@ -127,15 +66,48 @@ bool CertificateManager::generateRootCA() {
         return false;
     }
 
-    root_.setKey(key);
-    root_.setCertificate(x509);
+    root_.set_key(key);
+    root_.set_certificate(x509);
     XINFO << "Root CA generated.";
     return true;
 }
 
-bool CertificateManager::loadCertificate(const std::string& file, Certificate& cert) {
-    FILE *fp = nullptr;
-    fp = std::fopen(file.c_str(), "rb");
+certificate certificate_manager::get_certificate(const std::string& host) {
+    auto common_name = parse_common_name(host);
+
+    auto it = certificates_.find(common_name);
+    if (it != certificates_.end())
+        return it->second;
+
+    XDEBUG << "Certificate for " << host << " not found in cache.";
+
+    certificate cert;
+
+    auto filename = get_certificate_filename(common_name);
+    if (load_certificate(filename, cert)) {
+        XDEBUG << "Certificate for host " << host << " loaded from file.";
+        certificates_.insert(std::make_pair(common_name, cert));
+        return cert;
+    }
+
+    XDEBUG << "Generating certificate for " << host << "...";
+
+    if (!generate_certificate(common_name, cert)) {
+        XERROR << "Certificate generation error, host: " << host;
+        return cert;
+    }
+
+    XDEBUG << "Certificate for " << host << " generated.";
+
+    certificates_.insert(std::make_pair(common_name, cert));
+    if (!save_certificate(filename, cert))
+        XERROR << "Certificate saving error, host: " << host;
+
+    return cert;
+}
+
+bool certificate_manager::load_certificate(const std::string& file, certificate& cert) {
+    FILE *fp = std::fopen(file.c_str(), "rb");
     if(!fp) {
         XWARN << "Error opening file: " << file;
         return false;
@@ -147,7 +119,7 @@ bool CertificateManager::loadCertificate(const std::string& file, Certificate& c
         std::fclose(fp);
         return false;
     }
-    cert.setCertificate(x509);
+    cert.set_certificate(x509);
 
     EVP_PKEY *key = PEM_read_PrivateKey(fp, nullptr, nullptr, nullptr);
     if(!key) {
@@ -155,16 +127,15 @@ bool CertificateManager::loadCertificate(const std::string& file, Certificate& c
         std::fclose(fp);
         return false;
     }
-    cert.setKey(key);
+    cert.set_key(key);
 
     std::fclose(fp);
     XINFO << "Certificate and private key are loaded from " << file;
     return true;
 }
 
-bool CertificateManager::saveCertificate(const std::string& file, const Certificate& cert) {
-    FILE *fp = nullptr;
-    fp = std::fopen(file.c_str(), "wb");
+bool certificate_manager::save_certificate(const std::string& file, const certificate& cert) {
+    FILE *fp = std::fopen(file.c_str(), "wb");
     if(!fp) {
         XWARN << "Error opening file: " << file;
         return false;
@@ -187,7 +158,7 @@ bool CertificateManager::saveCertificate(const std::string& file, const Certific
     return true;
 }
 
-bool CertificateManager::generateCertificate(const std::string& common_name, Certificate& cert) {
+bool certificate_manager::generate_certificate(const std::string& common_name, Certificate& cert) {
     if(!root_.key() || !root_.certificate()) {
         XERROR << "Root CA does not exist.";
         return false;
@@ -208,8 +179,7 @@ bool CertificateManager::generateCertificate(const std::string& common_name, Cer
         return false;
     }
 
-    X509 *x509 = nullptr;
-    x509 = X509_new();
+    X509 *x509 = X509_new();
     if(!x509) {
         XERROR << "X509 creation error.";
         EVP_PKEY_free(key);
@@ -240,16 +210,19 @@ bool CertificateManager::generateCertificate(const std::string& common_name, Cer
         return false;
     }
 
-    cert.setCertificate(x509);
-    cert.setKey(key);
+    cert.set_certificate(x509);
+    cert.set_key(key);
     X509_REQ_free(req);
     XINFO << "Certificate generated for common name " << common_name;
     return true;
 }
 
-bool CertificateManager::loadDHParameters(const std::string& file) {
-    FILE *fp = nullptr;
-    fp = std::fopen(file.c_str(), "rb");
+DH *certificate_manager::get_dh_parameters() {
+    return dh_.get();
+}
+
+bool certificate_manager::load_dh_parameters(const std::string& file) {
+    FILE *fp = std::fopen(file.c_str(), "rb");
     if (!fp) {
         XWARN << "Error opening DH parameters file: " << file;
         return false;
@@ -268,9 +241,8 @@ bool CertificateManager::loadDHParameters(const std::string& file) {
     return true;
 }
 
-bool CertificateManager::saveDHParameters(const std::string& file) {
-    FILE *fp = nullptr;
-    fp = std::fopen(file.c_str(), "wb");
+bool certificate_manager::save_dh_parameters(const std::string& file) {
+    FILE *fp = std::fopen(file.c_str(), "wb");
     if (!fp) {
         XWARN << "Error opening DH parameters file: " << file;
         return false;
@@ -287,7 +259,7 @@ bool CertificateManager::saveDHParameters(const std::string& file) {
     return true;
 }
 
-bool CertificateManager::generateDHParameters(){
+bool certificate_manager::generate_dh_parameters(){
     DH *dh = DH_generate_parameters(512, DH_GENERATOR_2, nullptr, nullptr); // 512 bits
     if(!dh) {
         XERROR << "Error generating DH parameters.";
@@ -298,16 +270,14 @@ bool CertificateManager::generateDHParameters(){
     return true;
 }
 
-bool CertificateManager::generateKey(EVP_PKEY **key) {
-    EVP_PKEY *k = nullptr;
-    k = EVP_PKEY_new();
+bool certificate_manager::generate_key(EVP_PKEY **key) {
+    EVP_PKEY *k = EVP_PKEY_new();
     if(!k) {
         XERROR << "EVP_PKEY creation error.";
         return false;
     }
 
-    RSA *rsa = nullptr;
-    rsa = RSA_generate_key(2048, RSA_F4, nullptr, nullptr);
+    RSA *rsa = RSA_generate_key(2048, RSA_F4, nullptr, nullptr);
     if(!rsa) {
         XERROR << "Error generating 2048-bit RSA key.";
         EVP_PKEY_free(k);
@@ -325,15 +295,14 @@ bool CertificateManager::generateKey(EVP_PKEY **key) {
     return true;
 }
 
-bool CertificateManager::generateRequest(const std::string& common_name, X509_REQ **request, EVP_PKEY **key) {
+bool certificate_manager::generate_request(const std::string& common_name, X509_REQ **request, EVP_PKEY **key) {
     EVP_PKEY *k = nullptr;
-    if (!generateKey(&k)) {
+    if (!generate_key(&k)) {
         XERROR << "Key generation error.";
         return false;
     }
 
-    X509_REQ *req = nullptr;
-    req = X509_REQ_new();
+    X509_REQ *req = X509_REQ_new();
     if (!req) {
         XERROR << "X509_REQ creation error.";
         EVP_PKEY_free(k);
@@ -342,12 +311,12 @@ bool CertificateManager::generateRequest(const std::string& common_name, X509_RE
     X509_REQ_set_pubkey(req, k);
 
     X509_NAME *name = X509_REQ_get_subject_name(req);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Security"),   -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Lan"),               -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Internet"),          -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("CN"),                -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, static_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, static_cast<const unsigned char *>("xProxy Security"),   -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, static_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, static_cast<const unsigned char *>("Lan"),               -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, static_cast<const unsigned char *>("Internet"),          -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, static_cast<const unsigned char *>("CN"),                -1, -1, 0);
 
     if (!X509_REQ_sign(req, k, EVP_sha1())) {
         XERROR << "Error signing request.";
@@ -361,8 +330,8 @@ bool CertificateManager::generateRequest(const std::string& common_name, X509_RE
     return true;
 }
 
-std::string CertificateManager::parseCommonName(const std::string& host) {
-    std::size_t dot_count = std::count(host.begin(), host.end(), '.');
+std::string certificate_manager::parse_common_name(const std::string& host) {
+    auto dot_count = std::count(host.begin(), host.end(), '.');
     if(dot_count < 2) // means something like "something.com", or even something like "localhost"
         return host;
 
@@ -378,7 +347,7 @@ std::string CertificateManager::parseCommonName(const std::string& host) {
     return common_name;
 }
 
-std::string CertificateManager::getCertificateFileName(const std::string& common_name) {
+std::string certificate_manager::get_certificate_filename(const std::string& common_name) {
     // TODO enhance this function
     std::string filename(common_name);
     if(filename[0] == '*')
@@ -388,4 +357,4 @@ std::string CertificateManager::getCertificateFileName(const std::string& common
 }
 
 } // namespace ssl
-} // namespace xproxy
+} // namespace x
