@@ -1,38 +1,28 @@
-#ifndef SOCKET_FACADE_HPP
-#define SOCKET_FACADE_HPP
+#ifndef SOCKET_WRAPPER_HPP
+#define SOCKET_WRAPPER_HPP
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include "xproxy/common.hpp"
-#include "xproxy/log/log.hpp"
-#include "xproxy/ssl/certificate_manager.hpp"
+#include "x/common.hpp"
+#include "x/log/log.hpp"
+#include "x/ssl/certificate_manager.hpp"
 
-namespace xproxy {
+namespace x {
 namespace net {
 
-/**
- * @brief The SocketFacade class
- *
- * This class encapsulates both ssl socket and normal socket.
- * The functions defined in this class with different naming
- * style, is to make this class work with boost asio function
- * series async_xxx(...).
- */
-class SocketFacade {
+class socket_wrapper {
 public:
-    typedef SocketFacade this_type;
+    typedef socket_wrapper this_type;
     typedef boost::asio::ip::tcp::socket socket_type;
     typedef boost::asio::ssl::stream<socket_type> ssl_socket_type;
     typedef boost::asio::ssl::stream<socket_type&> ssl_socket_ref_type;
     typedef boost::asio::ssl::context ssl_context_type;
 
-    enum SSLMode { kServer, kClient };
-
     static this_type *create(boost::asio::io_service& service) {
-        return new SocketFacade(service);
+        return new socket_wrapper(service);
     }
 
-    DEFAULT_VIRTUAL_DTOR(SocketFacade);
+    DEFAULT_DTOR(socket_wrapper);
 
 public:
     const socket_type& socket() const {
@@ -76,62 +66,46 @@ public:
     }
 
 public:
-    template<typename HandshakeHandler>
-    void useSSL(HandshakeHandler&& handler, SSLMode mode = kClient,
-                ssl::Certificate ca = ssl::Certificate(), DH *dh = nullptr) {
-        if (use_ssl_) {
-            // if the ssl socket is already set up, we generate an error here
-            // TODO could we use move in capture here?
-            socket_->get_io_service().post([handler]() {
-                handler(boost::asio::error::already_open);
-            });
-            return;
-        }
+    void switch_to_ssl(boost::asio::ssl::stream_base::handshake_type type, ssl::certificate ca, DH *dh) {
+        assert(!use_ssl_);
 
         ssl_context_.reset(new ssl_context_type(ssl_context_type::sslv23));
 
-        if (mode == kServer) {
-            if (!ca.key() || !ca.certificate() || !dh) {
-                // TODO add logic here
-                use_ssl_ = false;
-                return;
-            }
+        if (type == boost::asio::ssl::stream_base::server) {
+            assert(ca.key() && ca.certificate() && dh);
+
             ssl_context_->set_options(ssl_context_type::default_workarounds
                                       | ssl_context_type::no_sslv2
                                       | ssl_context_type::single_dh_use);
-            ::SSL_CTX_use_certificate(ssl_context_->native_handle(), ca.certificate());
-            ::SSL_CTX_use_PrivateKey(ssl_context_->native_handle(), ca.key());
-            ::SSL_CTX_set_tmp_dh(ssl_context_->native_handle(), dh);
+            SSL_CTX_use_certificate(ssl_context_->native_handle(), ca.certificate());
+            SSL_CTX_use_PrivateKey(ssl_context_->native_handle(), ca.key());
+            SSL_CTX_set_tmp_dh(ssl_context_->native_handle(), dh);
         }
 
         ssl_socket_.reset(new ssl_socket_ref_type(*socket_, *ssl_context_));
 
-        if (mode == kClient) {
+        if (type == boost::asio::ssl::stream_base::client) {
             ssl_socket_->set_verify_mode(boost::asio::ssl::verify_peer);
             ssl_socket_->set_verify_callback([this] (bool preverified, boost::asio::ssl::verify_context& ctx) {
-                    // TODO enhance this function
-                    char subject_name[256];
-                    X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-                    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-                    XDEBUG << "Verifying server certificate, subject name: " << subject_name
-                           << ", pre-verified value: " << preverified;
+                #warning enhance this function
+                char subject_name[256];
+                X509 *cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+                X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+                XDEBUG << "Verifying server certificate, subject name: " << subject_name
+                       << ", pre-verified value: " << preverified;
 
-                    return true;
+                return true;
             });
         }
 
         use_ssl_ = true;
+        handshake_type_ = type;
+    }
 
-        ssl_socket_->async_handshake(mode == kClient ? boost::asio::ssl::stream_base::client :
-                                                       boost::asio::ssl::stream_base::server,
-                                     [this, handler](const boost::system::error_code& e) {
-            // if error occurred, we disable ssl read/write here
-            if (e) {
-                use_ssl_ = false;
-                XERROR << "Handshake error: " + e.message();
-            }
-            handler(e);
-        });
+    template<typename HandshakeHandler>
+    void async_handshake(HandshakeHandler&& handler) {
+        assert(use_ssl_);
+        ssl_socket_->async_handshake(handshake_type_, handler);
     }
 
     template<typename Iterator, typename ConnectHandler>
@@ -164,7 +138,7 @@ public:
     }
 
 private:
-    SocketFacade(boost::asio::io_service& service)
+    socket_wrapper(boost::asio::io_service& service)
         : service_(service),
           use_ssl_(false),
           socket_(new socket_type(service)) {}
@@ -172,6 +146,7 @@ private:
 private:
     boost::asio::io_service& service_;
     bool use_ssl_;
+    boost::asio::ssl::stream_base::handshake_type handshake_type_;
 
     std::unique_ptr<socket_type> socket_;
     std::unique_ptr<ssl_context_type> ssl_context_;
@@ -182,6 +157,6 @@ private:
 };
 
 } // namespace net
-} // namespace xproxy
+} // namespace x
 
-#endif // SOCKET_FACADE_HPP
+#endif // SOCKET_WRAPPER_HPP
