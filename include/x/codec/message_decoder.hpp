@@ -10,6 +10,8 @@ public:
     DEFAULT_DTOR(message_decoder);
 
     virtual std::size_t decode(const char *begin, std::size_t length, message& msg) = 0;
+
+    virtual void reset() = 0;
 };
 
 } // namespace codec

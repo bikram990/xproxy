@@ -11,6 +11,8 @@ public:
     DEFAULT_DTOR(message_encoder);
 
     virtual std::size_t encode(const message& msg, memory::byte_buffer& buf) = 0;
+
+    virtual void reset() = 0;
 };
 
 } // namespace codec

@@ -9,6 +9,8 @@ public:
     DEFAULT_DTOR(message);
 
     virtual bool deliverable() = 0;
+
+    virtual void reset() = 0;
 };
 
 } // namespace message
