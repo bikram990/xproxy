@@ -19,6 +19,7 @@ public:
         signals_.async_wait([this] (const boost::system::error_code&, int) {
             XINFO << "stopping xProxy...";
             acceptor_.close();
+            session_manager_.stop_all();
         });
 
         tcp::endpoint e(tcp::v4(), port_);
@@ -36,8 +37,9 @@ public:
 
 private:
     void start_accept() {
-        current_client_connection_ = (new client_connection(service_));
-        acceptor_.async_accept(current_client_connection_->socket(),
+        current_session_ = new session(service_);
+        conn_ptr client_conn = current_session_->get_connection(session::CLIENT_SIDE);
+        acceptor_.async_accept(client_conn->socket(),
                                [this] (const boost::system::error_code& e) {
             if (e) {
                 XERROR << "accept error, code: " << e.value()
@@ -45,11 +47,11 @@ private:
                 return;
             }
 
-            XTRACE << "new client connection, id: " << current_client_connection_->id()
-                   << ", addr: " << current_client_connection_->socket().remote_endpoint().address()
-                   << ", port: " << current_client_connection_->socket().remote_endpoint().port();
+            XTRACE << "new client connection, id: " << client_conn->id()
+                   << ", addr: " << client_conn->socket().remote_endpoint().address()
+                   << ", port: " << client_conn->socket().remote_endpoint().port();
 
-            current_client_connection_->start();
+            session_manager_.start(current_session_);
 
             start_accept();
         });
@@ -61,7 +63,8 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    conn_ptr current_client_connection_;
+    session_manager session_manager_;
+    session_ptr current_session_;
 
     MAKE_NONCOPYABLE(server);
 };

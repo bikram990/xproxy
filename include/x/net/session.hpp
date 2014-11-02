@@ -7,6 +7,10 @@ namespace net {
 class session : public util::counter<session>,
                 public std::enable_shared_from_this<session> {
 public:
+    enum conn_type {
+        CLIENT_SIDE, SERVER_SIDE
+    };
+
     static session_ptr create(boost::asio::io_service& service, session_manager& manager) {
         return session_ptr(new session(service, manager));
     }
@@ -19,6 +23,10 @@ public:
 
     void stop() {
         manager_.erase(shared_from_this());
+    }
+
+    conn_ptr get_connection(conn_type type) const {
+        return type == CLIENT_SIDE ? client_connection_ : server_connection_;
     }
 
 private:
