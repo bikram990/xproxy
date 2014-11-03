@@ -47,7 +47,7 @@ private:
 
 typedef std::shared_ptr<session> session_ptr;
 
-} // net
-} // x
+} // namespace net
+} // namespace x
 
 #endif // SESSION_HPP
