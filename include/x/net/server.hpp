@@ -6,12 +6,36 @@ namespace net {
 
 class server {
 public:
-    server(unsigned short port = 7077)
-        : port_(port),
-          signals_(service_),
-          acceptor_(service_) {
-        using namespace boost::asio::ip;
+    const static unsigned short DEFAULT_SERVER_PORT = 7077;
 
+    server() : signals_(service_), acceptor_(service_) {}
+
+    DEFAULT_DTOR(server);
+
+    bool init() {
+        if (!conf.load_config()) {
+            XFATAL << "unable to load server configuration.";
+            return false;
+        }
+
+        if (!cert_manager_.init()) {
+            XFATAL << "unable to init certificate manager.";
+            return false;
+        }
+
+        if (!config_.get_config("basic.port", port_))
+            port_ = DEFAULT_SERVER_PORT;
+
+        init_signal_handler();
+        init_acceptor();
+    }
+
+    void start() {
+        start_accept();
+    }
+
+private:
+    void init_signal_handler() {
         signals_.add(SIGINT);
         signals_.add(SIGTERM);
         #warning is the following needed?
@@ -21,6 +45,10 @@ public:
             acceptor_.close();
             session_manager_.stop_all();
         });
+    }
+
+    void init_acceptor() {
+        using namespace boost::asio::ip;
 
         tcp::endpoint e(tcp::v4(), port_);
         acceptor_.open(e.protocol());
@@ -29,13 +57,6 @@ public:
         acceptor_.listen();
     }
 
-    DEFAULT_DTOR(server);
-
-    void start() {
-        start_accept();
-    }
-
-private:
     void start_accept() {
         current_session_ = new session(service_);
         conn_ptr client_conn = current_session_->get_connection(session::CLIENT_SIDE);
@@ -65,6 +86,9 @@ private:
 
     session_manager session_manager_;
     session_ptr current_session_;
+
+    x::conf::config config_;
+    x::ssl::certificate_manager cert_manager_;
 
     MAKE_NONCOPYABLE(server);
 };
