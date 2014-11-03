@@ -50,12 +50,12 @@ bool certificate_manager::generate_root_ca() {
     X509_set_pubkey(x509, key);
 
     X509_NAME *name = X509_get_subject_name(x509);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, static_cast<const unsigned char *>("xProxy Root CA"), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, static_cast<const unsigned char *>("xProxy CA"),      -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, static_cast<const unsigned char *>("xProxy"),         -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, static_cast<const unsigned char *>("Lan"),            -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, static_cast<const unsigned char *>("Internet"),       -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, static_cast<const unsigned char *>("CN"),             -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Root CA"), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy CA"),      -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy"),         -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Lan"),            -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Internet"),       -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("CN"),             -1, -1, 0);
 
     X509_set_issuer_name(x509, name); //self signed
 
@@ -67,7 +67,7 @@ bool certificate_manager::generate_root_ca() {
     }
 
     root_.set_key(key);
-    root_.set_certificate(x509);
+    root_.set_cert(x509);
     XINFO << "Root CA generated.";
     return true;
 }
@@ -119,7 +119,7 @@ bool certificate_manager::load_certificate(const std::string& file, certificate&
         std::fclose(fp);
         return false;
     }
-    cert.set_certificate(x509);
+    cert.set_cert(x509);
 
     EVP_PKEY *key = PEM_read_PrivateKey(fp, nullptr, nullptr, nullptr);
     if(!key) {
@@ -141,7 +141,7 @@ bool certificate_manager::save_certificate(const std::string& file, const certif
         return false;
     }
 
-    if(!PEM_write_X509(fp, cert.certificate())) {
+    if(!PEM_write_X509(fp, cert.cert())) {
         XERROR << "Error writing certificate to " << file;
         std::fclose(fp);
         return false;
@@ -158,8 +158,8 @@ bool certificate_manager::save_certificate(const std::string& file, const certif
     return true;
 }
 
-bool certificate_manager::generate_certificate(const std::string& common_name, Certificate& cert) {
-    if(!root_.key() || !root_.certificate()) {
+bool certificate_manager::generate_certificate(const std::string& common_name, certificate& cert) {
+    if(!root_.key() || !root_.cert()) {
         XERROR << "Root CA does not exist.";
         return false;
     }
@@ -167,7 +167,7 @@ bool certificate_manager::generate_certificate(const std::string& common_name, C
     X509_REQ *req = nullptr;
     EVP_PKEY *key = nullptr;
 
-    if(!generateRequest(common_name, &req, &key)) {
+    if(!generate_request(common_name, &req, &key)) {
         XERROR << "Error generating request for common name " << common_name;
         return false;
     }
@@ -187,7 +187,7 @@ bool certificate_manager::generate_certificate(const std::string& common_name, C
         return false;
     }
 
-    X509_NAME *name = X509_get_subject_name(root_.certificate());
+    X509_NAME *name = X509_get_subject_name(root_.cert());
     X509_set_issuer_name(x509, name);
     name = X509_REQ_get_subject_name(req);
     X509_set_subject_name(x509, name);
@@ -210,14 +210,14 @@ bool certificate_manager::generate_certificate(const std::string& common_name, C
         return false;
     }
 
-    cert.set_certificate(x509);
+    cert.set_cert(x509);
     cert.set_key(key);
     X509_REQ_free(req);
     XINFO << "Certificate generated for common name " << common_name;
     return true;
 }
 
-DH *certificate_manager::get_dh_parameters() {
+DH *certificate_manager::get_dh_parameters() const {
     return dh_.get();
 }
 
@@ -311,12 +311,12 @@ bool certificate_manager::generate_request(const std::string& common_name, X509_
     X509_REQ_set_pubkey(req, k);
 
     X509_NAME *name = X509_REQ_get_subject_name(req);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, static_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, static_cast<const unsigned char *>("xProxy Security"),   -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, static_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, static_cast<const unsigned char *>("Lan"),               -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, static_cast<const unsigned char *>("Internet"),          -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, static_cast<const unsigned char *>("CN"),                -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("xProxy Security"),   -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>(common_name.c_str()), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "L",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Lan"),               -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Internet"),          -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, reinterpret_cast<const unsigned char *>("CN"),                -1, -1, 0);
 
     if (!X509_REQ_sign(req, k, EVP_sha1())) {
         XERROR << "Error signing request.";
