@@ -1,98 +1,51 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <boost/asio.hpp>
+#include "x/common.hpp"
+
 namespace x {
+namespace conf { class config; }
+namespace ssl { class certificate_manager; }
 namespace net {
+
+class session;
+class session_manager;
 
 class server {
 public:
     const static unsigned short DEFAULT_SERVER_PORT = 7077;
 
-    server() : signals_(service_), acceptor_(service_) {}
+    server();
 
     DEFAULT_DTOR(server);
 
-    bool init() {
-        if (!conf.load_config()) {
-            XFATAL << "unable to load server configuration.";
-            return false;
-        }
+    bool init();
 
-        if (!cert_manager_.init()) {
-            XFATAL << "unable to init certificate manager.";
-            return false;
-        }
+    void start();
 
-        if (!config_.get_config("basic.port", port_))
-            port_ = DEFAULT_SERVER_PORT;
-
-        init_signal_handler();
-        init_acceptor();
-    }
-
-    void start() {
-        start_accept();
-    }
-
-    boost::asio::io_service& get_service() const {
+    boost::asio::io_service& get_service() {
         return service_;
     }
 
-    x::conf::config& get_config() const {
-        return config_;
+    x::conf::config& get_config() {
+        return *config_;
     }
 
-    session_manager& get_session_manager() const {
-        return session_manager_;
+    session_manager& get_session_manager() {
+        return *session_manager_;
     }
 
     x::ssl::certificate_manager& get_certificate_manager() const {
-        return cert_manager_;
+        return *cert_manager_;
     }
 
 private:
-    void init_signal_handler() {
-        signals_.add(SIGINT);
-        signals_.add(SIGTERM);
-        #warning is the following needed?
-        // signals_.add(SIGQUIT);
-        signals_.async_wait([this] (const boost::system::error_code&, int) {
-            XINFO << "stopping xProxy...";
-            acceptor_.close();
-            session_manager_.stop_all();
-        });
-    }
+    void init_signal_handler();
 
-    void init_acceptor() {
-        using namespace boost::asio::ip;
+    void init_acceptor();
 
-        tcp::endpoint e(tcp::v4(), port_);
-        acceptor_.open(e.protocol());
-        acceptor_.set_option(tcp::acceptor::reuse_address(true));
-        acceptor_.bind(e);
-        acceptor_.listen();
-    }
-
-    void start_accept() {
-        current_session_ = new session(service_);
-        conn_ptr client_conn = current_session_->get_connection(session::CLIENT_SIDE);
-        acceptor_.async_accept(client_conn->socket(),
-                               [this] (const boost::system::error_code& e) {
-            if (e) {
-                XERROR << "accept error, code: " << e.value()
-                       << ", message: " << e.message();
-                return;
-            }
-
-            XTRACE << "new client connection, id: " << client_conn->id()
-                   << ", addr: " << client_conn->socket().remote_endpoint().address()
-                   << ", port: " << client_conn->socket().remote_endpoint().port();
-
-            session_manager_.start(current_session_);
-
-            start_accept();
-        });
-    }
+    void start_accept();
 
     unsigned short port_;
 
@@ -100,10 +53,11 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    x::conf::config config_;
-    session_ptr current_session_;
-    session_manager session_manager_;
-    x::ssl::certificate_manager cert_manager_;
+    std::unique_ptr<x::conf::config> config_;
+    std::unique_ptr<session_manager> session_manager_;
+    std::unique_ptr<x::ssl::certificate_manager> cert_manager_;
+
+    std::shared_ptr<session> current_session_;
 
     MAKE_NONCOPYABLE(server);
 };
