@@ -28,6 +28,7 @@ public:
 
     void stop() {
         manager_.erase(shared_from_this());
+        #warning add more code here
     }
 
     conn_ptr get_connection(conn_type type) const {
