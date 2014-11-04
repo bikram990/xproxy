@@ -34,6 +34,22 @@ public:
         start_accept();
     }
 
+    boost::asio::io_service& get_service() const {
+        return service_;
+    }
+
+    x::conf::config& get_config() const {
+        return config_;
+    }
+
+    session_manager& get_session_manager() const {
+        return session_manager_;
+    }
+
+    x::ssl::certificate_manager& get_certificate_manager() const {
+        return cert_manager_;
+    }
+
 private:
     void init_signal_handler() {
         signals_.add(SIGINT);
@@ -84,10 +100,9 @@ private:
     boost::asio::signal_set signals_;
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    session_manager session_manager_;
-    session_ptr current_session_;
-
     x::conf::config config_;
+    session_ptr current_session_;
+    session_manager session_manager_;
     x::ssl::certificate_manager cert_manager_;
 
     MAKE_NONCOPYABLE(server);
