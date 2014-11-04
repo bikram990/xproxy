@@ -9,6 +9,13 @@ namespace net {
 class connection : public util::counter<connection>,
                    public std::enable_shared_from_this<connection> {
 public:
+    #warning we should use connection state instead of connected_/stopped_ later
+    enum conn_state {
+        BEGINNING, CONNECTED, READING, HANDSHAKING,
+        DECODING, HANDLING, ENCODING, WRITING, COMPLETED,
+        DISCONNECTED, STOPPED
+    };
+
     connection(session_ptr session)
         : connected_(false),
           stopped_(false),
@@ -77,6 +84,36 @@ public:
 
     void set_port(unsigned short port) {
         port_ = port;
+    }
+
+    void close_socket() {
+        if (socket_ && connected_) {
+            socket_->close();
+            connected_ = false;
+        }
+    }
+
+    void stop() {
+        if (stopped_) {
+            XWARN_WITH_ID(this) << "connection already stopped.";
+            return;
+        }
+
+        XDEBUG_WITH_ID(this) << "stopping connection...";
+
+        // cancel timer
+        #warning add code here
+
+        // close socket
+        if (connected_)
+            close_socket();
+
+        // notify session (if it exists)
+        auto session = session_.lock();
+        if (session)
+            session->on_connection_stop(shared_from_this());
+
+        stopped_ = true;
     }
 
 protected:

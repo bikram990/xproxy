@@ -27,8 +27,21 @@ public:
     }
 
     void stop() {
-        manager_.erase(shared_from_this());
+        session_manager_.erase(shared_from_this());
         #warning add more code here
+    }
+
+    void on_connection_stop(conn_ptr connection) {
+        // 1. remove from manager
+        session_manager_.erase(shared_from_this());
+
+        // 2. notify the other side
+        if (client_connection_ == connection)
+            server_connection_->stop();
+        else if (server_connection_ == connection)
+            client_connection_->stop();
+        else
+            assert(0);
     }
 
     conn_ptr get_connection(conn_type type) const {
