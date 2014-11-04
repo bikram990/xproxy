@@ -9,10 +9,10 @@ namespace net {
 class connection : public util::counter<connection>,
                    public std::enable_shared_from_this<connection> {
 public:
-    connection(session& session)
+    connection(session_ptr session)
         : connected_(false),
           stopped_(false),
-          socket_(session.service()),
+          socket_(session->service()),
           session_(session),
           writing_(false) {}
           #warning add more constructions here
@@ -75,7 +75,7 @@ public:
         host_ = host;
     }
 
-    void set_port(short port) {
+    void set_port(unsigned short port) {
         port_ = port;
     }
 
@@ -83,9 +83,9 @@ protected:
     bool connected_;
     bool stopped_;
     std::string host_;
-    short port_;
+    unsigned short port_;
     std::unique_ptr<socket_wrapper> socket_;
-    session& session_;
+    std::weak_ptr<session> session_;
 
     std::unique_ptr<codec::message_decoder> decoder_;
     std::unique_ptr<codec::message_encoder> encoder_;
@@ -133,8 +133,6 @@ private:
     }
 
     enum { FIXED_BUFFER_SIZE = 8192 };
-
-    boost::asio::io_service& service_;
 
     std::array<char, FIXED_BUFFER_SIZE> buffer_in_;
     std::list<buffer_ptr> buffer_out_;
