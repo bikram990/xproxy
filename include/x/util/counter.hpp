@@ -25,7 +25,7 @@ private:
 private:
     #warning a better solution, is to increase id_ when copying
     // but now we just disable copying rudely
-    MAKE_NONCOPYABLE(Counter);
+    MAKE_NONCOPYABLE(counter);
 };
 
 template<class T>
