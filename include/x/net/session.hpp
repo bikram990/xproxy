@@ -11,9 +11,13 @@ public:
         CLIENT_SIDE, SERVER_SIDE
     };
 
-    static session_ptr create(boost::asio::io_service& service, session_manager& manager) {
-        return session_ptr(new session(service, manager));
-    }
+    session(const server& server)
+        : service_(server.get_service()),
+          config_(server.get_config()),
+          session_manager_(server.get_session_manager()),
+          cert_manager_(server.get_certificate_manager()),
+          client_connection_(service),
+          server_connection_(service) {}
 
     DEFAULT_DTOR(session);
 
@@ -30,14 +34,10 @@ public:
     }
 
 private:
-    session(boost::asio::io_service& service, session_manager& manager)
-        : service_(service), manager_(manager),
-          client_connection_(service),
-          server_connection_(service) {}
-
-private:
     boost::asio::io_service& service_;
-    session_manager& manager_;
+    x::conf::config& config_;
+    session_manager& session_manager_;
+    x::ssl::certificate_manager& cert_manager_;
 
     conn_ptr client_connection_;
     conn_ptr server_connection_;
