@@ -1,6 +1,11 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include "x/common.hpp"
+#include "x/log/log.hpp"
+
 namespace x {
 namespace conf {
 
@@ -15,12 +20,12 @@ public:
         try {
             boost::property_tree::ini_parser::read_ini(conf_file_, conf_tree_);
         } catch(boost::property_tree::ini_parser::ini_parser_error& e) {
-            XFATAL << "load config error, path: " << conf_file
+            XFATAL << "load config error, path: " << conf_file_
                    << ", reason: " << e.what();
             return false;
         }
 
-        XINFO << "config file " << conf_file << " loaded.";
+        XINFO << "config file " << conf_file_ << " loaded.";
         return true;
     }
 
