@@ -15,13 +15,14 @@ public:
         : service_(server.get_service()),
           config_(server.get_config()),
           session_manager_(server.get_session_manager()),
-          cert_manager_(server.get_certificate_manager()),
-          client_connection_(service),
-          server_connection_(service) {}
+          cert_manager_(server.get_certificate_manager()) {}
 
     DEFAULT_DTOR(session);
 
     void start() {
+        client_connection_.reset(new client_connection(shared_from_this()));
+        server_connection_.reset(new server_connection(shared_from_this()));
+
         client_connection_->start();
     }
 
@@ -31,6 +32,18 @@ public:
 
     conn_ptr get_connection(conn_type type) const {
         return type == CLIENT_SIDE ? client_connection_ : server_connection_;
+    }
+
+    boost::asio::io_service& get_service() const {
+        return service_;
+    }
+
+    x::conf::config& get_config() const {
+        return config_;
+    }
+
+    x::ssl::certificate_manager& get_certificate_manager() const {
+        return cert_manager_;
     }
 
 private:
