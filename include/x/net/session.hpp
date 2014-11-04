@@ -1,8 +1,16 @@
 #ifndef SESSION_HPP
 #define SESSION_HPP
 
+#include <boost/asio.hpp>
+#include "x/util/counter.hpp"
+
 namespace x {
+namespace conf { class config; }
+namespace ssl { class certificate_manager; }
 namespace net {
+
+class server;
+class session_manager;
 
 class session : public util::counter<session>,
                 public std::enable_shared_from_this<session> {
@@ -11,38 +19,15 @@ public:
         CLIENT_SIDE, SERVER_SIDE
     };
 
-    session(const server& server)
-        : service_(server.get_service()),
-          config_(server.get_config()),
-          session_manager_(server.get_session_manager()),
-          cert_manager_(server.get_certificate_manager()) {}
+    session(server& server);
 
     DEFAULT_DTOR(session);
 
-    void start() {
-        client_connection_.reset(new client_connection(shared_from_this()));
-        server_connection_.reset(new server_connection(shared_from_this()));
+    void start();
 
-        client_connection_->start();
-    }
+    void stop();
 
-    void stop() {
-        session_manager_.erase(shared_from_this());
-        #warning add more code here
-    }
-
-    void on_connection_stop(conn_ptr connection) {
-        // 1. remove from manager
-        session_manager_.erase(shared_from_this());
-
-        // 2. notify the other side
-        if (client_connection_ == connection)
-            server_connection_->stop();
-        else if (server_connection_ == connection)
-            client_connection_->stop();
-        else
-            assert(0);
-    }
+    void on_connection_stop(conn_ptr connection);
 
     conn_ptr get_connection(conn_type type) const {
         return type == CLIENT_SIDE ? client_connection_ : server_connection_;
@@ -71,8 +56,6 @@ private:
 
     MAKE_NONCOPYABLE(session);
 };
-
-typedef std::shared_ptr<session> session_ptr;
 
 } // namespace net
 } // namespace x

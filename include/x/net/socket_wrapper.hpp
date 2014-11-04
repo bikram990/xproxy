@@ -18,9 +18,10 @@ public:
     typedef boost::asio::ssl::stream<socket_type&> ssl_socket_ref_type;
     typedef boost::asio::ssl::context ssl_context_type;
 
-    static this_type *create(boost::asio::io_service& service) {
-        return new socket_wrapper(service);
-    }
+    socket_wrapper(boost::asio::io_service& service)
+        : service_(service),
+          use_ssl_(false),
+          socket_(new socket_type(service)) {}
 
     DEFAULT_DTOR(socket_wrapper);
 
@@ -72,12 +73,12 @@ public:
         ssl_context_.reset(new ssl_context_type(ssl_context_type::sslv23));
 
         if (type == boost::asio::ssl::stream_base::server) {
-            assert(ca.key() && ca.certificate() && dh);
+            assert(ca.key() && ca.cert() && dh);
 
             ssl_context_->set_options(ssl_context_type::default_workarounds
                                       | ssl_context_type::no_sslv2
                                       | ssl_context_type::single_dh_use);
-            SSL_CTX_use_certificate(ssl_context_->native_handle(), ca.certificate());
+            SSL_CTX_use_certificate(ssl_context_->native_handle(), ca.cert());
             SSL_CTX_use_PrivateKey(ssl_context_->native_handle(), ca.key());
             SSL_CTX_set_tmp_dh(ssl_context_->native_handle(), dh);
         }
@@ -138,12 +139,6 @@ public:
     }
 
 private:
-    socket_wrapper(boost::asio::io_service& service)
-        : service_(service),
-          use_ssl_(false),
-          socket_(new socket_type(service)) {}
-
-private:
     boost::asio::io_service& service_;
     bool use_ssl_;
     boost::asio::ssl::stream_base::handshake_type handshake_type_;
@@ -153,7 +148,7 @@ private:
     std::unique_ptr<ssl_socket_ref_type> ssl_socket_;
 
 private:
-    MAKE_NONCOPYABLE(SocketFacade);
+    MAKE_NONCOPYABLE(socket_wrapper);
 };
 
 } // namespace net

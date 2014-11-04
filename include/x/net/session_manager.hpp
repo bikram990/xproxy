@@ -1,6 +1,8 @@
 #ifndef SESSION_MANAGER_HPP
 #define SESSION_MANAGER_HPP
 
+#include "x/net/session.hpp"
+
 namespace x {
 namespace net {
 
@@ -19,10 +21,10 @@ public:
     }
 
     void stop_all() {
-        std::for_each(sessions_.begin(), session_.end(),
+        std::for_each(sessions_.begin(), sessions_.end(),
                       [](const session_ptr& session) {
             #warning the code below will change the container!!!
-            sessions_.stop();
+            session->stop();
         });
     }
 

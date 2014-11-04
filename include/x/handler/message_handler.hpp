@@ -9,7 +9,7 @@ class message_handler {
 public:
     DEFAULT_DTOR(message_handler);
 
-    virtual void handle_message(const message& msg) = 0;
+    virtual void handle_message(const message::message& msg) = 0;
 };
 
 } // namespace handler

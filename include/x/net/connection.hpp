@@ -1,7 +1,15 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
+#include <list>
+#include <boost/asio.hpp>
+#include "x/net/socket_wrapper.hpp"
+#include "x/ssl/certificate_manager.hpp"
+#include "x/util/counter.hpp"
+
 namespace x {
+namespace codec { class message_decoder; class message_encoder; }
+namespace handler { class message_handler; }
 namespace memory { class byte_buffer; }
 namespace message { class message; }
 namespace net {
@@ -16,13 +24,7 @@ public:
         DISCONNECTED, STOPPED
     };
 
-    connection(session_ptr session)
-        : connected_(false),
-          stopped_(false),
-          socket_(session->service()),
-          session_(session),
-          writing_(false) {}
-          #warning add more constructions here
+    connection(session_ptr session);
 
     DEFAULT_DTOR(connection);
 
@@ -30,49 +32,11 @@ public:
     virtual void connect() = 0;
     virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr) = 0;
 
-    virtual void read() {
-        XDEBUG_WITH_ID(this) << "=> read()";
+    virtual void read();
 
-        assert(connected_);
-        assert(!stopped_);
+    virtual void write(const message::message& message);
 
-        auto self(shared_from_this());
-        boost::asio::async_read(*socket,
-                                boost::asio::buffer(buffer_in_),
-                                boost::asio::transfer_at_lease(1),
-                                [self, this] (const boost::system::error_code& e, std::size_t length) {
-            if (e) {
-                XERROR_WITH_ID(this) << "read error, code: " << e.value()
-                                        << ", message: " << e.message();
-                stop();
-                return;
-            }
-
-            auto consumed = decoder_->decode(buffer_in_, length, *message_);
-            assert(consumed == length);
-
-            if (message_->deliverable()) {
-                handler_->handle_message(*message_);
-                return;
-            }
-
-            read();
-        });
-
-        XDEBUG_WITH_ID(this) << "<= read()";
-    }
-
-    virtual void write(const message::message& message) {
-        XDEBUG_WITH_ID(this) << "=> write()";
-
-        buffer_ptr buf(new memory::byte_buffer);
-        encoder_->encode_message(message, buf);
-
-        buffer_out_.push_back(buf);
-        do_write();
-
-        XDEBUG_WITH_ID(this) << "<= write()";
-    }
+    void stop();
 
     socket_wrapper::socket_type& socket() const {
         return socket_->socket();
@@ -84,36 +48,6 @@ public:
 
     void set_port(unsigned short port) {
         port_ = port;
-    }
-
-    void close_socket() {
-        if (socket_ && connected_) {
-            socket_->close();
-            connected_ = false;
-        }
-    }
-
-    void stop() {
-        if (stopped_) {
-            XWARN_WITH_ID(this) << "connection already stopped.";
-            return;
-        }
-
-        XDEBUG_WITH_ID(this) << "stopping connection...";
-
-        // cancel timer
-        #warning add code here
-
-        // close socket
-        if (connected_)
-            close_socket();
-
-        // notify session (if it exists)
-        auto session = session_.lock();
-        if (session)
-            session->on_connection_stop(shared_from_this());
-
-        stopped_ = true;
     }
 
 protected:
@@ -130,136 +64,39 @@ protected:
     std::unique_ptr<handler::message_handler> handler_;
 
 private:
-    void do_write() {
-        if (writing_) return;
-        if (buffer_out_.empty()) return;
-
-        XDEBUG_WITH_ID(this) << "=> do_write()";
-
-        writing_ = true;
-        auto& candidate = buffer_out_.front();
-        auto self(shared_from_this());
-        socket_->async_write_some(boost::asio::buffer(candidate->data(), candidate->size(),
-                                                      [self, candidate, this] (const boost::system::error_code& e, std::size_t length) {
-            if (e) {
-                XERROR_WITH_ID(this) << "write error, code: " << e.value()
-                                     << ", message: " << e.message();
-                stop();
-                return;
-            }
-
-            writing_ = false;
-            if (length < candidate->size()) {
-                XERROR_WITH_ID(this) << "write incomplete, continue.";
-                candidate->erase(0, length);
-                do_write();
-                return;
-            }
-
-            buffer_out_.erase(buffer_out_.begin());
-            if (!buffer_out_.empty()) {
-                XDEBUG_WITH_ID(this) << "more buffers added, continue.";
-                do_write();
-                return;
-            }
-
-            #warning add something here
-        }));
-
-        XDEBUG_WITH_ID(this) << "<= do_write()";
-    }
+    void do_write();
 
     enum { FIXED_BUFFER_SIZE = 8192 };
 
     std::array<char, FIXED_BUFFER_SIZE> buffer_in_;
-    std::list<buffer_ptr> buffer_out_;
+    std::list<memory::buffer_ptr> buffer_out_;
     bool writing_;
 };
 
 class client_connection : public connection {
 public:
-    client_connection(session& session) : connection(session) {}
+    client_connection(session_ptr session);
 
     DEFAULT_DTOR(client_connection);
 
-    virtual void start() {
-        connected_ = true;
-        host_ = socket_->socket().remote_endpoint().address().to_string();
-        port_ = socket_->socket().remote_endpoint().port();
-        read();
-    }
+    virtual void start();
 
-    virtual void connect() {
-        assert(0);
-    }
+    virtual void connect();
 
-    virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr) {
-        XDEBUG_WITH_ID(this) << "=> handshake()";
-
-        auto self(shared_from_this());
-        socket_->switch_to_ssl(boost::asio::ssl::stream_base::client, ca, dh);
-        socket_->async_handshake([self, this] (const boost::system::error_code& e) {
-            #warning do something here
-        });
-
-        XDEBUG_WITH_ID(this) << "<= handshake()";
-    }
+    virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr);
 };
 
 class server_connection : public connection {
 public:
-    server_connection(session& session) : connection(session) {}
+    server_connection(session_ptr session);
 
     DEFAULT_DTOR(server_connection);
 
-    virtual void start() {
-        assert(host_.length() > 0);
-        assert(port_ != 0);
+    virtual void start();
 
-        connect();
-    }
+    virtual void connect();
 
-    virtual void connect() {
-        XDEBUG_WITH_ID(this) << "=> connect()";
-
-        using namespace boost::asio::ip;
-        auto self(shared_from_this());
-        resolver_.async_resolve(tcp::resolver::query(host_, port_),
-                                [self, this] (const boost::system::error_code& e, tcp::resolver::iterator it) {
-            if (e) {
-                XERROR_WITH_ID(this) << "resolve error, code: " << e.value()
-                                     << ", message: " << e.message();
-                stop();
-                return;
-            }
-
-            socket_->async_connect(it, [self, this] (const boost::system::error_code& e, tcp::resolver::iterator it) {
-                if (e) {
-                    XERROR_WITH_ID(this) << "connect error, code: " << e.value()
-                                         << ", message: " << e.message();
-                    stop();
-                    return;
-                }
-
-                connected_ = true;
-                #warning add something here
-            });
-        });
-
-        XDEBUG_WITH_ID(this) << "<= connect()";
-    }
-
-    virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr) {
-        XDEBUG_WITH_ID(this) << "=> handshake()";
-
-        auto self(shared_from_this());
-        socket_->switch_to_ssl(boost::asio::ssl::stream_base::server, ca, dh);
-        socket_->async_handshake([self, this] (const boost::system::error_code& e) {
-            #warning do something here
-        });
-
-        XDEBUG_WITH_ID(this) << "<= handshake()";
-    }
+    virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr);
 
 private:
     boost::asio::ip::tcp::resolver resolver_;

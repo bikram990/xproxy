@@ -1,5 +1,7 @@
-#include "x/net/server.hpp"
 #include "x/conf/config.hpp"
+#include "x/log/log.hpp"
+#include "x/net/connection.hpp"
+#include "x/net/server.hpp"
 #include "x/net/session.hpp"
 #include "x/net/session_manager.hpp"
 #include "x/ssl/certificate_manager.hpp"
@@ -15,17 +17,17 @@ server::server()
       cert_manager_(new x::ssl::certificate_manager) {}
 
 bool server::init() {
-    if (!conf.load_config()) {
+    if (!config_->load_config()) {
         XFATAL << "unable to load server configuration.";
         return false;
     }
 
-    if (!cert_manager_.init()) {
+    if (!cert_manager_->init()) {
         XFATAL << "unable to init certificate manager.";
         return false;
     }
 
-    if (!config_.get_config("basic.port", port_))
+    if (!config_->get_config("basic.port", port_))
         port_ = DEFAULT_SERVER_PORT;
 
     init_signal_handler();
@@ -44,7 +46,7 @@ void server::init_signal_handler() {
     signals_.async_wait([this] (const boost::system::error_code&, int) {
         XINFO << "stopping xProxy...";
         acceptor_.close();
-        session_manager_.stop_all();
+        session_manager_->stop_all();
     });
 }
 
@@ -59,21 +61,21 @@ void server::init_acceptor() {
 }
 
 void server::start_accept() {
-    current_session_ = new session(service_);
-    conn_ptr client_conn = current_session_->get_connection(session::CLIENT_SIDE);
+    current_session_.reset(new session(*this));
+    auto client_conn = current_session_->get_connection(session::CLIENT_SIDE);
     acceptor_.async_accept(client_conn->socket(),
-                           [this] (const boost::system::error_code& e) {
+                           [this, client_conn] (const boost::system::error_code& e) {
         if (e) {
             XERROR << "accept error, code: " << e.value()
                    << ", message: " << e.message();
             return;
         }
 
-        XTRACE << "new client connection, id: " << client_conn->id()
+        XDEBUG << "new client connection, id: " << client_conn->id()
                << ", addr: " << client_conn->socket().remote_endpoint().address()
                << ", port: " << client_conn->socket().remote_endpoint().port();
 
-        session_manager_.start(current_session_);
+        session_manager_->start(current_session_);
 
         start_accept();
     });
