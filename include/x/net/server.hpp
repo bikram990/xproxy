@@ -9,9 +9,6 @@ namespace conf { class config; }
 namespace ssl { class certificate_manager; }
 namespace net {
 
-class session;
-class session_manager;
-
 class server {
 public:
     const static unsigned short DEFAULT_SERVER_PORT = 7077;
@@ -32,10 +29,6 @@ public:
         return *config_;
     }
 
-    session_manager& get_session_manager() {
-        return *session_manager_;
-    }
-
     x::ssl::certificate_manager& get_certificate_manager() const {
         return *cert_manager_;
     }
@@ -54,10 +47,9 @@ private:
     boost::asio::ip::tcp::acceptor acceptor_;
 
     std::unique_ptr<x::conf::config> config_;
-    std::unique_ptr<session_manager> session_manager_;
     std::unique_ptr<x::ssl::certificate_manager> cert_manager_;
 
-    std::shared_ptr<session> current_session_;
+    conn_ptr current_connection_;
 
     MAKE_NONCOPYABLE(server);
 };

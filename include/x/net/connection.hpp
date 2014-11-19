@@ -3,6 +3,7 @@
 
 #include <list>
 #include <boost/asio.hpp>
+#include "x/net/connection_context.hpp"
 #include "x/net/socket_wrapper.hpp"
 #include "x/ssl/certificate_manager.hpp"
 #include "x/util/counter.hpp"
@@ -24,7 +25,7 @@ public:
         DISCONNECTED, STOPPED
     };
 
-    connection(session_ptr session);
+    connection(boost::asio::io_service& service);
 
     DEFAULT_DTOR(connection);
 
@@ -42,6 +43,10 @@ public:
         return socket_->socket();
     }
 
+    context_ptr get_context() const {
+        return context_;
+    }
+
     void set_host(const std::string& host) {
         host_ = host;
     }
@@ -56,7 +61,7 @@ protected:
     std::string host_;
     unsigned short port_;
     std::unique_ptr<socket_wrapper> socket_;
-    std::weak_ptr<session> session_;
+    context_ptr context_;
 
     std::unique_ptr<codec::message_decoder> decoder_;
     std::unique_ptr<codec::message_encoder> encoder_;
@@ -75,7 +80,7 @@ private:
 
 class client_connection : public connection {
 public:
-    client_connection(session_ptr session);
+    client_connection(boost::asio::io_service& service);
 
     DEFAULT_DTOR(client_connection);
 
@@ -88,7 +93,7 @@ public:
 
 class server_connection : public connection {
 public:
-    server_connection(session_ptr session);
+    server_connection(boost::asio::io_service& service);
 
     DEFAULT_DTOR(server_connection);
 

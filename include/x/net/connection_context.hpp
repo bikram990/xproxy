@@ -2,6 +2,7 @@
 #define CONNECTION_CONTEXT_HPP
 
 namespace x {
+namespace message { class message; }
 namespace net {
 
 class connection_context {
@@ -16,11 +17,6 @@ public:
 private:
     bool https_;
     state state_;
-
-    std::string client_host_;
-    unsigned short client_port_;
-    std::string server_host_;
-    unsigned short server_port_;
 
     boost::asio::io_service& service_;
     std::weak_ptr<connection> client_conn_;

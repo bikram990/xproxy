@@ -4,16 +4,14 @@
 #include "x/memory/byte_buffer.hpp"
 #include "x/message/message.hpp"
 #include "x/net/connection.hpp"
-#include "x/net/session.hpp"
 
 namespace x {
 namespace net {
 
-connection::connection(session_ptr session)
+connection::connection(boost::asio::io_service& service)
     : connected_(false),
       stopped_(false),
-      socket_(new socket_wrapper(session->get_service())),
-      session_(session),
+      socket_(new socket_wrapper(service)),
       #warning add more constructions here
       writing_(false) {}
 
@@ -78,10 +76,11 @@ void connection::stop() {
         connected_ = false;
     }
 
-    // notify session (if it exists)
-    auto session = session_.lock();
-    if (session)
-        session->on_connection_stop(shared_from_this());
+    // notify the bridged connection(if it exists)
+    #warning add code here
+    // auto session = session_.lock();
+    // if (session)
+    //     session->on_connection_stop(shared_from_this());
 
     stopped_ = true;
 }
@@ -125,8 +124,8 @@ void connection::do_write() {
     XDEBUG_WITH_ID(this) << "<= do_write()";
 }
 
-client_connection::client_connection(session_ptr session)
-    : connection(session) {}
+client_connection::client_connection(boost::asio::io_service& service)
+    : connection(service) {}
 
 void client_connection::start() {
     connected_ = true;
@@ -151,9 +150,9 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
     XDEBUG_WITH_ID(this) << "<= handshake()";
 }
 
-server_connection::server_connection(session_ptr session)
-    : connection(session),
-      resolver_(session->get_service()) {}
+server_connection::server_connection(boost::asio::io_service& service)
+    : connection(service),
+      resolver_(service) {}
 
 void server_connection::start() {
     assert(host_.length() > 0);

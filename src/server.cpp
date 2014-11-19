@@ -2,8 +2,6 @@
 #include "x/log/log.hpp"
 #include "x/net/connection.hpp"
 #include "x/net/server.hpp"
-#include "x/net/session.hpp"
-#include "x/net/session_manager.hpp"
 #include "x/ssl/certificate_manager.hpp"
 
 namespace x {
@@ -13,7 +11,6 @@ server::server()
     : signals_(service_),
       acceptor_(service_),
       config_(new x::conf::config),
-      session_manager_(new session_manager),
       cert_manager_(new x::ssl::certificate_manager) {}
 
 bool server::init() {
@@ -46,7 +43,6 @@ void server::init_signal_handler() {
     signals_.async_wait([this] (const boost::system::error_code&, int) {
         XINFO << "stopping xProxy...";
         acceptor_.close();
-        session_manager_->stop_all();
     });
 }
 
@@ -61,21 +57,24 @@ void server::init_acceptor() {
 }
 
 void server::start_accept() {
-    current_session_.reset(new session(*this));
-    auto client_conn = current_session_->get_connection(session::CLIENT_SIDE);
-    acceptor_.async_accept(client_conn->socket(),
-                           [this, client_conn] (const boost::system::error_code& e) {
+    current_connection_.reset(new client_connection(service_));
+    acceptor_.async_accept(current_connection_->socket(),
+                           [this] (const boost::system::error_code& e) {
         if (e) {
             XERROR << "accept error, code: " << e.value()
                    << ", message: " << e.message();
             return;
         }
 
-        XDEBUG << "new client connection, id: " << client_conn->id()
-               << ", addr: " << client_conn->socket().remote_endpoint().address()
-               << ", port: " << client_conn->socket().remote_endpoint().port();
+        auto addr = current_connection_->socket().remote_endpoint().address();
+        auto port = current_connection_->socket().remote_endpoint().port();
+        current_connection_->set_host(addr.to_string());
+        current_connection_->set_port(port);
 
-        session_manager_->start(current_session_);
+        XDEBUG << "new client connection, id: " << current_connection_->id()
+               << ", addr: " << addr << ", port: " << port;
+
+        current_connection_->start();
 
         start_accept();
     });
