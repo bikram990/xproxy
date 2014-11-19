@@ -1,7 +1,7 @@
 #ifndef BYTE_BUFFER_HPP
 #define BYTE_BUFFER_HPP
 
-#include <string>
+#include <cstring>
 #include <cassert>
 
 namespace x {
