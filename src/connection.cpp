@@ -125,12 +125,13 @@ void connection::do_write() {
 }
 
 client_connection::client_connection(boost::asio::io_service& service)
-    : connection(service) {}
+    : connection(service) {
+    context_.reset(new connection_context(service));
+}
 
 void client_connection::start() {
     connected_ = true;
-    host_ = socket_->socket().remote_endpoint().address().to_string();
-    port_ = socket_->socket().remote_endpoint().port();
+    context_->set_client_connection(shared_from_this());
     read();
 }
 
@@ -150,9 +151,11 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
     XDEBUG_WITH_ID(this) << "<= handshake()";
 }
 
-server_connection::server_connection(boost::asio::io_service& service)
-    : connection(service),
-      resolver_(service) {}
+server_connection::server_connection(context_ptr context)
+    : connection(context->service()),
+      resolver_(context->service()) {
+      context_ = context;
+}
 
 void server_connection::start() {
     assert(host_.length() > 0);

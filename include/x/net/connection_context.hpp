@@ -9,8 +9,25 @@ class connection_context {
 public:
     #warning add more here!
     enum state {
-        READY,
+        CREATED, READY,
     };
+
+    connection_context(boost::asio::io_service& service)
+        : https_(false),
+          state_(CREATED),
+          service_(service) {}
+
+    boost::asio::io_service& service() const {
+        return service_;
+    }
+
+    void set_client_connection(conn_ptr connection) {
+        client_conn_ = connection;
+    }
+
+    void set_server_connection(conn_ptr connection) {
+        server_conn_ = connection;
+    }
 
     void on_message(message::message& msg);
 

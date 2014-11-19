@@ -93,7 +93,7 @@ public:
 
 class server_connection : public connection {
 public:
-    server_connection(boost::asio::io_service& service);
+    server_connection(context_ptr context);
 
     DEFAULT_DTOR(server_connection);
 
