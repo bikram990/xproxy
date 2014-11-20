@@ -25,7 +25,7 @@ public:
         DISCONNECTED, STOPPED
     };
 
-    connection(boost::asio::io_service& service);
+    connection(context_ptr ctx);
 
     DEFAULT_DTOR(connection);
 
@@ -66,7 +66,6 @@ protected:
     std::unique_ptr<codec::message_decoder> decoder_;
     std::unique_ptr<codec::message_encoder> encoder_;
     std::unique_ptr<message::message> message_;
-    std::unique_ptr<handler::message_handler> handler_;
 
 private:
     void do_write();

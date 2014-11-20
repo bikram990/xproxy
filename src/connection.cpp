@@ -8,10 +8,11 @@
 namespace x {
 namespace net {
 
-connection::connection(boost::asio::io_service& service)
+connection::connection(context_ptr ctx)
     : connected_(false),
       stopped_(false),
-      socket_(new socket_wrapper(service)),
+      socket_(new socket_wrapper(ctx->service())),
+      context_(ctx),
       #warning add more constructions here
       writing_(false) {}
 
@@ -37,7 +38,7 @@ void connection::read() {
         assert(consumed == length);
 
         if (message_->deliverable()) {
-            handler_->handle_message(*message_);
+            context_->on_message(*message_);
             return;
         }
 
@@ -124,10 +125,8 @@ void connection::do_write() {
     XDEBUG_WITH_ID(this) << "<= do_write()";
 }
 
-client_connection::client_connection(boost::asio::io_service& service)
-    : connection(service) {
-    context_.reset(new connection_context(service));
-}
+client_connection::client_connection(context_ptr ctx)
+    : connection(ctx) {}
 
 void client_connection::start() {
     connected_ = true;
@@ -151,11 +150,9 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
     XDEBUG_WITH_ID(this) << "<= handshake()";
 }
 
-server_connection::server_connection(context_ptr context)
-    : connection(context->service()),
-      resolver_(context->service()) {
-      context_ = context;
-}
+server_connection::server_connection(context_ptr ctx)
+    : connection(ctx),
+      resolver_(ctx->service()) {}
 
 void server_connection::start() {
     assert(host_.length() > 0);

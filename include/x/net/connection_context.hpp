@@ -5,7 +5,7 @@ namespace x {
 namespace message { class message; }
 namespace net {
 
-class connection_context {
+class connection_context : public std::enable_shared_from_this<connection_context> {
 public:
     #warning add more here!
     enum state {

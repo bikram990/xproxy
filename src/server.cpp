@@ -57,7 +57,8 @@ void server::init_acceptor() {
 }
 
 void server::start_accept() {
-    current_connection_.reset(new client_connection(service_));
+    context_ptr ctx(service_);
+    current_connection_.reset(new client_connection(ctx));
     acceptor_.async_accept(current_connection_->socket(),
                            [this] (const boost::system::error_code& e) {
         if (e) {
