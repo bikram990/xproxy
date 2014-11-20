@@ -79,7 +79,7 @@ private:
 
 class client_connection : public connection {
 public:
-    client_connection(boost::asio::io_service& service);
+    client_connection(context_ptr ctx);
 
     DEFAULT_DTOR(client_connection);
 
@@ -92,7 +92,7 @@ public:
 
 class server_connection : public connection {
 public:
-    server_connection(context_ptr context);
+    server_connection(context_ptr ctx);
 
     DEFAULT_DTOR(server_connection);
 
