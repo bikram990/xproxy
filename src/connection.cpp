@@ -1,5 +1,7 @@
 #include "x/codec/message_decoder.hpp"
 #include "x/codec/message_encoder.hpp"
+#include "x/codec/http/http_decoder.hpp"
+#include "x/codec/http/http_encoder.hpp"
 #include "x/handler/message_handler.hpp"
 #include "x/memory/byte_buffer.hpp"
 #include "x/message/message.hpp"
@@ -126,7 +128,10 @@ void connection::do_write() {
 }
 
 client_connection::client_connection(context_ptr ctx)
-    : connection(ctx) {}
+    : connection(ctx) {
+    decoder_.reset(new codec::http::http_decoder(HTTP_REQUEST));
+    encoder_.reset(new codec::http::http_encoder(HTTP_REQUEST));
+}
 
 void client_connection::start() {
     connected_ = true;
@@ -152,7 +157,10 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
 
 server_connection::server_connection(context_ptr ctx)
     : connection(ctx),
-      resolver_(ctx->service()) {}
+      resolver_(ctx->service()) {
+    decoder_.reset(new codec::http::http_decoder(HTTP_RESPONSE));
+    encoder_.reset(new codec::http::http_encoder(HTTP_RESPONSE));
+}
 
 void server_connection::start() {
     assert(host_.length() > 0);

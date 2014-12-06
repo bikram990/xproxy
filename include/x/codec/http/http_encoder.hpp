@@ -1,6 +1,8 @@
 #ifndef HTTP_ENCODER_HPP
 #define HTTP_ENCODER_HPP
 
+#include "http_parser.h"
+
 namespace x {
 namespace memory { class byte_buffer; }
 namespace message { class message; namespace http { class http_message; } }
@@ -14,7 +16,8 @@ public:
     virtual void reset();
 
 public:
-    http_encoder() : state_(BEGIN), body_encoded_(0) {}
+    http_encoder(http_parser_type type)
+        : type_(type), state_(BEGIN), body_encoded_(0) {}
 
     DEFAULT_VIRTUAL_DTOR(http_encoder);
 
@@ -27,6 +30,7 @@ private:
         BEGIN, FIRST_LINE, HEADERS, BODY, END
     };
 
+    http_parser_type type_;
     encode_state state_;
     std::size_t body_encoded_;
 

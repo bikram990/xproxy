@@ -52,7 +52,36 @@ std::size_t http_encoder::encode_first_line(const message::http::http_message& m
     assert(msg.headers_completed());
     assert(state_ == BEGIN);
 
-    auto first_line = msg.get_first_line();
+    std::string first_line;
+
+    if (type_ == HTTP_REQUEST) {
+        message::http::http_request *request = dynamic_cast<message::http::http_request *>(&msg);
+        assert(request);
+
+        first_line.append(request->get_method())
+                .append(' ')
+                .append(request->get_uri())
+                .append(' ')
+                .append("HTTP/")
+                .append(request->get_major_version())
+                .append('.')
+                .append(request->get_minor_version())
+                .append(CRLF);
+    } else {
+        message::http::http_response *response = dynamic_cast<message::http::http_response *>(&msg);
+        assert(response);
+
+        first_line.append("HTTP/")
+                .append(response->get_major_version())
+                .append('.')
+                .append(response->get_minor_version())
+                .append(' ')
+                .append(response->get_status())
+                .append(' ')
+                .append(response->get_message())
+                .append(CRLF);
+    }
+
     buf << first_line;
 
     state_ = FIRST_LINE;

@@ -14,8 +14,6 @@ public:
 
     virtual void reset();
 
-    virtual std::string get_first_line() const = 0;
-
     bool headers_completed() const {
         return headers_completed_;
     }
