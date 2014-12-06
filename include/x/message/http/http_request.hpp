@@ -14,7 +14,7 @@ public:
     }
 
     virtual http_parser_type get_decoder_type() {
-        return HTTP_PARSER_REQUEST;
+        return HTTP_REQUEST;
     }
 
     virtual void reset();
