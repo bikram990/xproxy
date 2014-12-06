@@ -42,10 +42,12 @@ public:
 
     http_message& add_header(const std::string& name, const std::string& value) {
         headers_.insert(std::make_pair(name, value));
+        return *this;
     }
 
     http_message& append_body(const char *data, std::size_t size) {
         body_ << memory::byte_buffer::wrap(data, size);
+        return *this;
     }
 
 protected:
