@@ -13,6 +13,10 @@ public:
         return deliverable_;
     }
 
+    virtual http_parser_type get_decoder_type() {
+        return HTTP_PARSER_REQUEST;
+    }
+
     virtual void reset();
 
     std::string get_method() const {

@@ -13,6 +13,10 @@ public:
         return true;
     }
 
+    virtual http_parser_type get_decoder_type() {
+        return HTTP_PARSER_RESPONSE;
+    }
+
     virtual void reset();
 
     int get_status() const {

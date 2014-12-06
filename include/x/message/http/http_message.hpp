@@ -11,6 +11,8 @@ public:
 
     virtual bool deliverable() = 0;
 
+    virtual http_parser_type get_decoder_type() = 0;
+
     virtual void reset();
 
     int get_major_version() const {
