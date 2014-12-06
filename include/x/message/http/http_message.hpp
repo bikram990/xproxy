@@ -2,6 +2,7 @@
 #define HTTP_MESSAGE_HPP
 
 namespace x {
+namespace memory { class byte_buffer; }
 namespace message {
 namespace http {
 
@@ -12,6 +13,24 @@ public:
     virtual bool deliverable() = 0;
 
     virtual void reset();
+
+    virtual std::string get_first_line() const = 0;
+
+    bool headers_completed() const {
+        return headers_completed_;
+    }
+
+    bool message_completed() const {
+        return message_completed_;
+    }
+
+    void headers_completed(bool completed) {
+        headers_completed_ = completed;
+    }
+
+    void message_completed(bool completed) {
+        message_completed_ = completed;
+    }
 
     int get_major_version() const {
         return major_version_;
@@ -45,6 +64,14 @@ public:
         return *this;
     }
 
+    const std::map<std::string, std::string>& get_headers() const {
+        return headers_;
+    }
+
+    std::map<std::string, std::string>& get_headers() {
+        return headers_;
+    }
+
     http_message& append_body(const char *data, std::size_t size) {
         body_ << memory::byte_buffer::wrap(data, size);
         return *this;
@@ -55,11 +82,25 @@ public:
         return *this;
     }
 
+    const memory::byte_buffer& get_body() const {
+        return body_;
+    }
+
+    memory::byte_buffer& get_body() {
+        return body_;
+    }
+
 protected:
+    http_message()
+        : major_version_(0),minor_version_(0),
+          headers_completed_(false), message_completed_(false) {}
+
     int major_version_;
     int minor_version_;
 
 private:
+    bool headers_completed_;
+    bool message_completed_;
     std::map<std::string, std::string> headers_;
     memory::byte_buffer body_;
 

@@ -156,6 +156,7 @@ int http_decoder::on_headers_complete(http_parser *parser) {
     p->current_header_value_.clear();
 
     p->headers_completed_ = true;
+    p->message_->headers_completed(true);
 
     if (p->parser_.flags & F_CHUNKED)
         p->chunked_ = true;
@@ -193,6 +194,7 @@ int http_decoder::on_message_complete(http_parser *parser) {
     }
 
     p->message_completed_ = true;
+    p->message_->message_completed(true);
 
     return 0;
 }

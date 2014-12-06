@@ -2,7 +2,7 @@
 #define MESSAGE_ENCODER_HPP
 
 namespace x {
-namespace { class byte_buffer; }
+namespace memory { class byte_buffer; }
 namespace message { class message; }
 namespace codec {
 
