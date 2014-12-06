@@ -3,9 +3,9 @@
 
 #include "http_parser.h"
 #include "x/common.hpp"
-#include "x/message/http/http_message.hpp"
 
 namespace x {
+namespace message { namespace http { class http_message; } }
 namespace codec {
 namespace http {
 
@@ -15,19 +15,19 @@ public:
 
     virtual void reset();
 
-    bool headersCompleted() const { return headers_completed_; }
+    bool headers_completed() const { return headers_completed_; }
 
-    bool messageCompleted() const { return message_completed_; }
+    bool message_completed() const { return message_completed_; }
 
-    bool keepAlive() const;
+    bool keep_alive() const;
 
     void reset();
 
 public:
-    http_decoder(message::http::http_message& message)
-        : message_(message), headers_completed_(false),
+    http_decoder(http_parser_type type)
+        : message_(nullptr), headers_completed_(false),
           message_completed_(false), chunked_(false) {
-        ::http_parser_init(&parser_, message_.get_decoder_type());
+        ::http_parser_init(&parser_, type);
         parser_.data = this;
     }
 
@@ -48,7 +48,7 @@ private:
     }
 
 private:
-    message::http::http_message& message_;
+    message::http::http_message *message_;
 
     bool headers_completed_;
     bool message_completed_;

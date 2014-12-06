@@ -11,8 +11,6 @@ public:
 
     virtual bool deliverable() = 0;
 
-    virtual http_parser_type get_decoder_type() = 0;
-
     virtual void reset();
 
     int get_major_version() const {
@@ -49,6 +47,11 @@ public:
 
     http_message& append_body(const char *data, std::size_t size) {
         body_ << memory::byte_buffer::wrap(data, size);
+        return *this;
+    }
+
+    http_message& append_body(const std::string& str) {
+        body_ << str;
         return *this;
     }
 

@@ -13,17 +13,13 @@ public:
         return true;
     }
 
-    virtual http_parser_type get_decoder_type() {
-        return HTTP_RESPONSE;
-    }
-
     virtual void reset();
 
-    int get_status() const {
+    unsigned int get_status() const {
         return status_;
     }
 
-    void set_status(int status) {
+    void set_status(unsigned int status) {
         status_ = status;
     }
 
@@ -36,7 +32,7 @@ public:
     }
 
 private:
-    int status_;
+    unsigned int status_;
     std::string message_;
 
     MAKE_NONCOPYABLE(http_response);
