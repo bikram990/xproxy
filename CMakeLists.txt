@@ -58,14 +58,6 @@ set(TEST_EXE "test-${PROJECT_NAME}")
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/gtest)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    # force this option to ON so that Google Test will use /MD instead of /MT
-    # /MD is now the default for Visual Studio, so it should be our default, too
-    option(gtest_force_shared_crt
-           "Use shared CRT even when Google Test is built as static lib."
-           ON)
-endif()
-
 add_subdirectory(${GTEST_DIR})
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 file(GLOB TEST_SRC ${TEST_DIR}/*.cpp)
@@ -73,7 +65,6 @@ file(GLOB TEST_SRC ${TEST_DIR}/*.cpp)
 # we should also add source code here, not only the testing code
 # however, we should remove the main.cpp, otherwise it will overwrite the
 # main() function defined in gtest_main
-#file(GLOB ${PROJECT_NAME}_SRC ${SRC_DIR}/*.cpp)
 aux_source_directory(${SRC_DIR} SRC_FOR_TEST)
 list(REMOVE_ITEM SRC_FOR_TEST ${SRC_DIR}/main.cpp)
 add_executable(${TEST_EXE} ${TEST_SRC} ${SRC_FOR_TEST})
@@ -86,22 +77,14 @@ add_test(${TEST_EXE} ${TEST_EXE}) # first: test name, second: test command
 # Configure boost library
 ################################################################################
 if(WIN32)
-    set(BOOST_ROOT "D:/SDTs/Boost")
+    set(BOOST_ROOT "D:/SDTs/MinGW")
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
-    if(MINGW)
-        target_link_libraries(${PROJECT_NAME} ws2_32 wsock32)
-    elseif(MSVC)
-        set(Boost_COMPILER "-vc120")
-        add_definitions(-D_WIN32_WINNT=0x0501)
-    endif()
+    target_link_libraries(${PROJECT_NAME} ws2_32 wsock32)
 endif()
 
 find_package(Boost 1.54.0 COMPONENTS atomic system date_time regex log log_setup filesystem thread chrono REQUIRED)
 if(Boost_FOUND)
-    if(NOT WIN32)
-        add_definitions(-DBOOST_LOG_DYN_LINK)
-    endif()
     include_directories(${Boost_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
     target_link_libraries(${TEST_EXE} ${Boost_LIBRARIES})
@@ -121,10 +104,14 @@ endif()
 # Configure OpenSSL library
 ################################################################################
 if(WIN32)
-    set(OPENSSL_ROOT_DIR "D:/SDTs/OpenSSL")
+    set(OPENSSL_ROOT_DIR "D:/SDTs/MinGW")
+    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+    set(OPENSSL_LIBRARIES "${OPENSSL_ROOT_DIR}/lib/libssl.a" "${OPENSSL_ROOT_DIR}/lib/libcrypto.a")
+    set(OPENSSL_FOUND "TRUE")
+else()
+    find_package(OpenSSL)
 endif()
 
-find_package(OpenSSL)
 if(OPENSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES})
@@ -138,9 +125,9 @@ endif()
 # Configure log4cpp library
 ################################################################################
 if(WIN32)
-    set(LOG4CPP_ROOT_DIR "D:/SDTs/log4cpp")
+    set(LOG4CPP_ROOT_DIR "D:/SDTs/MinGW")
     set(LOG4CPP_INCLUDE_DIR "${LOG4CPP_ROOT_DIR}/include")
-    set(LOG4CPP_LIBRARIES "${LOG4CPP_ROOT_DIR}/lib/log4cpp.lib")
+    set(LOG4CPP_LIBRARIES "${LOG4CPP_ROOT_DIR}/lib/liblog4cpp.a")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(LOG4CPP_INCLUDE_DIR "/usr/local/include")
     set(LOG4CPP_LIBRARIES "/usr/local/lib/liblog4cpp.dylib")
