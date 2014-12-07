@@ -3,16 +3,16 @@
 
 #include <list>
 #include <boost/asio.hpp>
+#include "x/codec/message_decoder.hpp"
+#include "x/codec/message_encoder.hpp"
+#include "x/message/message.hpp"
 #include "x/net/connection_context.hpp"
 #include "x/net/socket_wrapper.hpp"
 #include "x/ssl/certificate_manager.hpp"
 #include "x/util/counter.hpp"
 
 namespace x {
-namespace codec { class message_decoder; class message_encoder; }
-namespace handler { class message_handler; }
 namespace memory { class byte_buffer; }
-namespace message { class message; }
 namespace net {
 
 class connection : public util::counter<connection>,

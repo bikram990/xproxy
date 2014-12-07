@@ -1,6 +1,8 @@
 #ifndef MESSAGE_ENCODER_HPP
 #define MESSAGE_ENCODER_HPP
 
+#include "x/common.hpp"
+
 namespace x {
 namespace memory { class byte_buffer; }
 namespace message { class message; }

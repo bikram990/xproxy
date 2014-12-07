@@ -2,6 +2,7 @@
 #define HTTP_ENCODER_HPP
 
 #include "http_parser.h"
+#include "x/codec/message_encoder.hpp"
 
 namespace x {
 namespace memory { class byte_buffer; }
@@ -9,7 +10,7 @@ namespace message { class message; namespace http { class http_message; } }
 namespace codec {
 namespace http {
 
-class http_encoder {
+class http_encoder : public message_encoder {
 public:
     virtual std::size_t encode(const message::message& msg, memory::byte_buffer& buf);
 

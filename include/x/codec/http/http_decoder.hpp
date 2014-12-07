@@ -3,13 +3,14 @@
 
 #include "http_parser.h"
 #include "x/common.hpp"
+#include "x/codec/message_decoder.hpp"
 
 namespace x {
 namespace message { namespace http { class http_message; } }
 namespace codec {
 namespace http {
 
-class http_decoder {
+class http_decoder : public message_decoder {
 public:
     virtual std::size_t decode(const char *begin, std::size_t length, message::message& msg);
 
@@ -20,8 +21,6 @@ public:
     bool message_completed() const { return message_completed_; }
 
     bool keep_alive() const;
-
-    void reset();
 
 public:
     http_decoder(http_parser_type type)

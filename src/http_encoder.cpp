@@ -125,6 +125,11 @@ std::size_t http_encoder::encode_body(const message::http::http_message& msg, me
     return inc;
 }
 
+void http_encoder::reset() {
+    state_ = BEGIN;
+    body_encoded_ = 0;
+}
+
 } // namespace http
 } // namespace codec
 } // namespace x
