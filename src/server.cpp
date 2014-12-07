@@ -1,6 +1,7 @@
 #include "x/conf/config.hpp"
 #include "x/log/log.hpp"
 #include "x/net/connection.hpp"
+#include "x/net/connection_context.hpp"
 #include "x/net/server.hpp"
 #include "x/ssl/certificate_manager.hpp"
 
@@ -57,7 +58,7 @@ void server::init_acceptor() {
 }
 
 void server::start_accept() {
-    context_ptr ctx(service_);
+    context_ptr ctx(new connection_context(service_));
     current_connection_.reset(new client_connection(ctx));
     acceptor_.async_accept(current_connection_->socket(),
                            [this] (const boost::system::error_code& e) {

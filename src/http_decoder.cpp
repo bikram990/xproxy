@@ -20,7 +20,8 @@ http_parser_settings http_decoder::settings_ = {
 };
 
 std::size_t http_decoder::decode(const char *begin, std::size_t length, message::message& msg) {
-    message_ = &msg;
+    message_ = dynamic_cast<message::http::http_message *>(&msg);
+    assert(message_);
 
     auto consumed = ::http_parser_execute(&parser_, &settings_, begin, length);
 

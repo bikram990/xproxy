@@ -13,7 +13,7 @@ namespace codec {
 namespace http {
 
 std::size_t http_encoder::encode(const message::message& msg, memory::byte_buffer& buf) {
-    message::http::http_message *message = dynamic_cast<message::http::http_message *>(&msg);
+    auto message = dynamic_cast<const message::http::http_message *>(&msg);
     assert(message);
 
     // we do not do encoding if the headers are not completed
@@ -22,22 +22,22 @@ std::size_t http_encoder::encode(const message::message& msg, memory::byte_buffe
 
     switch (state_) {
     case BEGIN: {
-        auto line_length = encode_first_line(message, buf);
-        auto headers_length = encode_headers(message, buf);
-        auto body_length= encode_body(message, buf);
+        auto line_length = encode_first_line(*message, buf);
+        auto headers_length = encode_headers(*message, buf);
+        auto body_length= encode_body(*message, buf);
         return line_length + headers_length + body_length;
     }
     case FIRST_LINE: {
-        auto headers_length = encode_headers(message, buf);
-        auto body_length= encode_body(message, buf);
+        auto headers_length = encode_headers(*message, buf);
+        auto body_length= encode_body(*message, buf);
         return headers_length + body_length;
     }
     case HEADERS: {
-        auto body_length = encode_body(message, buf);
+        auto body_length = encode_body(*message, buf);
         return body_length;
     }
     case BODY: {
-        auto body_length = encode_body(message, buf);
+        auto body_length = encode_body(*message, buf);
         return body_length;
     }
     case END: {
@@ -54,30 +54,31 @@ std::size_t http_encoder::encode_first_line(const message::http::http_message& m
 
     std::string first_line;
 
+#warning use byte_buffer below instead of std::string
     if (type_ == HTTP_REQUEST) {
-        message::http::http_request *request = dynamic_cast<message::http::http_request *>(&msg);
+        auto request = dynamic_cast<const message::http::http_request *>(&msg);
         assert(request);
 
         first_line.append(request->get_method())
-                .append(' ')
+                .append(1, ' ')
                 .append(request->get_uri())
-                .append(' ')
+                .append(1, ' ')
                 .append("HTTP/")
-                .append(request->get_major_version())
-                .append('.')
-                .append(request->get_minor_version())
+                .append(std::to_string(request->get_major_version()))
+                .append(1, '.')
+                .append(std::to_string(request->get_minor_version()))
                 .append(CRLF);
     } else {
-        message::http::http_response *response = dynamic_cast<message::http::http_response *>(&msg);
+        auto response = dynamic_cast<const message::http::http_response *>(&msg);
         assert(response);
 
         first_line.append("HTTP/")
-                .append(response->get_major_version())
-                .append('.')
-                .append(response->get_minor_version())
-                .append(' ')
-                .append(response->get_status())
-                .append(' ')
+                .append(std::to_string(response->get_major_version()))
+                .append(1, '.')
+                .append(std::to_string(response->get_minor_version()))
+                .append(1, ' ')
+                .append(std::to_string(response->get_status()))
+                .append(1, ' ')
                 .append(response->get_message())
                 .append(CRLF);
     }
@@ -96,7 +97,7 @@ std::size_t http_encoder::encode_headers(const message::http::http_message& msg,
 
     auto& headers = msg.get_headers();
     for (auto it = std::begin(headers); it != std::end(headers); ++it) {
-        buf << it.first << ": " << it.second << CRLF;
+        buf << it->first << ": " << it->second << CRLF;
     }
     buf << CRLF;
 

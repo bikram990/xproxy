@@ -1,14 +1,16 @@
 #ifndef HTTP_MESSAGE_HPP
 #define HTTP_MESSAGE_HPP
 
+#include "x/memory/byte_buffer.hpp"
+#include "x/message/message.hpp"
+
 namespace x {
-namespace memory { class byte_buffer; }
 namespace message {
 namespace http {
 
 class http_message : public message {
 public:
-    DEFAULT_DTOR(message);
+    DEFAULT_DTOR(http_message);
 
     virtual bool deliverable() = 0;
 
