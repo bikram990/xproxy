@@ -3,10 +3,6 @@
 #include "x/net/server.hpp"
 #include "x/ssl/certificate_manager.hpp"
 
-#ifdef WIN32
-#include "openssl/applink.c"
-#endif
-
 int main(int, char**) {
     using namespace x;
     using namespace x::conf;
