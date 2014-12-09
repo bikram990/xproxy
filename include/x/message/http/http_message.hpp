@@ -1,6 +1,8 @@
 #ifndef HTTP_MESSAGE_HPP
 #define HTTP_MESSAGE_HPP
 
+#include <map>
+#include "x/common.hpp"
 #include "x/memory/byte_buffer.hpp"
 #include "x/message/message.hpp"
 
@@ -14,7 +16,14 @@ public:
 
     virtual bool deliverable() = 0;
 
-    virtual void reset();
+    virtual void reset() {
+        major_version_ = 0;
+        minor_version_ = 0;
+        headers_completed_ = false;
+        message_completed_ = false;
+        headers_.clear();
+        body_.clear();
+    }
 
     bool headers_completed() const {
         return headers_completed_;

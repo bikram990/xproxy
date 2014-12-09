@@ -3,6 +3,8 @@
 #include "x/handler/message_handler.hpp"
 #include "x/memory/byte_buffer.hpp"
 #include "x/message/message.hpp"
+#include "x/message/http/http_request.hpp"
+#include "x/message/http/http_response.hpp"
 #include "x/net/connection.hpp"
 
 namespace x {
@@ -129,6 +131,7 @@ client_connection::client_connection(context_ptr ctx)
     : connection(ctx) {
     decoder_.reset(new codec::http::http_decoder(HTTP_REQUEST));
     encoder_.reset(new codec::http::http_encoder(HTTP_REQUEST));
+    message_.reset(new message::http::http_request);
 }
 
 void client_connection::start() {
@@ -158,6 +161,7 @@ server_connection::server_connection(context_ptr ctx)
       resolver_(ctx->service()) {
     decoder_.reset(new codec::http::http_decoder(HTTP_RESPONSE));
     encoder_.reset(new codec::http::http_encoder(HTTP_RESPONSE));
+    message_.reset(new message::http::http_response);
 }
 
 void server_connection::start() {

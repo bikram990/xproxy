@@ -1,6 +1,8 @@
 #ifndef HTTP_REQUEST_HPP
 #define HTTP_REQUEST_HPP
 
+#include "x/message/http/http_message.hpp"
+
 namespace x {
 namespace message {
 namespace http {
@@ -9,11 +11,18 @@ class http_request : public http_message {
 public:
     DEFAULT_DTOR(http_request);
 
+    http_request() : deliverable_(false) {}
+
     virtual bool deliverable() {
         return deliverable_;
     }
 
-    virtual void reset();
+    virtual void reset() {
+        http_message::reset();
+        deliverable_ = false;
+        method_.clear();
+        uri_.clear();
+    }
 
     std::string get_method() const {
         return method_;
