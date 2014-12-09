@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(xproxy)
 enable_testing()
-set(CMAKE_VERBOSE_MAKEFILE 1)
+set(CMAKE_VERBOSE_MAKEFILE 0)
 
 #-------------------------------------------------------------------------------
 # Set compilation warnings
@@ -121,7 +121,6 @@ message(STATUS "include: " ${OPENSSL_INCLUDE_DIR})
 message(STATUS "include: " ${LOG4CPP_INCLUDE_DIR})
 message(STATUS "include: " ${http-parser_DIR})
 message(STATUS "include: " ${gtest_SOURCE_DIR}/include)
-message(STATUS "include: " ${gtest_SOURCE_DIR})
 
 include_directories(${INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
@@ -129,11 +128,10 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${LOG4CPP_INCLUDE_DIR})
 include_directories(${http-parser_DIR})
 include_directories(${gtest_SOURCE_DIR}/include)
-include_directories(${gtest_SOURCE_DIR})
 
-message(STATUS "linking: " ${Boost_LIBRARIES})
-message(STATUS "linking: " ${OPENSSL_LIBRARIES})
-message(STATUS "linking: " ${LOG4CPP_LIBRARIES})
+foreach(lib ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${LOG4CPP_LIBRARIES})
+    message(STATUS "linking: " ${lib})
+endforeach(lib)
 
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES})
