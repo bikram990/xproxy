@@ -1,9 +1,14 @@
 #ifndef CONNECTION_CONTEXT_HPP
 #define CONNECTION_CONTEXT_HPP
 
+#include <boost/asio.hpp>
+#include "x/common.hpp"
+
 namespace x {
 namespace message { class message; }
 namespace net {
+
+class connection;
 
 class connection_context : public std::enable_shared_from_this<connection_context> {
 public:
@@ -21,15 +26,17 @@ public:
         return service_;
     }
 
-    void set_client_connection(conn_ptr connection) {
+    void set_client_connection(std::shared_ptr<connection> connection) {
         client_conn_ = connection;
     }
 
-    void set_server_connection(conn_ptr connection) {
+    void set_server_connection(std::shared_ptr<connection> connection) {
         server_conn_ = connection;
     }
 
-    void on_message(message::message& msg);
+    void on_client_message(message::message& msg);
+
+    void on_server_message(message::message& msg);
 
 private:
     bool https_;

@@ -1,18 +1,16 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
-#include <list>
 #include <boost/asio.hpp>
 #include "x/codec/message_decoder.hpp"
 #include "x/codec/message_encoder.hpp"
+#include "x/memory/byte_buffer.hpp"
 #include "x/message/message.hpp"
 #include "x/net/connection_context.hpp"
 #include "x/net/socket_wrapper.hpp"
-#include "x/ssl/certificate_manager.hpp"
 #include "x/util/counter.hpp"
 
 namespace x {
-namespace memory { class byte_buffer; }
 namespace net {
 
 class connection : public util::counter<connection>,
@@ -105,6 +103,8 @@ public:
 private:
     boost::asio::ip::tcp::resolver resolver_;
 };
+
+typedef std::shared_ptr<connection> connection_ptr;
 
 } // namespace net
 } // namespace x

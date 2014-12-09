@@ -1,6 +1,7 @@
 #ifndef MESSAGE_ENCODER_HPP
 #define MESSAGE_ENCODER_HPP
 
+#include <cstddef>
 #include "x/common.hpp"
 
 namespace x {

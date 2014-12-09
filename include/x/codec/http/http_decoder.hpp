@@ -1,6 +1,7 @@
 #ifndef HTTP_DECODER_HPP
 #define HTTP_DECODER_HPP
 
+#include <string>
 #include "http_parser.h"
 #include "x/common.hpp"
 #include "x/codec/message_decoder.hpp"

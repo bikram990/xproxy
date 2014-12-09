@@ -1,8 +1,6 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
-#include <memory>
-
 #define DEFAULT_CTOR_AND_DTOR(T) T() = default; \
     virtual ~T() = default
 
@@ -30,20 +28,5 @@
  * When we get short read error, we should treat it as EOF in normal mode.
  */
 #define SSL_SHORT_READ(ec) ((ec.value() & 0xFF) == SSL_R_SHORT_READ)
-
-namespace x {
-namespace memory {
-class byte_buffer;
-typedef std::shared_ptr<byte_buffer> buffer_ptr;
-}
-
-namespace net {
-class connection;
-typedef std::shared_ptr<connection> conn_ptr;
-
-class session;
-typedef std::shared_ptr<session> session_ptr;
-}
-}
 
 #endif // COMMON_HPP

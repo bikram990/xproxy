@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <memory>
 
 namespace x {
 namespace memory {
@@ -190,6 +191,8 @@ private:
     size_type size_;
     size_type capacity_;
 };
+
+typedef std::shared_ptr<byte_buffer> buffer_ptr;
 
 } // namespace memory
 } // namespace x

@@ -3,6 +3,7 @@
 
 #include <boost/asio.hpp>
 #include "x/common.hpp"
+#include "x/net/connection.hpp"
 
 namespace x {
 namespace conf { class config; }
@@ -49,7 +50,7 @@ private:
     std::unique_ptr<x::conf::config> config_;
     std::unique_ptr<x::ssl::certificate_manager> cert_manager_;
 
-    conn_ptr current_connection_;
+    connection_ptr current_connection_;
 
     MAKE_NONCOPYABLE(server);
 };
