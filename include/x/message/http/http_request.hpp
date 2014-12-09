@@ -9,17 +9,15 @@ namespace http {
 
 class http_request : public http_message {
 public:
+    DEFAULT_CTOR(http_request);
     DEFAULT_DTOR(http_request);
 
-    http_request() : deliverable_(false) {}
-
     virtual bool deliverable() {
-        return deliverable_;
+        return message_completed();
     }
 
     virtual void reset() {
         http_message::reset();
-        deliverable_ = false;
         method_.clear();
         uri_.clear();
     }
@@ -41,7 +39,6 @@ public:
     }
 
 private:
-    bool deliverable_;
     std::string method_;
     std::string uri_;
 
