@@ -30,10 +30,13 @@ bool server::init() {
 
     init_signal_handler();
     init_acceptor();
+
+    return true;
 }
 
 void server::start() {
     start_accept();
+    service_.run();
 }
 
 void server::init_signal_handler() {

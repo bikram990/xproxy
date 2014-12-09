@@ -41,7 +41,6 @@ if(WIN32)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
 
-#find_package(Boost 1.55.0 COMPONENTS atomic system date_time regex filesystem thread chrono REQUIRED)
 find_package(Boost 1.55.0 COMPONENTS system date_time REQUIRED)
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost is not found.")
