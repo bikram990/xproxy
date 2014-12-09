@@ -1,6 +1,8 @@
 #ifndef MESSAGE_HPP
 #define MESSAGE_HPP
 
+#include "x/common.hpp"
+
 namespace x {
 namespace message {
 
