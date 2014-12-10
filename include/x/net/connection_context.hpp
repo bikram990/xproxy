@@ -14,12 +14,12 @@ class connection_context : public std::enable_shared_from_this<connection_contex
 public:
     #warning add more here!
     enum state {
-        CREATED, READY,
+        READY, CLIENT_HANDSHAKE,
     };
 
     connection_context(boost::asio::io_service& service)
         : https_(false),
-          state_(CREATED),
+          state_(READY),
           service_(service) {}
 
     boost::asio::io_service& service() const {
