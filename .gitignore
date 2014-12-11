@@ -25,3 +25,9 @@ GTAGS
 
 # clion
 .idea/
+
+# qtcreator generic project files
+*.creator
+*.files
+*.includes
+*.config
