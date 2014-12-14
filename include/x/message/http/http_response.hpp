@@ -10,6 +10,28 @@ namespace http {
 
 class http_response: public http_message {
 public:
+    enum response_type {
+        SSL_REPLY
+    };
+
+    static std::shared_ptr<http_response> make_response(response_type type) {
+        std::shared_ptr<http_response> response = std::make_shared<http_response>();
+        switch(type) {
+        case SSL_REPLY: {
+            response->set_major_version(1);
+            response->set_minor_version(1);
+            response->set_status(200);
+            response->set_message("Connection Established");
+            response->add_header("Content-Length", "0");
+            response->add_header("Connection","keep-alive");
+            response->add_header("Proxy-Connection", "keep-alive");
+            return response;
+        }
+        default:
+            assert(0);
+        }
+    }
+
     DEFAULT_DTOR(http_response);
 
     http_response() : status_(0) {}

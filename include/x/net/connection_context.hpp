@@ -5,7 +5,7 @@
 #include "x/common.hpp"
 
 namespace x {
-namespace message { class message; }
+namespace message { class message; namespace http { class http_request; }}
 namespace net {
 
 class connection;
@@ -14,7 +14,7 @@ class connection_context : public std::enable_shared_from_this<connection_contex
 public:
     #warning add more here!
     enum state {
-        READY, CLIENT_HANDSHAKE,
+        READY, CLIENT_SSL_REPLYING, CLIENT_HANDSHAKE, SERVER_CONNECTING, SERVER_WRITING
     };
 
     connection_context(boost::asio::io_service& service)
@@ -39,6 +39,9 @@ public:
     void on_server_message(message::message& msg);
 
 private:
+    void parse_destination(const message::http::http_request& request,
+                           bool& https, std::string& host, unsigned short& port);
+
     bool https_;
     state state_;
 
