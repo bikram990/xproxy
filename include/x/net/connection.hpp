@@ -9,6 +9,7 @@
 #include "x/net/connection_context.hpp"
 #include "x/net/socket_wrapper.hpp"
 #include "x/util/counter.hpp"
+#include "x/util/timer.hpp"
 
 namespace x {
 namespace net {
@@ -81,6 +82,7 @@ protected:
     std::string host_;
     unsigned short port_;
     std::unique_ptr<socket_wrapper> socket_;
+    util::timer timer_;
     context_ptr context_;
 
     std::unique_ptr<codec::message_decoder> decoder_;

@@ -11,6 +11,7 @@ connection::connection(context_ptr ctx)
     : connected_(false),
       stopped_(false),
       socket_(new socket_wrapper(ctx->service())),
+      timer_(ctx->service()),
       context_(ctx),
       #warning add more constructions here
       writing_(false) {}
@@ -128,7 +129,7 @@ void connection::do_write() {
 client_connection::client_connection(context_ptr ctx)
     : connection(ctx) {
     decoder_.reset(new codec::http::http_decoder(HTTP_REQUEST));
-    encoder_.reset(new codec::http::http_encoder(HTTP_REQUEST));
+    encoder_.reset(new codec::http::http_encoder(HTTP_RESPONSE));
     message_.reset(new message::http::http_request);
 }
 
@@ -168,6 +169,11 @@ void client_connection::on_connect() {
 
 void client_connection::on_read() {
     context_->on_event(READ, *this);
+    auto self(shared_from_this());
+    timer_.start(30, [self, this] (const boost::system::error_code&) {
+        XERROR_WITH_ID(this) << "waiting for server response timed out.";
+        stop();
+    });
 }
 
 void client_connection::on_write() {
@@ -185,7 +191,7 @@ server_connection::server_connection(context_ptr ctx)
     : connection(ctx),
       resolver_(ctx->service()) {
     decoder_.reset(new codec::http::http_decoder(HTTP_RESPONSE));
-    encoder_.reset(new codec::http::http_encoder(HTTP_RESPONSE));
+    encoder_.reset(new codec::http::http_encoder(HTTP_REQUEST));
     message_.reset(new message::http::http_response);
 }
 
