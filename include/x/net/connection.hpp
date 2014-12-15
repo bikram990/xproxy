@@ -32,8 +32,13 @@ public:
     virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr) = 0;
 
     virtual void read();
-
     virtual void write(const message::message& message);
+
+    virtual void on_connect() = 0;
+    virtual void on_read() = 0;
+    virtual void on_write() = 0;
+    virtual void on_handshake() = 0;
+
 
     void stop();
 
@@ -45,12 +50,29 @@ public:
         return context_;
     }
 
+
+    message::message& get_message() {
+        return *message_;
+    }
+
+    const message::message& get_message() const {
+        return *message_;
+    }
+
     void set_host(const std::string& host) {
         host_ = host;
     }
 
+    std::string get_host() const {
+        return host_;
+    }
+
     void set_port(unsigned short port) {
         port_ = port;
+    }
+
+    unsigned short get_port() const {
+        return port_;
     }
 
 protected:
@@ -86,6 +108,14 @@ public:
     virtual void connect();
 
     virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr);
+
+    virtual void on_connect();
+
+    virtual void on_read();
+
+    virtual void on_write();
+
+    virtual void on_handshake();
 };
 
 class server_connection : public connection {
@@ -99,6 +129,14 @@ public:
     virtual void connect();
 
     virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr);
+
+    virtual void on_connect();
+
+    virtual void on_read();
+
+    virtual void on_write();
+
+    virtual void on_handshake();
 
 private:
     boost::asio::ip::tcp::resolver resolver_;

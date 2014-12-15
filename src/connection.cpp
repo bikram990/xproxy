@@ -37,7 +37,7 @@ void connection::read() {
         assert(consumed == length);
 
         if (message_->deliverable()) {
-            context_->on_client_message(*message_);
+            on_read();
             return;
         }
 
@@ -119,6 +119,7 @@ void connection::do_write() {
         }
 
 #warning add something here
+        on_write();
     });
 
     XDEBUG_WITH_ID(this) << "<= do_write()";
@@ -147,10 +148,37 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
     auto self(shared_from_this());
     socket_->switch_to_ssl(boost::asio::ssl::stream_base::client, ca, dh);
     socket_->async_handshake([self, this] (const boost::system::error_code& e) {
+        if (e) {
+            XERROR_WITH_ID(this) << "handshake error, code: " << e.value()
+                                 << ", message: " << e.message();
+            stop();
+            return;
+        }
+
 #warning do something here
+        on_handshake();
     });
 
     XDEBUG_WITH_ID(this) << "<= handshake()";
+}
+
+void client_connection::on_connect() {
+    assert(0);
+}
+
+void client_connection::on_read() {
+    context_->on_event(READ, *this);
+}
+
+void client_connection::on_write() {
+    context_->on_event(WRITE, *this);
+}
+
+void client_connection::on_handshake() {
+    message_->reset();
+    decoder_->reset();
+
+    read();
 }
 
 server_connection::server_connection(context_ptr ctx)
@@ -192,6 +220,7 @@ void server_connection::connect() {
 
             connected_ = true;
 #warning add something here
+            on_connect();
         });
     });
 
@@ -204,10 +233,34 @@ void server_connection::handshake(ssl::certificate ca, DH *dh) {
     auto self(shared_from_this());
     socket_->switch_to_ssl(boost::asio::ssl::stream_base::server, ca, dh);
     socket_->async_handshake([self, this] (const boost::system::error_code& e) {
+        if (e) {
+            XERROR_WITH_ID(this) << "handshake error, code: " << e.value()
+                                 << ", message: " << e.message();
+            stop();
+            return;
+        }
+
 #warning do something here
+        on_handshake();
     });
 
     XDEBUG_WITH_ID(this) << "<= handshake()";
+}
+
+void server_connection::on_connect() {
+    context_->on_event(CONNECT, *this);
+}
+
+void server_connection::on_read() {
+    context_->on_event(READ, *this);
+}
+
+void server_connection::on_write() {
+    read();
+}
+
+void server_connection::on_handshake() {
+    context_->on_event(HANDSHAKE, *this);
 }
 
 } // namespace net

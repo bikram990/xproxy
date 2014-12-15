@@ -1,11 +1,61 @@
 #include <boost/lexical_cast.hpp>
 #include "x/net/connection.hpp"
 #include "x/net/connection_context.hpp"
+#include "x/net/server.hpp"
 #include "x/message/http/http_request.hpp"
 #include "x/message/http/http_response.hpp"
 
 namespace x {
 namespace net {
+
+boost::asio::io_service& connection_context::service() const {
+    return server_.get_service();
+}
+
+void connection_context::on_event(connection_event event, client_connection& conn) {
+    switch (event) {
+    case READ:
+        return on_client_message(conn.get_message());
+    case WRITE: {
+        if (state_ == CLIENT_SSL_REPLYING) {
+            auto svr_conn(server_conn_.lock());
+            assert(svr_conn);
+            auto& cert_mgr = server_.get_certificate_manager();
+            conn.handshake(cert_mgr.get_certificate(svr_conn->get_host()), cert_mgr.get_dh_parameters());
+        }
+#warning add more code here
+        return;
+    }
+    default:
+        assert(0);
+    }
+}
+
+void connection_context::on_event(connection_event event, server_connection& conn) {
+    switch (event) {
+    case CONNECT: {
+        if (https_) {
+            conn.handshake();
+            return;
+        }
+
+        auto client_conn(client_conn_.lock());
+        assert(client_conn);
+        conn.write(client_conn->get_message());
+        return;
+    }
+    case READ:
+        return on_server_message(conn.get_message());
+    case HANDSHAKE: {
+        auto client_conn(client_conn_.lock());
+        assert(client_conn);
+        conn.write(client_conn->get_message());
+        return;
+    }
+    default:
+        assert(0);
+    }
+}
 
 void connection_context::on_client_message(message::message& msg) {
     assert(state_ == READY || state_ == CLIENT_SSL_REPLYING);
@@ -43,8 +93,8 @@ void connection_context::on_client_message(message::message& msg) {
         auto svr_conn(server_conn_.lock());
         assert(svr_conn);
 
-        svr_conn->write(msg);
-        state_ = SERVER_WRITING;
+        svr_conn->start();
+        state_ = SERVER_CONNECTING;
     }
 }
 
