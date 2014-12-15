@@ -152,6 +152,9 @@ int http_decoder::on_headers_complete(http_parser *parser) {
     // current_header_value_ MUST NOT be empty
     assert(!p->current_header_value_.empty());
 
+    p->message_->set_major_version(parser->http_major);
+    p->message_->set_minor_version(parser->http_minor);
+
     p->message_->add_header(p->current_header_field_, p->current_header_value_);
     p->current_header_field_.clear();
     p->current_header_value_.clear();
