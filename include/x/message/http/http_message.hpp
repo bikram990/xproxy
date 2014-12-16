@@ -14,7 +14,7 @@ class http_message : public message {
 public:
     DEFAULT_DTOR(http_message);
 
-    virtual bool deliverable() = 0;
+    virtual bool deliverable() const = 0;
 
     virtual void reset() {
         major_version_ = 0;

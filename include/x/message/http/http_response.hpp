@@ -36,7 +36,7 @@ public:
 
     http_response() : status_(0) {}
 
-    virtual bool deliverable() {
+    virtual bool deliverable() const {
         return true;
     }
 

@@ -12,8 +12,8 @@ public:
     DEFAULT_CTOR(http_request);
     DEFAULT_DTOR(http_request);
 
-    virtual bool deliverable() {
-        return message_completed();
+    virtual bool deliverable() const {
+        return completed();
     }
 
     virtual void reset() {
