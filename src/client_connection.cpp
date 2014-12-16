@@ -6,6 +6,10 @@
 namespace x {
 namespace net {
 
+enum {
+    SVR_RSP_WAITING_TIME = 5 // seconds
+};
+
 client_connection::client_connection(context_ptr ctx)
     : connection(ctx) {
     decoder_.reset(new codec::http::http_decoder(HTTP_REQUEST));
@@ -48,11 +52,40 @@ void client_connection::on_connect() {
     assert(0);
 }
 
-void client_connection::on_read() {
+void client_connection::on_read(const char *data, std::size_t length) {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    if (length <= 0) {
+        XWARN_WITH_ID(this) << "read, no data.";
+        stop();
+        return;
+    }
+
+    if (message_->completed()) {
+        XERROR_WITH_ID(this) << "message already completed.";
+        stop();
+        return;
+    }
+
+    if (timer_.running())
+        timer_.cancel();
+
+    auto consumed = decoder_->decode(data, length, *message_);
+#warning use macro like xy_assert_retnone(...) here
+    assert(consumed == length);
+
+    if (!message_->deliverable()) {
+        read();
+        return;
+    }
+
     context_->on_event(READ, *this);
     auto self(shared_from_this());
-    timer_.start(30, [self, this] (const boost::system::error_code&) {
-        XERROR_WITH_ID(this) << "waiting for server response timed out.";
+    timer_.start(SVR_RSP_WAITING_TIME, [self, this] (const boost::system::error_code&) {
+        XERROR_WITH_ID(this) << "server response waiting timed out.";
         stop();
     });
 }

@@ -63,7 +63,7 @@ void connection_context::on_client_message(message::message& msg) {
     assert(state_ == READY || state_ == CLIENT_SSL_REPLYING);
     auto request = dynamic_cast<message::http::http_request *>(&msg);
     assert(request);
-    assert(request->message_completed());
+    assert(request->completed());
 
     if (state_ == READY) {
         auto tmp(server_conn_.lock());

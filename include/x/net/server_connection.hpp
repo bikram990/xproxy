@@ -20,7 +20,7 @@ public:
 
     virtual void on_connect();
 
-    virtual void on_read();
+    virtual void on_read(const char *data, std::size_t length);
 
     virtual void on_write();
 

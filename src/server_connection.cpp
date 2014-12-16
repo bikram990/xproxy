@@ -77,8 +77,39 @@ void server_connection::on_connect() {
     context_->on_event(CONNECT, *this);
 }
 
-void server_connection::on_read() {
-    context_->on_event(READ, *this);
+void server_connection::on_read(const char *data, std::size_t length) {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    if (length <= 0) {
+        XERROR_WITH_ID(this) << "read, no data.";
+        stop();
+        return;
+    }
+
+    if (message_->completed()) {
+        XERROR_WITH_ID(this) << "message already completed.";
+        stop();
+        return;
+    }
+
+    if (timer_.running())
+        timer_.cancel();
+
+    auto consumed = decoder_->decode(data, length, *message_);
+#warning use macro like xy_assert_retnone(...) here
+    assert(consumed == length);
+
+    if (message_->deliverable())
+        context_->on_event(READ, *this);
+
+    if (!message_->completed()) {
+        read();
+    } else {
+#warning add message exchange completed logic here
+    }
 }
 
 void server_connection::on_write() {

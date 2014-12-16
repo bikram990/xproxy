@@ -36,7 +36,7 @@ public:
     virtual void write(const message::message& message);
 
     virtual void on_connect() = 0;
-    virtual void on_read() = 0;
+    virtual void on_read(const char *data, std::size_t length) = 0;
     virtual void on_write() = 0;
     virtual void on_handshake() = 0;
 

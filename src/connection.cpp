@@ -28,15 +28,7 @@ void connection::read() {
                             [self, this] (const boost::system::error_code& e, std::size_t length) {
         CHECK_RETURN(e, "read");
 
-        auto consumed = decoder_->decode(buffer_in_.data(), length, *message_);
-        assert(consumed == length);
-
-        if (message_->deliverable()) {
-            on_read();
-            return;
-        }
-
-        read();
+        on_read(buffer_in_.data(), length);
     });
 
     XDEBUG_WITH_ID(this) << "<= read()";

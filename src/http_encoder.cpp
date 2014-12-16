@@ -118,7 +118,7 @@ std::size_t http_encoder::encode_body(const message::http::http_message& msg, me
     buf << memory::byte_buffer::wrap(body.data(body_encoded_), inc);
     body_encoded_ += inc;
 
-    if (msg.message_completed())
+    if (msg.completed())
         state_ = END;
     else
         state_ = BODY;
