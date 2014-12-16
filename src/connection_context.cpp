@@ -99,7 +99,9 @@ void connection_context::on_client_message(message::message& msg) {
 }
 
 void connection_context::on_server_message(message::message& msg) {
-#warning implement logic here
+    auto client_conn(client_conn_.lock());
+    assert(client_conn);
+    client_conn->write(msg);
 }
 
 void connection_context::parse_destination(const message::http::http_request &request,

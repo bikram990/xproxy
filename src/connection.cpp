@@ -131,6 +131,7 @@ client_connection::client_connection(context_ptr ctx)
     decoder_.reset(new codec::http::http_decoder(HTTP_REQUEST));
     encoder_.reset(new codec::http::http_encoder(HTTP_RESPONSE));
     message_.reset(new message::http::http_request);
+    XDEBUG_WITH_ID(this) << "new client connection";
 }
 
 void client_connection::start() {
@@ -193,6 +194,7 @@ server_connection::server_connection(context_ptr ctx)
     decoder_.reset(new codec::http::http_decoder(HTTP_RESPONSE));
     encoder_.reset(new codec::http::http_encoder(HTTP_REQUEST));
     message_.reset(new message::http::http_response);
+    XDEBUG_WITH_ID(this) << "new server connection";
 }
 
 void server_connection::start() {
