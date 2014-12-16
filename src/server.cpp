@@ -1,5 +1,6 @@
 #include "x/conf/config.hpp"
 #include "x/log/log.hpp"
+#include "x/net/client_connection.hpp"
 #include "x/net/connection.hpp"
 #include "x/net/connection_context.hpp"
 #include "x/net/server.hpp"

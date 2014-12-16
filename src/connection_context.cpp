@@ -1,7 +1,9 @@
 #include <boost/lexical_cast.hpp>
+#include "x/net/client_connection.hpp"
 #include "x/net/connection.hpp"
 #include "x/net/connection_context.hpp"
 #include "x/net/server.hpp"
+#include "x/net/server_connection.hpp"
 #include "x/message/http/http_request.hpp"
 #include "x/message/http/http_response.hpp"
 

@@ -40,7 +40,6 @@ public:
     virtual void on_write() = 0;
     virtual void on_handshake() = 0;
 
-
     void stop();
 
     socket_wrapper::socket_type& socket() const {
@@ -50,7 +49,6 @@ public:
     context_ptr get_context() const {
         return context_;
     }
-
 
     message::message& get_message() {
         return *message_;
@@ -97,51 +95,6 @@ private:
     std::array<char, FIXED_BUFFER_SIZE> buffer_in_;
     std::list<memory::buffer_ptr> buffer_out_;
     bool writing_;
-};
-
-class client_connection : public connection {
-public:
-    client_connection(context_ptr ctx);
-
-    DEFAULT_DTOR(client_connection);
-
-    virtual void start();
-
-    virtual void connect();
-
-    virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr);
-
-    virtual void on_connect();
-
-    virtual void on_read();
-
-    virtual void on_write();
-
-    virtual void on_handshake();
-};
-
-class server_connection : public connection {
-public:
-    server_connection(context_ptr ctx);
-
-    DEFAULT_DTOR(server_connection);
-
-    virtual void start();
-
-    virtual void connect();
-
-    virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr);
-
-    virtual void on_connect();
-
-    virtual void on_read();
-
-    virtual void on_write();
-
-    virtual void on_handshake();
-
-private:
-    boost::asio::ip::tcp::resolver resolver_;
 };
 
 typedef std::shared_ptr<connection> connection_ptr;
