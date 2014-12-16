@@ -25,12 +25,12 @@ public:
         body_.clear();
     }
 
-    bool headers_completed() const {
-        return headers_completed_;
+    virtual bool completed() const {
+        return message_completed_;
     }
 
-    bool message_completed() const {
-        return message_completed_;
+    bool headers_completed() const {
+        return headers_completed_;
     }
 
     void headers_completed(bool completed) {

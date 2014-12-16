@@ -13,6 +13,8 @@ public:
     virtual bool deliverable() = 0;
 
     virtual void reset() = 0;
+
+    virtual bool completed() = 0;
 };
 
 } // namespace message
