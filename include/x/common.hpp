@@ -29,4 +29,14 @@
  */
 #define SSL_SHORT_READ(ec) ((ec.value() & 0xFF) == SSL_R_SHORT_READ)
 
+#define CHECK_RETURN(error_code, error_type) \
+    do {\
+        if (error_code) {\
+            XERROR_WITH_ID(this) << error_type << " error, code: " << error_code.value()\
+                                 << ", message: " << error_code.message();\
+            stop();\
+            return;\
+        }\
+    } while(0)
+
 #endif // COMMON_HPP

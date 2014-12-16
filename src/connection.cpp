@@ -26,12 +26,7 @@ void connection::read() {
                             boost::asio::buffer(buffer_in_),
                             boost::asio::transfer_at_least(1),
                             [self, this] (const boost::system::error_code& e, std::size_t length) {
-        if (e) {
-            XERROR_WITH_ID(this) << "read error, code: " << e.value()
-                                 << ", message: " << e.message();
-            stop();
-            return;
-        }
+        CHECK_RETURN(e, "read");
 
         auto consumed = decoder_->decode(buffer_in_.data(), length, *message_);
         assert(consumed == length);
@@ -96,12 +91,7 @@ void connection::do_write() {
     auto self(shared_from_this());
     socket_->async_write_some(boost::asio::buffer(candidate->data(), candidate->size()),
                                                   [self, candidate, this] (const boost::system::error_code& e, std::size_t length) {
-        if (e) {
-            XERROR_WITH_ID(this) << "write error, code: " << e.value()
-                                 << ", message: " << e.message();
-            stop();
-            return;
-        }
+        CHECK_RETURN(e, "write");
 
         writing_ = false;
         if (length < candidate->size()) {
