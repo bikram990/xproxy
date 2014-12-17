@@ -37,6 +37,43 @@
             stop();\
             return;\
         }\
-    } while(0)
+    } while (0)
+
+#warning add stack trace here
+#define ASSERT(exp)\
+    do {\
+        XFATAL << "assertion error: " << #exp\
+               << ", line: " << __LINE__\
+               << ", function: " << __FUNCTION__;\
+        assert((exp) && #exp);\
+    } while (0)
+
+#define ASSERT_RETVAL(exp, ret)\
+    do {\
+        if (exp) break;\
+        ASSERT(exp);\
+        return ret;\
+    } while (0)
+
+#define ASSERT_RETNONE(exp)\
+    do {\
+        if (exp) break;\
+        ASSERT(exp);\
+        return;\
+    } while (0)
+
+#define ASSERT_NOTHING(exp)\
+    do {\
+        if (exp) break;\
+        ASSERT(exp);\
+    } while (0)
+
+#define ASSERT_EXEC_RETNONE(exp, func)\
+    do {\
+        if (exp) break;\
+        ASSERT(exp);\
+        func();\
+        return;\
+    } while (0)
 
 #endif // COMMON_HPP

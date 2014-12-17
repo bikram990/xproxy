@@ -52,9 +52,20 @@ void client_connection::on_connect() {
     assert(0);
 }
 
-void client_connection::on_read(const char *data, std::size_t length) {
+void client_connection::on_read(const boost::system::error_code& e, const char *data, std::size_t length) {
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    if (e) {
+        if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
+            XDEBUG_WITH_ID(this) << "read, EOF in socket, stop.";
+        } else {
+            XERROR_WITH_ID(this) << "read error, code: " << e.value()
+                                 << ", message: " << e.message();
+        }
+        stop();
         return;
     }
 
@@ -74,8 +85,7 @@ void client_connection::on_read(const char *data, std::size_t length) {
         timer_.cancel();
 
     auto consumed = decoder_->decode(data, length, *message_);
-#warning use macro like xy_assert_retnone(...) here
-    assert(consumed == length);
+    ASSERT_EXEC_RETNONE(consumed == length, stop);
 
     if (!message_->deliverable()) {
         read();

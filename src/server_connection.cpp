@@ -77,10 +77,22 @@ void server_connection::on_connect() {
     context_->on_event(CONNECT, *this);
 }
 
-void server_connection::on_read(const char *data, std::size_t length) {
+void server_connection::on_read(const boost::system::error_code& e, const char *data, std::size_t length) {
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
+    }
+
+    if (e) {
+        if (e == boost::asio::error::eof || SSL_SHORT_READ(e)) {
+            XDEBUG_WITH_ID(this) << "read, EOF in socket.";
+            connected_ = false;
+        } else {
+            XERROR_WITH_ID(this) << "read error, code: " << e.value()
+                                 << ", message: " << e.message();
+            stop();
+            return;
+        }
     }
 
     if (length <= 0) {
@@ -99,8 +111,7 @@ void server_connection::on_read(const char *data, std::size_t length) {
         timer_.cancel();
 
     auto consumed = decoder_->decode(data, length, *message_);
-#warning use macro like xy_assert_retnone(...) here
-    assert(consumed == length);
+    ASSERT_EXEC_RETNONE(consumed == length, stop);
 
     if (message_->deliverable())
         context_->on_event(READ, *this);
