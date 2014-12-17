@@ -26,7 +26,7 @@ public:
 
     virtual void on_write();
 
-    virtual void on_handshake();
+    virtual void on_handshake(const boost::system::error_code& e);
 
 private:
     void on_resolve(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it);

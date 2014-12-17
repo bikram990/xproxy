@@ -44,19 +44,12 @@ void server_connection::connect() {
 void server_connection::handshake(ssl::certificate ca, DH *dh) {
     XDEBUG_WITH_ID(this) << "=> handshake()";
 
-    auto self(shared_from_this());
-    socket_->switch_to_ssl(boost::asio::ssl::stream_base::server, ca, dh);
-    socket_->async_handshake([self, this] (const boost::system::error_code& e) {
-        if (e) {
-            XERROR_WITH_ID(this) << "handshake error, code: " << e.value()
-                                 << ", message: " << e.message();
-            stop();
-            return;
-        }
+    auto callback = std::bind(&connection::on_handshake,
+                              shared_from_this(),
+                              std::placeholders::_1);
 
-#warning do something here
-        on_handshake();
-    });
+    socket_->switch_to_ssl(boost::asio::ssl::stream_base::server, ca, dh);
+    socket_->async_handshake(callback);
 
     XDEBUG_WITH_ID(this) << "<= handshake()";
 }
@@ -144,7 +137,14 @@ void server_connection::on_write() {
     read();
 }
 
-void server_connection::on_handshake() {
+void server_connection::on_handshake(const boost::system::error_code& e) {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    CHECK_LOG_EXEC_RETURN(e, "handshake", stop);
+
     context_->on_event(HANDSHAKE, *this);
 }
 

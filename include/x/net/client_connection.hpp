@@ -26,7 +26,7 @@ public:
 
     virtual void on_write();
 
-    virtual void on_handshake();
+    virtual void on_handshake(const boost::system::error_code& e);
 };
 
 } // namespace net
