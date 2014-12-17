@@ -32,28 +32,12 @@ void server_connection::connect() {
 
     using namespace boost::asio::ip;
     auto self(shared_from_this());
-    resolver_.async_resolve(tcp::resolver::query(host_, std::to_string(port_)),
-                            [self, this] (const boost::system::error_code& e, tcp::resolver::iterator it) {
-        if (e) {
-            XERROR_WITH_ID(this) << "resolve error, code: " << e.value()
-                                 << ", message: " << e.message();
-            stop();
-            return;
-        }
+    auto callback = std::bind(&server_connection::on_resolve,
+                              shared_from_this(),
+                              std::placeholders::_1,
+                              std::placeholders::_2);
 
-        socket_->async_connect(it, [self, this] (const boost::system::error_code& e, tcp::resolver::iterator it) {
-            if (e) {
-                XERROR_WITH_ID(this) << "connect error, code: " << e.value()
-                                     << ", message: " << e.message();
-                stop();
-                return;
-            }
-
-            connected_ = true;
-#warning add something here
-            on_connect();
-        });
-    });
+    resolver_.async_resolve(tcp::resolver::query(host_, std::to_string(port_)), callback);
 
     XDEBUG_WITH_ID(this) << "<= connect()";
 }
@@ -93,7 +77,16 @@ void server_connection::reset() {
     });
 }
 
-void server_connection::on_connect() {
+void server_connection::on_connect(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator) {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    CHECK_LOG_EXEC_RETURN(e, "connect", stop);
+
+    connected_ = true;
+
     context_->on_event(CONNECT, *this);
 }
 
@@ -144,11 +137,32 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
 }
 
 void server_connection::on_write() {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
     read();
 }
 
 void server_connection::on_handshake() {
     context_->on_event(HANDSHAKE, *this);
+}
+
+void server_connection::on_resolve(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it) {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    CHECK_LOG_EXEC_RETURN(e, "resolve", stop);
+
+    auto callback = std::bind(&connection::on_connect,
+                              shared_from_this(),
+                              std::placeholders::_1,
+                              std::placeholders::_2);
+
+    socket_->async_connect(it, shared_from_this(), callback);
 }
 
 } // namespace net

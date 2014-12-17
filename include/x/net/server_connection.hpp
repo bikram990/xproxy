@@ -20,7 +20,7 @@ public:
 
     virtual void reset();
 
-    virtual void on_connect();
+    virtual void on_connect(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it);
 
     virtual void on_read(const boost::system::error_code& e, const char *data, std::size_t length);
 
@@ -29,6 +29,8 @@ public:
     virtual void on_handshake();
 
 private:
+    void on_resolve(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it);
+
     boost::asio::ip::tcp::resolver resolver_;
 };
 

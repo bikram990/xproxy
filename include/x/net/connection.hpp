@@ -36,7 +36,7 @@ public:
     virtual void write(const message::message& message);
     virtual void reset();
 
-    virtual void on_connect() = 0;
+    virtual void on_connect(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it) = 0;
     virtual void on_read(const boost::system::error_code& e, const char *data, std::size_t length) = 0;
     virtual void on_write() = 0;
     virtual void on_handshake() = 0;

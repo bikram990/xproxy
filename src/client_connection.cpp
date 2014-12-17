@@ -27,7 +27,7 @@ void client_connection::start() {
 }
 
 void client_connection::connect() {
-    assert(0);
+    ASSERT_EXEC_RETNONE(0, stop);
 }
 
 void client_connection::handshake(ssl::certificate ca, DH *dh) {
@@ -67,8 +67,8 @@ void client_connection::reset() {
     read();
 }
 
-void client_connection::on_connect() {
-    assert(0);
+void client_connection::on_connect(const boost::system::error_code&, boost::asio::ip::tcp::resolver::iterator) {
+    ASSERT_EXEC_RETNONE(0, stop);
 }
 
 void client_connection::on_read(const boost::system::error_code& e, const char *data, std::size_t length) {
@@ -120,6 +120,11 @@ void client_connection::on_read(const boost::system::error_code& e, const char *
 }
 
 void client_connection::on_write() {
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
     context_->on_event(WRITE, *this);
 }
 
