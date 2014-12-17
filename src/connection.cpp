@@ -39,7 +39,6 @@ void connection::read() {
 void connection::write() {
     XDEBUG_WITH_ID(this) << "=> write()";
 
-    ASSERT_EXEC_RETNONE(connected_, stop);
     ASSERT_EXEC_RETNONE(!stopped_,stop);
 
     do_write();
@@ -50,7 +49,6 @@ void connection::write() {
 void connection::write(const message::message& message) {
     XDEBUG_WITH_ID(this) << "=> write(msg)";
 
-    ASSERT_EXEC_RETNONE(connected_, stop);
     ASSERT_EXEC_RETNONE(!stopped_, stop);
 
     memory::buffer_ptr buf(new memory::byte_buffer);
@@ -96,6 +94,10 @@ void connection::stop() {
 void connection::do_write() {
     if (writing_) return;
     if (buffer_out_.empty()) return;
+    if (!connected_) {
+        start();
+        return;
+    }
 
     XDEBUG_WITH_ID(this) << "=> do_write()";
 

@@ -47,17 +47,13 @@ void connection_context::on_event(connection_event event, server_connection& con
             return;
         }
 
-        auto client_conn(client_conn_.lock());
-        assert(client_conn);
-        conn.write(client_conn->get_message());
+        conn.write();
         return;
     }
     case READ:
         return on_server_message(conn.get_message());
     case HANDSHAKE: {
-        auto client_conn(client_conn_.lock());
-        assert(client_conn);
-        conn.write(client_conn->get_message());
+        conn.write();
         return;
     }
     default:
@@ -86,8 +82,8 @@ void connection_context::on_client_message(message::message& msg) {
         server_conn_ = svr_conn;
 
         if (!https_) {
-            svr_conn->start();
-            state_ = SERVER_CONNECTING;
+            svr_conn->write(msg);
+            state_ = SERVER_WRITING;
         } else{
             auto client_conn(client_conn_.lock());
             assert(client_conn);
@@ -101,8 +97,8 @@ void connection_context::on_client_message(message::message& msg) {
         auto svr_conn(server_conn_.lock());
         assert(svr_conn);
 
-        svr_conn->start();
-        state_ = SERVER_CONNECTING;
+        svr_conn->write(msg);
+        state_ = SERVER_WRITING;
     }
 }
 
