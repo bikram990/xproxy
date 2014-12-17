@@ -7,7 +7,9 @@ namespace x {
 namespace net {
 
 enum {
-    SVR_RSP_WAITING_TIME = 5 // seconds
+    // all values are measured by second
+    SVR_RSP_WAITING_TIME = 5,
+    IDLE_WAITING_TIME = 60
 };
 
 client_connection::client_connection(context_ptr ctx)
@@ -46,6 +48,23 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
     });
 
     XDEBUG_WITH_ID(this) << "<= handshake()";
+}
+
+void client_connection::reset() {
+    connection::reset();
+    // do not reset context here, it will reset itself
+    // context_->reset();
+    decoder_->reset();
+    encoder_->reset();
+    message_->reset();
+
+    auto self(shared_from_this());
+    timer_.start(IDLE_WAITING_TIME, [self, this] (const boost::system::error_code&) {
+        XERROR_WITH_ID(this) << "idle waiting timed out.";
+        stop();
+    });
+
+    read();
 }
 
 void client_connection::on_connect() {

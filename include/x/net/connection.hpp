@@ -34,6 +34,7 @@ public:
 
     virtual void read();
     virtual void write(const message::message& message);
+    virtual void reset();
 
     virtual void on_connect() = 0;
     virtual void on_read(const boost::system::error_code& e, const char *data, std::size_t length) = 0;
@@ -89,6 +90,7 @@ protected:
 
 private:
     void do_write();
+    void on_write(const boost::system::error_code& e, std::size_t length);
 
     enum { FIXED_BUFFER_SIZE = 8192 };
 

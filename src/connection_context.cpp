@@ -24,8 +24,14 @@ void connection_context::on_event(connection_event event, client_connection& con
             assert(svr_conn);
             auto& cert_mgr = server_.get_certificate_manager();
             conn.handshake(cert_mgr.get_certificate(svr_conn->get_host()), cert_mgr.get_dh_parameters());
+            return;
         }
-#warning add more code here
+
+        if (message_exchange_completed_) {
+#warning check field keep-alive here, close the socket if it does not require keeping alive
+            conn.reset();
+        }
+
         return;
     }
     default:

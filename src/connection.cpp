@@ -39,6 +39,9 @@ void connection::read() {
 void connection::write(const message::message &message) {
     XDEBUG_WITH_ID(this) << "=> write()";
 
+    ASSERT_EXEC_RETNONE(connected_, stop);
+    ASSERT_EXEC_RETNONE(!stopped_, stop);
+
     memory::buffer_ptr buf(new memory::byte_buffer);
     encoder_->encode(message, *buf);
 
@@ -46,6 +49,11 @@ void connection::write(const message::message &message) {
     do_write();
 
     XDEBUG_WITH_ID(this) << "<= write()";
+}
+
+void connection::reset() {
+    buffer_out_.clear();
+    writing_ = false;
 }
 
 void connection::stop() {
@@ -81,32 +89,47 @@ void connection::do_write() {
     XDEBUG_WITH_ID(this) << "=> do_write()";
 
     writing_ = true;
+
+    auto callback = std::bind(static_cast<void(connection::*)(const::boost::system::error_code&,
+                                                              std::size_t)>(&connection::on_write),
+                              shared_from_this(),
+                              std::placeholders::_1,
+                              std::placeholders::_2);
+
     auto& candidate = buffer_out_.front();
-    auto self(shared_from_this());
-    socket_->async_write_some(boost::asio::buffer(candidate->data(), candidate->size()),
-                                                  [self, candidate, this] (const boost::system::error_code& e, std::size_t length) {
-        CHECK_RETURN(e, "write");
-
-        writing_ = false;
-        if (length < candidate->size()) {
-            XERROR_WITH_ID(this) << "write incomplete, continue.";
-            candidate->erase(0, length);
-            do_write();
-            return;
-        }
-
-        buffer_out_.erase(buffer_out_.begin());
-        if (!buffer_out_.empty()) {
-            XDEBUG_WITH_ID(this) << "more buffers added, continue.";
-            do_write();
-            return;
-        }
-
-#warning add something here
-        on_write();
-    });
+    socket_->async_write_some(boost::asio::buffer(candidate->data(),
+                                                  candidate->size()),
+                              callback);
 
     XDEBUG_WITH_ID(this) << "<= do_write()";
+}
+
+void connection::on_write(const boost::system::error_code& e, std::size_t length) {
+    writing_ = false;
+
+    if (stopped_) {
+        XERROR_WITH_ID(this) << "connection stopped.";
+        return;
+    }
+
+    CHECK_LOG_EXEC_RETURN(e, "write", stop);
+
+    auto it = buffer_out_.begin();
+    if (length < (*it)->size()) {
+        XERROR_WITH_ID(this) << "write incomplete, continue.";
+        (*it)->erase(0, length);
+        do_write();
+        return;
+    }
+
+    buffer_out_.erase(it);
+    if (!buffer_out_.empty()) {
+        XDEBUG_WITH_ID(this) << "more buffers added, continue.";
+        do_write();
+        return;
+    }
+
+    on_write();
 }
 
 } // namespace net

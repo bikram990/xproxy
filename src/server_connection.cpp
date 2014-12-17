@@ -6,6 +6,11 @@
 namespace x {
 namespace net {
 
+enum {
+    // all values are measured by second
+    IDLE_WAITING_TIME = 15
+};
+
 server_connection::server_connection(context_ptr ctx)
     : connection(ctx),
       resolver_(ctx->service()) {
@@ -71,6 +76,21 @@ void server_connection::handshake(ssl::certificate ca, DH *dh) {
     });
 
     XDEBUG_WITH_ID(this) << "<= handshake()";
+}
+
+void server_connection::reset() {
+    connection::reset();
+    // do not reset context here, it will reset itself
+    // context_->reset();
+    decoder_->reset();
+    encoder_->reset();
+    message_->reset();
+
+    auto self(shared_from_this());
+    timer_.start(IDLE_WAITING_TIME, [self, this] (const boost::system::error_code&) {
+        XERROR_WITH_ID(this) << "idle waiting timed out.";
+        stop();
+    });
 }
 
 void server_connection::on_connect() {

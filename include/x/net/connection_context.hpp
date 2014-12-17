@@ -26,6 +26,7 @@ public:
 
     connection_context(server& svr)
         : https_(false),
+          message_exchange_completed_(false),
           state_(READY),
           server_(svr) {}
 
@@ -50,6 +51,7 @@ private:
                            bool& https, std::string& host, unsigned short& port);
 
     bool https_;
+    bool message_exchange_completed_;
     state state_;
 
     server& server_;
