@@ -82,7 +82,8 @@ void connection::stop() {
     XDEBUG_WITH_ID(this) << "stopping connection...";
 
     // cancel timer
-    #warning add code here
+    if (timer_.running())
+        timer_.cancel();
 
     // close socket
     if (connected_ && socket_) {
