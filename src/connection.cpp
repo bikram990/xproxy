@@ -3,6 +3,7 @@
 #include "x/message/http/http_request.hpp"
 #include "x/message/http/http_response.hpp"
 #include "x/net/connection.hpp"
+#include <functional>
 
 namespace x {
 namespace net {
@@ -18,18 +19,19 @@ connection::connection(context_ptr ctx)
 void connection::read() {
     XDEBUG_WITH_ID(this) << "=> read()";
 
-    assert(connected_);
-    assert(!stopped_);
+    ASSERT_EXEC_RETNONE(connected_, stop);
+    ASSERT_EXEC_RETNONE(!stopped_, stop);
 
-    auto self(shared_from_this());
+    auto callback = std::bind(&connection::on_read,
+                              shared_from_this(),
+                              std::placeholders::_1,
+                              buffer_in_.data(),
+                              std::placeholders::_2);
+
     boost::asio::async_read(*socket_,
                             boost::asio::buffer(buffer_in_),
                             boost::asio::transfer_at_least(1),
-                            [self, this] (const boost::system::error_code& e, std::size_t length) {
-        CHECK_RETURN(e, "read");
-
-        on_read(buffer_in_.data(), length);
-    });
+                            callback);
 
     XDEBUG_WITH_ID(this) << "<= read()";
 }
