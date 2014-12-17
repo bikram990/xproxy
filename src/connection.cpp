@@ -54,7 +54,9 @@ void connection::write(const message::message& message) {
     memory::buffer_ptr buf(new memory::byte_buffer);
     encoder_->encode(message, *buf);
 
-    buffer_out_.push_back(buf);
+    if (buf->size() > 0)
+        buffer_out_.push_back(buf);
+
     do_write();
 
     XDEBUG_WITH_ID(this) << "<= write(msg)";

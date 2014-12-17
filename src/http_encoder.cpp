@@ -108,10 +108,6 @@ std::size_t http_encoder::encode_headers(const message::http::http_message& msg,
 std::size_t http_encoder::encode_body(const message::http::http_message& msg, memory::byte_buffer& buf) {
     assert(msg.headers_completed());
     assert(state_ == HEADERS || state_ == BODY);
-    if (state_ == HEADERS)
-        assert(body_encoded_ == 0);
-    else
-        assert(body_encoded_ > 0);
 
     auto& body = msg.get_body();
     auto inc = body.size() - body_encoded_;
