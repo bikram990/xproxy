@@ -32,6 +32,8 @@ public:
 
     boost::asio::io_service& service() const;
 
+    void reset();
+
     void set_client_connection(std::shared_ptr<connection> connection) {
         client_conn_ = connection;
     }

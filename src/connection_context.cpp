@@ -14,6 +14,11 @@ boost::asio::io_service& connection_context::service() const {
     return server_.get_service();
 }
 
+void connection_context::reset() {
+    message_exchange_completed_= false;
+    state_ = READY;
+}
+
 void connection_context::on_event(connection_event event, client_connection& conn) {
     switch (event) {
     case READ:
@@ -28,8 +33,14 @@ void connection_context::on_event(connection_event event, client_connection& con
         }
 
         if (message_exchange_completed_) {
-#warning check field keep-alive here, close the socket if it does not require keeping alive
-            conn.reset();
+            if (conn.keep_alive()) {
+                conn.reset();
+                // as when client's on_write is invoked, the server connection
+                // is already reset earlier, so we reset the context itself here
+                reset();
+            } else {
+                conn.stop();
+            }
         }
 
         return;
@@ -110,10 +121,17 @@ void connection_context::on_server_message(message::message& msg) {
 
     client_conn->write(msg);
 
-    if (msg.completed()) {
-        message_exchange_completed_ = true;
-        server_conn->reset();
+    if (!msg.completed()) {
+        server_conn->read();
+        return;
     }
+
+    message_exchange_completed_ = true;
+
+    if (server_conn->keep_alive())
+        server_conn->reset();
+    else
+        server_conn->stop();
 }
 
 void connection_context::parse_destination(const message::http::http_request &request,

@@ -12,6 +12,8 @@ public:
 
     DEFAULT_DTOR(server_connection);
 
+    virtual bool keep_alive();
+
     virtual void start();
 
     virtual void connect();

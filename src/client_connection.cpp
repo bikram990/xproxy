@@ -20,6 +20,11 @@ client_connection::client_connection(context_ptr ctx)
     XDEBUG_WITH_ID(this) << "new client connection";
 }
 
+bool client_connection::keep_alive() {
+    codec::message_decoder *decoder = decoder_.get();
+    return dynamic_cast<codec::http::http_decoder *>(decoder)->keep_alive();
+}
+
 void client_connection::start() {
     connected_ = true;
     context_->set_client_connection(shared_from_this());

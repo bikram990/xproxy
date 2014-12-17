@@ -20,6 +20,11 @@ server_connection::server_connection(context_ptr ctx)
     XDEBUG_WITH_ID(this) << "new server connection";
 }
 
+bool server_connection::keep_alive() {
+    codec::message_decoder *decoder = decoder_.get();
+    return dynamic_cast<codec::http::http_decoder *>(decoder)->keep_alive();
+}
+
 void server_connection::start() {
     assert(host_.length() > 0);
     assert(port_ != 0);

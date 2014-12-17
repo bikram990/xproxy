@@ -28,6 +28,8 @@ public:
 
     DEFAULT_DTOR(connection);
 
+    virtual bool keep_alive() = 0;
+
     virtual void start() = 0;
     virtual void connect() = 0;
     virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr) = 0;
