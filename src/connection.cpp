@@ -41,6 +41,9 @@ void connection::write() {
 
     ASSERT_EXEC_RETNONE(!stopped_,stop);
 
+    if (timer_.running())
+        timer_.cancel();
+
     do_write();
 
     XDEBUG_WITH_ID(this) << "<= write()";
@@ -50,6 +53,9 @@ void connection::write(const message::message& message) {
     XDEBUG_WITH_ID(this) << "=> write(msg)";
 
     ASSERT_EXEC_RETNONE(!stopped_, stop);
+
+    if (timer_.running())
+        timer_.cancel();
 
     memory::buffer_ptr buf(new memory::byte_buffer);
     encoder_->encode(message, *buf);
