@@ -104,8 +104,16 @@ void connection_context::on_client_message(message::message& msg) {
 
 void connection_context::on_server_message(message::message& msg) {
     auto client_conn(client_conn_.lock());
+    auto server_conn(server_conn_.lock());
     assert(client_conn);
+    assert(server_conn);
+
     client_conn->write(msg);
+
+    if (msg.completed()) {
+        message_exchange_completed_ = true;
+        server_conn->reset();
+    }
 }
 
 void connection_context::parse_destination(const message::http::http_request &request,
