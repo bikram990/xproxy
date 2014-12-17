@@ -31,9 +31,8 @@ void server_connection::connect() {
     XDEBUG_WITH_ID(this) << "=> connect()";
 
     using namespace boost::asio::ip;
-    auto self(shared_from_this());
     auto callback = std::bind(&server_connection::on_resolve,
-                              shared_from_this(),
+                              std::dynamic_pointer_cast<server_connection>(shared_from_this()),
                               std::placeholders::_1,
                               std::placeholders::_2);
 
@@ -162,7 +161,7 @@ void server_connection::on_resolve(const boost::system::error_code& e, boost::as
                               std::placeholders::_1,
                               std::placeholders::_2);
 
-    socket_->async_connect(it, shared_from_this(), callback);
+    socket_->async_connect(it, callback);
 }
 
 } // namespace net
