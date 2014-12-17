@@ -33,6 +33,7 @@ public:
     virtual void handshake(ssl::certificate ca = ssl::certificate(), DH *dh = nullptr) = 0;
 
     virtual void read();
+    virtual void write();
     virtual void write(const message::message& message);
     virtual void reset();
 

@@ -36,8 +36,19 @@ void connection::read() {
     XDEBUG_WITH_ID(this) << "<= read()";
 }
 
-void connection::write(const message::message &message) {
+void connection::write() {
     XDEBUG_WITH_ID(this) << "=> write()";
+
+    ASSERT_EXEC_RETNONE(connected_, stop);
+    ASSERT_EXEC_RETNONE(!stopped_,stop);
+
+    do_write();
+
+    XDEBUG_WITH_ID(this) << "<= write()";
+}
+
+void connection::write(const message::message& message) {
+    XDEBUG_WITH_ID(this) << "=> write(msg)";
 
     ASSERT_EXEC_RETNONE(connected_, stop);
     ASSERT_EXEC_RETNONE(!stopped_, stop);
@@ -48,7 +59,7 @@ void connection::write(const message::message &message) {
     buffer_out_.push_back(buf);
     do_write();
 
-    XDEBUG_WITH_ID(this) << "<= write()";
+    XDEBUG_WITH_ID(this) << "<= write(msg)";
 }
 
 void connection::reset() {
