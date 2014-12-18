@@ -130,14 +130,12 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
     auto consumed = decoder_->decode(data, length, *message_);
     ASSERT_EXEC_RETNONE(consumed == length, stop);
 
-    if (message_->deliverable())
-        context_->on_event(READ, *this);
-
-    if (!message_->completed()) {
+    if (!message_->deliverable()) {
         read();
-    } else {
-#warning add message exchange completed logic here
+        return;
     }
+
+    context_->on_event(READ, *this);
 }
 
 void server_connection::on_write() {
