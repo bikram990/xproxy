@@ -3,7 +3,6 @@
 #include "x/message/http/http_request.hpp"
 #include "x/message/http/http_response.hpp"
 #include "x/net/connection.hpp"
-#include <functional>
 
 namespace x {
 namespace net {
