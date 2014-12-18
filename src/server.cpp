@@ -49,6 +49,8 @@ void server::init_signal_handler() {
     // signals_.add(SIGQUIT);
     signals_.async_wait([this] (const boost::system::error_code&, int) {
         XINFO << "stopping xProxy...";
+        client_conn_mgr_->stop_all();
+        server_conn_mgr_->stop_all();
         acceptor_.close();
     });
 }
@@ -69,8 +71,12 @@ void server::start_accept() {
     acceptor_.async_accept(current_connection_->socket(),
                            [this] (const boost::system::error_code& e) {
         if (e) {
-            XERROR << "accept error, code: " << e.value()
-                   << ", message: " << e.message();
+            if (e == boost::asio::error::operation_aborted) {
+                XDEBUG << "closing acceptor...";
+            } else {
+                XERROR << "accept error, code: " << e.value()
+                       << ", message: " << e.message();
+            }
             return;
         }
 
