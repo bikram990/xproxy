@@ -12,8 +12,8 @@ enum {
     IDLE_WAITING_TIME = 60
 };
 
-client_connection::client_connection(context_ptr ctx)
-    : connection(ctx) {
+client_connection::client_connection(context_ptr ctx, connection_manager& mgr)
+    : connection(ctx, mgr) {
     decoder_.reset(new codec::http::http_decoder(HTTP_REQUEST));
     encoder_.reset(new codec::http::http_encoder(HTTP_RESPONSE));
     message_.reset(new message::http::http_request);

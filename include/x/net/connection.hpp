@@ -14,6 +14,8 @@
 namespace x {
 namespace net {
 
+class connection_manager;
+
 class connection : public util::counter<connection>,
                    public std::enable_shared_from_this<connection> {
 public:
@@ -24,7 +26,7 @@ public:
         DISCONNECTED, STOPPED
     };
 
-    connection(context_ptr ctx);
+    connection(context_ptr ctx, connection_manager& mgr);
 
     DEFAULT_DTOR(connection);
 
@@ -45,6 +47,10 @@ public:
     virtual void on_handshake(const boost::system::error_code& e) = 0;
 
     void stop();
+
+    void detach() {
+        manager_ = nullptr;
+    }
 
     socket_wrapper::socket_type& socket() const {
         return socket_->socket();
@@ -100,6 +106,8 @@ private:
     std::array<char, FIXED_BUFFER_SIZE> buffer_in_;
     std::list<memory::buffer_ptr> buffer_out_;
     bool writing_;
+
+    connection_manager *manager_;
 };
 
 typedef std::shared_ptr<connection> connection_ptr;

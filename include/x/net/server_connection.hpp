@@ -8,7 +8,7 @@ namespace net {
 
 class server_connection : public connection {
 public:
-    server_connection(context_ptr ctx);
+    server_connection(context_ptr ctx, connection_manager& mgr);
 
     DEFAULT_DTOR(server_connection);
 

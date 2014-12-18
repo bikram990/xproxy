@@ -3,17 +3,19 @@
 #include "x/message/http/http_request.hpp"
 #include "x/message/http/http_response.hpp"
 #include "x/net/connection.hpp"
+#include "x/net/connection_manager.hpp"
 
 namespace x {
 namespace net {
 
-connection::connection(context_ptr ctx)
+connection::connection(context_ptr ctx, connection_manager& mgr)
     : connected_(false),
       stopped_(false),
       socket_(new socket_wrapper(ctx->service())),
       timer_(ctx->service()),
       context_(ctx),
-      writing_(false) {}
+      writing_(false),
+      manager_(&mgr) {}
 
 void connection::read() {
     XDEBUG_WITH_ID(this) << "=> read()";
@@ -95,6 +97,9 @@ void connection::stop() {
     // auto session = session_.lock();
     // if (session)
     //     session->on_connection_stop(shared_from_this());
+
+    if (manager_)
+        manager_->erase(shared_from_this());
 
     stopped_ = true;
 }

@@ -86,7 +86,8 @@ void connection_context::on_client_message(message::message& msg) {
         unsigned short port;
         parse_destination(*request, https_, host, port);
 
-        auto svr_conn = std::make_shared<server_connection>(shared_from_this());
+        auto svr_conn = std::make_shared<server_connection>(shared_from_this(),
+                                                            server_.get_server_connection_manager());
         svr_conn->set_host(host);
         svr_conn->set_port(port);
 

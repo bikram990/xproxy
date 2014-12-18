@@ -11,8 +11,8 @@ enum {
     IDLE_WAITING_TIME = 15
 };
 
-server_connection::server_connection(context_ptr ctx)
-    : connection(ctx),
+server_connection::server_connection(context_ptr ctx, connection_manager& mgr)
+    : connection(ctx, mgr),
       resolver_(ctx->service()) {
     decoder_.reset(new codec::http::http_decoder(HTTP_RESPONSE));
     encoder_.reset(new codec::http::http_encoder(HTTP_REQUEST));

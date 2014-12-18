@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include "x/common.hpp"
 #include "x/net/connection.hpp"
+#include "x/net/connection_manager.hpp"
 
 namespace x {
 namespace conf { class config; }
@@ -34,6 +35,14 @@ public:
         return *cert_manager_;
     }
 
+    x::net::connection_manager& get_client_connection_manager() const {
+        return *client_conn_mgr_;
+    }
+
+    x::net::connection_manager& get_server_connection_manager() const {
+        return *server_conn_mgr_;
+    }
+
 private:
     void init_signal_handler();
 
@@ -49,6 +58,8 @@ private:
 
     std::unique_ptr<x::conf::config> config_;
     std::unique_ptr<x::ssl::certificate_manager> cert_manager_;
+    std::unique_ptr<x::net::connection_manager> client_conn_mgr_;
+    std::unique_ptr<x::net::connection_manager> server_conn_mgr_;
 
     connection_ptr current_connection_;
 

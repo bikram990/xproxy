@@ -13,7 +13,9 @@ server::server()
     : signals_(service_),
       acceptor_(service_),
       config_(new x::conf::config),
-      cert_manager_(new x::ssl::certificate_manager) {}
+      cert_manager_(new x::ssl::certificate_manager),
+      client_conn_mgr_(new x::net::connection_manager),
+      server_conn_mgr_(new x::net::connection_manager) {}
 
 bool server::init() {
     if (!config_->load_config()) {
@@ -63,7 +65,7 @@ void server::init_acceptor() {
 
 void server::start_accept() {
     context_ptr ctx(new connection_context(*this));
-    current_connection_.reset(new client_connection(ctx));
+    current_connection_.reset(new client_connection(ctx, *client_conn_mgr_));
     acceptor_.async_accept(current_connection_->socket(),
                            [this] (const boost::system::error_code& e) {
         if (e) {
@@ -80,7 +82,7 @@ void server::start_accept() {
         XDEBUG << "new client connection, id: " << current_connection_->id()
                << ", addr: " << addr << ", port: " << port;
 
-        current_connection_->start();
+        client_conn_mgr_->start(current_connection_);
 
         start_accept();
     });
