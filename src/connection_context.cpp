@@ -79,19 +79,20 @@ void connection_context::on_client_message(message::message& msg) {
     assert(request->completed());
 
     if (state_ == READY) {
-        auto tmp(server_conn_.lock());
-        assert(!tmp);
+        auto svr_conn(server_conn_.lock());
 
-        std::string host;
-        unsigned short port;
-        parse_destination(*request, https_, host, port);
+        if (!svr_conn) {
+            std::string host;
+            unsigned short port;
+            parse_destination(*request, https_, host, port);
 
-        auto svr_conn = std::make_shared<server_connection>(shared_from_this(),
-                                                            server_.get_server_connection_manager());
-        svr_conn->set_host(host);
-        svr_conn->set_port(port);
+            svr_conn = std::make_shared<server_connection>(shared_from_this(),
+                                                           server_.get_server_connection_manager());
+            svr_conn->set_host(host);
+            svr_conn->set_port(port);
+            server_conn_ = svr_conn;
+        }
 
-        server_conn_ = svr_conn;
 
         if (!https_) {
             svr_conn->write(msg);
