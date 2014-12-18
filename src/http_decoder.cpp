@@ -28,10 +28,10 @@ std::size_t http_decoder::decode(const char *begin, std::size_t length, message:
     if (consumed != length) {
         if (HTTP_PARSER_ERRNO(&parser_) != HPE_OK) {
             XERROR << "decode error, code: " << parser_.http_errno
-                   << ", message: " << error_message();
-            XERROR << "----- error message dump begin -----";
-            XERROR << std::string(begin, length);
-            XERROR << "-----  error message dump end  -----";
+                   << ", message: " << error_message() << '\n'
+                   << "----- error message dump begin -----\n"
+                   << std::string(begin, length)
+                   << "\n-----  error message dump end  -----";
             return 0;
         } else {
             #warning TODO will this happen? a message is parsed, but there is still data?
