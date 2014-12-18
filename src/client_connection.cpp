@@ -2,6 +2,7 @@
 #include "x/codec/http/http_encoder.hpp"
 #include "x/message/http/http_request.hpp"
 #include "x/net/client_connection.hpp"
+#include "x/net/connection_manager.hpp"
 
 namespace x {
 namespace net {
@@ -27,7 +28,11 @@ bool client_connection::keep_alive() {
 
 void client_connection::start() {
     connected_ = true;
-    context_->set_client_connection(shared_from_this());
+
+    auto self(shared_from_this());
+    context_->set_client_connection(self);
+    manager_->add(self);
+
     read();
 }
 
@@ -98,8 +103,10 @@ void client_connection::on_read(const boost::system::error_code& e, const char *
         return;
     }
 
-    if (timer_.running())
+    if (timer_.running()) {
+        XDEBUG_WITH_ID(this) << "cancel running timer.";
         timer_.cancel();
+    }
 
     auto consumed = decoder_->decode(data, length, *message_);
     ASSERT_EXEC_RETNONE(consumed == length, stop);

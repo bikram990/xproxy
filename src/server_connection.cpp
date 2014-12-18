@@ -1,6 +1,7 @@
 #include "x/codec/http/http_decoder.hpp"
 #include "x/codec/http/http_encoder.hpp"
 #include "x/message/http/http_response.hpp"
+#include "x/net/connection_manager.hpp"
 #include "x/net/server_connection.hpp"
 
 namespace x {
@@ -28,6 +29,10 @@ bool server_connection::keep_alive() {
 void server_connection::start() {
     assert(host_.length() > 0);
     assert(port_ != 0);
+
+    auto self(shared_from_this());
+    context_->set_server_connection(self);
+    manager_->add(self);
 
     connect();
 }
@@ -117,8 +122,10 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
         return;
     }
 
-    if (timer_.running())
+    if (timer_.running()) {
+        XDEBUG_WITH_ID(this) << "cancel running timer.";
         timer_.cancel();
+    }
 
     auto consumed = decoder_->decode(data, length, *message_);
     ASSERT_EXEC_RETNONE(consumed == length, stop);

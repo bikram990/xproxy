@@ -96,6 +96,7 @@ protected:
     std::unique_ptr<codec::message_decoder> decoder_;
     std::unique_ptr<codec::message_encoder> encoder_;
     std::unique_ptr<message::message> message_;
+    connection_manager *manager_;
 
 private:
     void do_write();
@@ -106,8 +107,6 @@ private:
     std::array<char, FIXED_BUFFER_SIZE> buffer_in_;
     std::list<memory::buffer_ptr> buffer_out_;
     bool writing_;
-
-    connection_manager *manager_;
 };
 
 typedef std::shared_ptr<connection> connection_ptr;

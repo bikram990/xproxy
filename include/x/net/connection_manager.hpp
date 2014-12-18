@@ -10,9 +10,8 @@ class connection_manager {
 public:
     DEFAULT_CTOR_AND_DTOR(connection_manager);
 
-    void start(connection_ptr conn) {
+    void add(connection_ptr conn) {
         connections_.insert(conn);
-        conn->start();
     }
 
     void erase(connection_ptr conn) {
