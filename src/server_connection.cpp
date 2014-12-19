@@ -65,6 +65,8 @@ void server_connection::handshake(ssl::certificate ca, DH *dh) {
 }
 
 void server_connection::reset() {
+    XDEBUG_WITH_ID(this) << "resetting server connection...";
+
     connection::reset();
     // do not reset context here, it will reset itself
     // context_->reset();
@@ -80,6 +82,8 @@ void server_connection::reset() {
 }
 
 void server_connection::on_connect(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator) {
+    XDEBUG_WITH_ID(this) << "on_connect() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
@@ -93,6 +97,8 @@ void server_connection::on_connect(const boost::system::error_code& e, boost::as
 }
 
 void server_connection::on_read(const boost::system::error_code& e, const char *data, std::size_t length) {
+    XDEBUG_WITH_ID(this) << "on_read() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
@@ -139,6 +145,8 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
 }
 
 void server_connection::on_write() {
+    XDEBUG_WITH_ID(this) << "on_write() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
@@ -148,6 +156,8 @@ void server_connection::on_write() {
 }
 
 void server_connection::on_handshake(const boost::system::error_code& e) {
+    XDEBUG_WITH_ID(this) << "on_handshake() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
@@ -159,6 +169,8 @@ void server_connection::on_handshake(const boost::system::error_code& e) {
 }
 
 void server_connection::on_resolve(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it) {
+    XDEBUG_WITH_ID(this) << "on_resolve() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;

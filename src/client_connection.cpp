@@ -54,6 +54,8 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
 }
 
 void client_connection::reset() {
+    XDEBUG_WITH_ID(this) << "resetting client connection...";
+
     connection::reset();
     // do not reset context here, it will reset itself
     // context_->reset();
@@ -75,6 +77,8 @@ void client_connection::on_connect(const boost::system::error_code&, boost::asio
 }
 
 void client_connection::on_read(const boost::system::error_code& e, const char *data, std::size_t length) {
+    XDEBUG_WITH_ID(this) << "on_read() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
@@ -125,6 +129,8 @@ void client_connection::on_read(const boost::system::error_code& e, const char *
 }
 
 void client_connection::on_write() {
+    XDEBUG_WITH_ID(this) << "on_write() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;
@@ -134,6 +140,8 @@ void client_connection::on_write() {
 }
 
 void client_connection::on_handshake(const boost::system::error_code& e) {
+    XDEBUG_WITH_ID(this) << "on_handshake() called.";
+
     if (stopped_) {
         XERROR_WITH_ID(this) << "connection stopped.";
         return;

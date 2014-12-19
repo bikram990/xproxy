@@ -34,11 +34,13 @@ void connection_context::on_event(connection_event event, client_connection& con
 
         if (message_exchange_completed_) {
             if (conn.keep_alive()) {
+                XDEBUG << "response completed, keep client connection [id: " << conn->id() << "] alive.";
                 conn.reset();
                 // as when client's on_write is invoked, the server connection
                 // is already reset earlier, so we reset the context itself here
                 reset();
             } else {
+                XDEBUG << "response completed, close client connection [id: " << conn->id() << "].";
                 conn.stop();
             }
         }
@@ -130,10 +132,13 @@ void connection_context::on_server_message(message::message& msg) {
 
     message_exchange_completed_ = true;
 
-    if (server_conn->keep_alive())
+    if (server_conn->keep_alive()) {
+        XDEBUG << "response completed, keep server connection [id: " << server_conn->id() << "] alive.";
         server_conn->reset();
-    else
+    } else {
         server_conn->stop();
+        XDEBUG << "response completed, close server connection [id: " << server_conn->id() << "].";
+    }
 }
 
 void connection_context::parse_destination(const message::http::http_request &request,
