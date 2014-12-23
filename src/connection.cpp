@@ -129,6 +129,11 @@ void connection::do_write() {
                               std::placeholders::_2);
 
     auto& candidate = buffer_out_.front();
+    if (x::log::debug_enabled()) {
+        XDEBUG_WITH_ID(this) << "\n----- dump message begin -----\n"
+                             << std::string(candidate->data(), candidate->size())
+                             << "\n------ dump message end ------";
+    }
     socket_->async_write_some(boost::asio::buffer(candidate->data(),
                                                   candidate->size()),
                               callback);
