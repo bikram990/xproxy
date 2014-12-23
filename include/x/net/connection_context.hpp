@@ -19,11 +19,6 @@ class server_connection;
 
 class connection_context : public std::enable_shared_from_this<connection_context> {
 public:
-    #warning add more here!
-    enum state {
-        READY, CLIENT_SSL_REPLYING, CLIENT_HANDSHAKE, SERVER_CONNECTING, SERVER_WRITING
-    };
-
     connection_context(server& svr)
         : https_(false),
           ssl_setup_(false),
