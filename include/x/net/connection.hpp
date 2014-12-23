@@ -28,7 +28,9 @@ public:
 
     connection(context_ptr ctx, connection_manager& mgr);
 
-    DEFAULT_DTOR(connection);
+    virtual ~connection() {
+        XDEBUG_WITH_ID(this) << "connection destructed.";
+    }
 
     virtual bool keep_alive() = 0;
 
