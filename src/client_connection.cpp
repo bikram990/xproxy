@@ -159,7 +159,7 @@ void client_connection::on_handshake(const boost::system::error_code& e) {
     decoder_->reset();
     encoder_->reset();
 
-    read();
+    context_->on_event(HANDSHAKE, *this);
 }
 
 } // namespace net

@@ -16,7 +16,6 @@ boost::asio::io_service& connection_context::service() const {
 
 void connection_context::reset() {
     message_exchange_completed_= false;
-    state_ = READY;
 }
 
 void connection_context::on_event(connection_event event, client_connection& conn) {
@@ -24,7 +23,7 @@ void connection_context::on_event(connection_event event, client_connection& con
     case READ:
         return on_client_message(conn.get_message());
     case WRITE: {
-        if (state_ == CLIENT_SSL_REPLYING) {
+        if (https_ && !ssl_setup_) {
             auto svr_conn(server_conn_.lock());
             assert(svr_conn);
             auto& cert_mgr = server_.get_certificate_manager();
@@ -45,6 +44,11 @@ void connection_context::on_event(connection_event event, client_connection& con
             }
         }
 
+        return;
+    }
+    case HANDSHAKE: {
+        ssl_setup_ = true;
+        conn.read();
         return;
     }
     default:
@@ -75,47 +79,48 @@ void connection_context::on_event(connection_event event, server_connection& con
 }
 
 void connection_context::on_client_message(message::message& msg) {
-    assert(state_ == READY || state_ == CLIENT_SSL_REPLYING);
     auto request = dynamic_cast<message::http::http_request *>(&msg);
     assert(request);
     assert(request->completed());
 
-    if (state_ == READY) {
-        auto svr_conn(server_conn_.lock());
+    auto svr_conn(server_conn_.lock());
 
-        if (!svr_conn) {
-            std::string host;
-            unsigned short port;
-            parse_destination(*request, https_, host, port);
-
-            svr_conn = std::make_shared<server_connection>(shared_from_this(),
-                                                           server_.get_server_connection_manager());
-            svr_conn->set_host(host);
-            svr_conn->set_port(port);
-            server_.get_server_connection_manager().add(svr_conn);
-            server_conn_ = svr_conn;
-        }
-
-
-        if (!https_) {
-            svr_conn->write(msg);
-            state_ = SERVER_WRITING;
-        } else{
-            auto client_conn(client_conn_.lock());
-            assert(client_conn);
-
-            using namespace message::http;
-            auto response = http_response::make_response(http_response::SSL_REPLY);
-            client_conn->write(*response);
-            state_ = CLIENT_SSL_REPLYING;
-        }
-    } else {
-        auto svr_conn(server_conn_.lock());
-        assert(svr_conn);
-
+    // the server connection exists, it must not be the first request, we just
+    // write the message to server
+    if (svr_conn) {
         svr_conn->write(msg);
-        state_ = SERVER_WRITING;
+        return;
     }
+
+    // the server connection does not exist, two conditions:
+    // 1. the first request, we must parse the host and port, and check if it
+    //    is a CONNECT request
+    // 2. the server connection timed out and closed, we still need to parse
+    //    the host and port, under this condition, we do not need
+    std::string host;
+    unsigned short port;
+    bool orig_https = https_;
+    parse_destination(*request, https_, host, port);
+    assert(!(orig_https && !https_));
+
+    svr_conn = std::make_shared<server_connection>(shared_from_this(),
+                                                   server_.get_server_connection_manager());
+    svr_conn->set_host(host);
+    svr_conn->set_port(port);
+    server_.get_server_connection_manager().add(svr_conn);
+    server_conn_ = svr_conn;
+
+    if (https_ && !ssl_setup_) {
+        auto client_conn(client_conn_.lock());
+        assert(client_conn);
+
+        using namespace message::http;
+        auto response = http_response::make_response(http_response::SSL_REPLY);
+        client_conn->write(*response);
+        return;
+    }
+
+    svr_conn->write(msg);
 }
 
 void connection_context::on_server_message(message::message& msg) {

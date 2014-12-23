@@ -26,8 +26,8 @@ public:
 
     connection_context(server& svr)
         : https_(false),
+          ssl_setup_(false),
           message_exchange_completed_(false),
-          state_(READY),
           server_(svr) {}
 
     boost::asio::io_service& service() const;
@@ -53,8 +53,8 @@ private:
                            bool& https, std::string& host, unsigned short& port);
 
     bool https_;
+    bool ssl_setup_;
     bool message_exchange_completed_;
-    state state_;
 
     server& server_;
     std::weak_ptr<connection> client_conn_;
