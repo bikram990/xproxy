@@ -25,6 +25,8 @@ public:
             response->add_header("Content-Length", "0");
             response->add_header("Connection","keep-alive");
             response->add_header("Proxy-Connection", "keep-alive");
+            response->headers_completed(true);
+            response->message_completed(true);
             return response;
         }
         default:
