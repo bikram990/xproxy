@@ -47,7 +47,7 @@ void client_connection::handshake(ssl::certificate ca, DH *dh) {
                               shared_from_this(),
                               std::placeholders::_1);
 
-    socket_->switch_to_ssl(boost::asio::ssl::stream_base::client, ca, dh);
+    socket_->switch_to_ssl(boost::asio::ssl::stream_base::server, ca, dh);
     socket_->async_handshake(callback);
 
     XDEBUG_WITH_ID(this) << "<= handshake()";
@@ -157,6 +157,7 @@ void client_connection::on_handshake(const boost::system::error_code& e) {
 
     message_->reset();
     decoder_->reset();
+    encoder_->reset();
 
     read();
 }

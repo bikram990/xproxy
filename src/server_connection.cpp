@@ -32,7 +32,8 @@ void server_connection::start() {
 
     auto self(shared_from_this());
     context_->set_server_connection(self);
-    manager_->add(self);
+    // we have already added the connection to manager in context class
+    // manager_->add(self);
 
     connect();
 }
@@ -58,7 +59,7 @@ void server_connection::handshake(ssl::certificate ca, DH *dh) {
                               shared_from_this(),
                               std::placeholders::_1);
 
-    socket_->switch_to_ssl(boost::asio::ssl::stream_base::server, ca, dh);
+    socket_->switch_to_ssl(boost::asio::ssl::stream_base::client, ca, dh);
     socket_->async_handshake(callback);
 
     XDEBUG_WITH_ID(this) << "<= handshake()";

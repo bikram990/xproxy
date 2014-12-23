@@ -92,6 +92,7 @@ void connection_context::on_client_message(message::message& msg) {
                                                            server_.get_server_connection_manager());
             svr_conn->set_host(host);
             svr_conn->set_port(port);
+            server_.get_server_connection_manager().add(svr_conn);
             server_conn_ = svr_conn;
         }
 
