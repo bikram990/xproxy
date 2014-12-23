@@ -133,6 +133,12 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
         timer_.cancel();
     }
 
+    if (x::log::debug_enabled()) {
+        XDEBUG_WITH_ID(this) << "\n----- dump message begin -----\n"
+                             << std::string(data, length)
+                             << "\n------ dump message end ------";
+    }
+
     auto consumed = decoder_->decode(data, length, *message_);
     ASSERT_EXEC_RETNONE(consumed == length, stop);
 
