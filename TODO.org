@@ -33,3 +33,9 @@
 1. consider to design a more better buffering system
 
 2. use Google Mock to do unit test
+
+-------------------------------------------------------------------------------
+
+1. add timer for server connection's connect() method, otherwise it takes too long for it to time out
+
+2. use service.post(...) to post tasks in those callback method, otherwise all work is done in callback method
