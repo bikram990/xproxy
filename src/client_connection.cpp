@@ -9,7 +9,7 @@ namespace net {
 
 enum {
     // all values are measured by second
-    SVR_RSP_WAITING_TIME = 5,
+    SVR_RSP_WAITING_TIME = 15,
     IDLE_WAITING_TIME = 60
 };
 
