@@ -126,9 +126,12 @@ void connection_context::on_client_message(message::message& msg) {
     server_.get_server_connection_manager().add(svr_conn);
     server_conn_ = svr_conn;
 
+    auto client_conn(client_conn_.lock());
+    assert(client_conn);
+    XDEBUG << "connection mapping: [id: " << client_conn->id()
+           << "] <=> [id: " << svr_conn->id() << "].";
+
     if (https_ && !ssl_setup_) {
-        auto client_conn(client_conn_.lock());
-        assert(client_conn);
 
         using namespace message::http;
         auto response = http_response::make_response(http_response::SSL_REPLY);
