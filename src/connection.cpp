@@ -42,10 +42,8 @@ void connection::write() {
 
     ASSERT_EXEC_RETNONE(!stopped_,stop);
 
-    if (timer_.running()) {
-        XDEBUG_WITH_ID(this) << "cancel running timer.";
-        timer_.cancel();
-    }
+    if (timer_.running())
+        cancel_timer();
 
     do_write();
 
@@ -57,10 +55,8 @@ void connection::write(const message::message& message) {
 
     ASSERT_EXEC_RETNONE(!stopped_, stop);
 
-    if (timer_.running()) {
-        XDEBUG_WITH_ID(this) << "cancel running timer.";
-        timer_.cancel();
-    }
+    if (timer_.running())
+        cancel_timer();
 
     memory::buffer_ptr buf(new memory::byte_buffer);
     encoder_->encode(message, *buf);
@@ -87,10 +83,8 @@ void connection::stop() {
     XDEBUG_WITH_ID(this) << "stopping connection...";
 
     // cancel timer
-    if (timer_.running()) {
-        XDEBUG_WITH_ID(this) << "cancel running timer.";
-        timer_.cancel();
-    }
+    if (timer_.running())
+        cancel_timer();
 
     // close socket
     if (connected_ && socket_) {

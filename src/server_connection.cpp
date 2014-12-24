@@ -128,10 +128,8 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
         return;
     }
 
-    if (timer_.running()) {
-        XDEBUG_WITH_ID(this) << "cancel running timer.";
-        timer_.cancel();
-    }
+    if (timer_.running())
+        cancel_timer();
 
     if (x::log::debug_enabled()) {
         XDEBUG_WITH_ID(this) << "\n----- dump message begin -----\n"

@@ -80,6 +80,11 @@ public:
     }
 
 protected:
+    void cancel_timer() {
+        XDEBUG_WITH_ID(this) << "cancel running timer.";
+        timer_.cancel();
+    }
+
     bool connected_;
     bool stopped_;
     std::string host_;
