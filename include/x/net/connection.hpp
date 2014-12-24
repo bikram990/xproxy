@@ -19,13 +19,6 @@ class connection_manager;
 class connection : public util::counter<connection>,
                    public std::enable_shared_from_this<connection> {
 public:
-    #warning we should use connection state instead of connected_/stopped_ later
-    enum conn_state {
-        BEGINNING, CONNECTED, READING, HANDSHAKING,
-        DECODING, HANDLING, ENCODING, WRITING, COMPLETED,
-        DISCONNECTED, STOPPED
-    };
-
     connection(context_ptr ctx, connection_manager& mgr);
 
     virtual ~connection() {
