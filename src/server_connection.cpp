@@ -32,8 +32,6 @@ void server_connection::start() {
 
     auto self(shared_from_this());
     context_->set_server_connection(self);
-    // we have already added the connection to manager in context class
-    // manager_->add(self);
 
     connect();
 }

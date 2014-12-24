@@ -88,6 +88,7 @@ void server::start_accept() {
         XDEBUG << "new client connection, id: " << current_connection_->id()
                << ", addr: " << addr << ", port: " << port;
 
+        client_conn_mgr_->add(current_connection_);
         current_connection_->start();
 
         start_accept();

@@ -31,7 +31,6 @@ void client_connection::start() {
 
     auto self(shared_from_this());
     context_->set_client_connection(self);
-    manager_->add(self);
 
     read();
 }
