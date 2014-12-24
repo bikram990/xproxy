@@ -92,7 +92,8 @@ void server_connection::on_connect(const boost::system::error_code& e, boost::as
 
     connected_ = true;
 
-    context_->on_event(CONNECT, *this);
+    auto task = [this] () { context_->on_event(CONNECT, *this); };
+    context_->service().post(task);
 }
 
 void server_connection::on_read(const boost::system::error_code& e, const char *data, std::size_t length) {
@@ -146,7 +147,8 @@ void server_connection::on_read(const boost::system::error_code& e, const char *
         return;
     }
 
-    context_->on_event(READ, *this);
+    auto task = [this] () { context_->on_event(READ, *this); };
+    context_->service().post(task);
 }
 
 void server_connection::on_write() {
@@ -170,7 +172,8 @@ void server_connection::on_handshake(const boost::system::error_code& e) {
 
     CHECK_LOG_EXEC_RETURN(e, "handshake", stop);
 
-    context_->on_event(HANDSHAKE, *this);
+    auto task = [this] () { context_->on_event(HANDSHAKE, *this); };
+    context_->service().post(task);
 }
 
 void server_connection::on_resolve(const boost::system::error_code& e, boost::asio::ip::tcp::resolver::iterator it) {

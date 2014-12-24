@@ -125,7 +125,9 @@ void client_connection::on_read(const boost::system::error_code& e, const char *
         return;
     }
 
-    context_->on_event(READ, *this);
+    auto task = [this] () { context_->on_event(READ, *this); };
+    context_->service().post(task);
+
     auto self(shared_from_this());
     timer_.start(SVR_RSP_WAITING_TIME, [self, this] (const boost::system::error_code&) {
         XERROR_WITH_ID(this) << "server response waiting timed out.";
@@ -141,7 +143,8 @@ void client_connection::on_write() {
         return;
     }
 
-    context_->on_event(WRITE, *this);
+    auto task = [this] () { context_->on_event(WRITE, *this); };
+    context_->service().post(task);
 }
 
 void client_connection::on_handshake(const boost::system::error_code& e) {
@@ -158,7 +161,8 @@ void client_connection::on_handshake(const boost::system::error_code& e) {
     decoder_->reset();
     encoder_->reset();
 
-    context_->on_event(HANDSHAKE, *this);
+    auto task = [this] () { context_->on_event(HANDSHAKE, *this); };
+    context_->service().post(task);
 }
 
 } // namespace net
