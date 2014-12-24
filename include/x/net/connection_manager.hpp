@@ -28,7 +28,7 @@ public:
         std::for_each(connections_.begin(), connections_.end(),
                       [] (connection_ptr conn) {
             conn->detach();
-            conn->stop();
+            conn->stop(false);
         });
 
         connections_.clear();

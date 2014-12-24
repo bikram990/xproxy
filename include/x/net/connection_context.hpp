@@ -40,6 +40,8 @@ public:
     void on_event(connection_event event, client_connection& conn);
     void on_event(connection_event event, server_connection& conn);
 
+    void on_stop(std::shared_ptr<connection> conn);
+
 private:
     void on_client_message(message::message& msg);
     void on_server_message(message::message& msg);

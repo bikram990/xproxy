@@ -41,7 +41,7 @@ public:
     virtual void on_write() = 0;
     virtual void on_handshake(const boost::system::error_code& e) = 0;
 
-    void stop();
+    void stop(bool notify = true);
 
     void detach() {
         manager_ = nullptr;

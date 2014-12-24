@@ -74,7 +74,7 @@ void connection::reset() {
     writing_ = false;
 }
 
-void connection::stop() {
+void connection::stop(bool notify) {
     if (stopped_) {
         XWARN_WITH_ID(this) << "connection already stopped.";
         return;
@@ -92,11 +92,10 @@ void connection::stop() {
         connected_ = false;
     }
 
-    // notify the bridged connection(if it exists)
-    #warning add code here
-    // auto session = session_.lock();
-    // if (session)
-    //     session->on_connection_stop(shared_from_this());
+    if (notify) {
+        auto task = [this] () { context_->on_stop(shared_from_this()); };
+        context_->service().post(task);
+    }
 
     if (manager_)
         manager_->erase(shared_from_this());

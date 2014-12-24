@@ -76,7 +76,7 @@ void server_connection::reset() {
     auto self(shared_from_this());
     timer_.start(IDLE_WAITING_TIME, [self, this] (const boost::system::error_code&) {
         XDEBUG_WITH_ID(this) << "idle waiting timed out.";
-        stop();
+        stop(false);
     });
 }
 

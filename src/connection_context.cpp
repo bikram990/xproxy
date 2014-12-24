@@ -40,7 +40,7 @@ void connection_context::on_event(connection_event event, client_connection& con
                 reset();
             } else {
                 XDEBUG << "response completed, close client connection [id: " << conn.id() << "].";
-                conn.stop();
+                conn.stop(false);
             }
         }
 
@@ -76,6 +76,20 @@ void connection_context::on_event(connection_event event, server_connection& con
     default:
         assert(0);
     }
+}
+
+void connection_context::on_stop(std::shared_ptr<connection> conn) {
+    auto c(client_conn_.lock());
+    auto s(server_conn_.lock());
+
+    if (c == conn) {
+        if (s)
+            s->stop(false);
+        return;
+    }
+
+    if (c)
+        c->stop(false);
 }
 
 void connection_context::on_client_message(message::message& msg) {
@@ -142,7 +156,7 @@ void connection_context::on_server_message(message::message& msg) {
         XDEBUG << "response completed, keep server connection [id: " << server_conn->id() << "] alive.";
         server_conn->reset();
     } else {
-        server_conn->stop();
+        server_conn->stop(false);
         XDEBUG << "response completed, close server connection [id: " << server_conn->id() << "].";
     }
 }
