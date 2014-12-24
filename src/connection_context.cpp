@@ -82,6 +82,8 @@ void connection_context::on_stop(std::shared_ptr<connection> conn) {
     auto c(client_conn_.lock());
     auto s(server_conn_.lock());
 
+    XDEBUG << "stop request recieved from connection [id: " << conn->id() << "].";
+
     if (c == conn) {
         if (s)
             s->stop(false);

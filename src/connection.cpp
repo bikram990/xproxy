@@ -92,13 +92,15 @@ void connection::stop(bool notify) {
         connected_ = false;
     }
 
+    auto self(shared_from_this());
     if (notify) {
-        auto task = [this] () { context_->on_stop(shared_from_this()); };
+        XDEBUG_WITH_ID(this) << "notify the peer to stop.";
+        auto task = [self, this] () { context_->on_stop(self); };
         context_->service().post(task);
     }
 
     if (manager_)
-        manager_->erase(shared_from_this());
+        manager_->erase(self);
 
     stopped_ = true;
 }
