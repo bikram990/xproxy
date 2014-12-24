@@ -184,6 +184,8 @@ void server_connection::on_resolve(const boost::system::error_code& e, boost::as
 
     CHECK_LOG_EXEC_RETURN(e, "resolve", stop);
 
+    XDEBUG_WITH_ID(this) << "host: " << host_ << ", ip: " << it->endpoint().address();
+
     auto callback = std::bind(&connection::on_connect,
                               shared_from_this(),
                               std::placeholders::_1,
