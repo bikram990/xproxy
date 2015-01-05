@@ -116,7 +116,13 @@ void client_connection::on_read(const boost::system::error_code& e, const char *
     }
 
     auto consumed = decoder_->decode(data, length, *message_);
-    ASSERT_EXEC_RETNONE(consumed == length, stop);
+    // ASSERT_EXEC_RETNONE(consumed == length, stop);
+    if (consumed != length) {
+        XERROR_WITH_ID(this) << "consumed data length not match, consumed: "
+                             << consumed << ", desired: " << length;
+        stop();
+        return;
+    }
 
     if (!message_->deliverable()) {
         read();
